@@ -5,8 +5,8 @@ authors = ["Tim Molteno <tim@elec.ac.nz>"]
 
 [dependencies]
 cdshealpix = { version = "*"}
-ndarray = "^0.12.1"
-num = "^0.2"
+ndarray = "^0.15"
+num = "^0.4"
 
 # For data handling
 structopt = "^0.2" # CLI lib (based on clap)
@@ -19,7 +19,7 @@ serde_json = "^1.0"
 
 # reqwest="^0.9"
 
-wasm-bindgen = { version = "0.2.74", features = ["serde-serialize"] }
+wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
 
 
 cfg-if = "0.1"

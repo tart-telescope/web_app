@@ -47,7 +47,8 @@ pub fn image_visibilities(
     let harmonics = get_harmonics(sky, u, v, w);
     
     for i in 0..vis.len() {
-        pixels = pixels + vis[i]*&harmonics[i];
+        let v = vis[i];
+        pixels = pixels + v * &harmonics[i];
     }
     
     if real_only {
