@@ -22,5 +22,5 @@ RUN find ./dist -type f -regex '.*\.\(htm\|html\|txt\|text\|js\|css\)$' -exec gz
 
 # Serve static content
 FROM nginx:1.21.6 as production-stage
-COPY --from=node-build-stage /app/tart-vuer/dist /usr/share/nginx/html
+COPY --from=node-build-stage /app/tart-vuer/dist /usr/share/nginx/html/viewer
 EXPOSE 80
