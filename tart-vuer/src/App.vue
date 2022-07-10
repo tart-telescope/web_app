@@ -7,7 +7,7 @@
                 <span class="font-weight-light">VIEWER</span>
             </v-toolbar-title>
             <v-spacer />
-            <v-btn icon color='cyan' href="https://github.com/tmolteno/TART">
+            <v-btn icon color='cyan' href="https://github.com/tart-telescope/web_app">
                 <v-icon>mdi-github</v-icon>
             </v-btn>
         </v-app-bar>
