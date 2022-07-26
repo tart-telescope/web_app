@@ -16,7 +16,10 @@
                 <g class="grid">
 
                     <circle v-for="ant_i in antennas" :key="ant_i.toString()" fill="transparent" :cx="offset+scale*ant_i[0]" :cy="offset-scale*ant_i[1]" r="12" stroke-width="1" stroke="rgb(0,0,0)" />
+                    <text text-anchor="middle" dominant-baseline="middle" :x="offset+scale*0.5" :y="490">1 metre</text>
+                    <path id='scaleLine' stroke-width='2.5' fill='none' stroke='black' :d="scaleLine" />
                     <path id='arrow-line' marker-mid='url(#mid)' stroke-width='3' fill='none' stroke='black' :d="line" />
+
                     <circle fill="white" :cx="offset+scale*ant_sel_i[0]" :cy="offset-scale*ant_sel_i[1]" :r="14" style="stroke-width:3;" stroke="teal" />
                     <circle fill="white" :cx="offset+scale*ant_sel_j[0]" :cy="offset-scale*ant_sel_j[1]" :r="14" style="stroke-width:3;" stroke="cyan" />
                     <text text-anchor="middle" dominant-baseline="middle" v-for="(ant_i, i) in antennas" :key="i.toString()+ant_i.toString()" :x="offset+scale*ant_i[0]" :y="1+offset-scale*ant_i[1]">{{i}}</text>
@@ -35,7 +38,7 @@ export default {
     data: function () {
         return {
             offset: 256,
-            scale: 170,
+            // scale: 130,
         };
     },
     methods: {},
@@ -51,6 +54,14 @@ export default {
             return ['M', x1, y1, "L", xm, ym, "L", x2, y2].join(' ')
 
         },
+        scaleLine(){
+            let x1 = parseInt(this.offset + this.scale * 0.)
+            let y1 = parseInt(500)
+            let x2 = parseInt(this.offset + this.scale * 1.)
+            let y2 = parseInt(500)
+
+            return ['M', x1, y1, "L", x2, y2].join(' ')
+        },
 
         ant_sel_i() {
             return this.antennas[this.$store.state.selectedBaseline[0]];
@@ -61,6 +72,17 @@ export default {
         antennas() {
             return this.$store.state.antennas;
         },
+        scale() {
+            const ant = this.$store.state.antennas;
+            let min = Math.min(...ant.map(a => a[0]), ...ant.map(a => a[1]))
+            let max = Math.max(...ant.map(a => a[0]), ...ant.map(a => a[1]))
+            let absMax = Math.max(-min, max)
+
+
+            return Math.floor(220 / absMax)
+        },
+
+
     },
 };
 </script>

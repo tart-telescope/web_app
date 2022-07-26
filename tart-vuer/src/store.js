@@ -126,13 +126,13 @@ export default new Vuex.Store({
         renewChannels(context) {
             Vue.axios.get(this.state.TART_URL + "/api/v1/status/channel").then((response) => {
                 let data = Object.freeze(response.data)
-                    // console.log(data)
                 context.commit('newChannels', data)
             })
         },
         renewInfo(context) {
             Vue.axios.get(this.state.TART_URL + "/api/v1/info").then((response) => {
                 let data = Object.freeze(response.data.info)
+                console.log(data)
                 context.commit('newInfo', data)
             })
         },
@@ -170,6 +170,9 @@ export default new Vuex.Store({
                 context.commit('appendVis', visArr)
             })
         },
+        resetVis(context){
+            this.state.vis_history = []
+        },
         renewGain(context) {
             Vue.axios.get(this.state.TART_URL + "/api/v1/calibration/gain").then((response) => {
                 let d = Object.freeze(response.data)
@@ -178,15 +181,22 @@ export default new Vuex.Store({
         },
         renewSatellite(context) {
             var api_call
-            if (this.state.vis) {
-                api_call = this.state.CATALOG_URL + "/catalog?date=" + this.state.vis.timestamp + "&lat=-45.85177&lon=170.5456"
+            if (Object.keys(this.state.info).length>0) {
+                const lat = this.state.info.location.lat
+                const lon = this.state.info.location.lon    
+                if (this.state.vis) {
+                    api_call = this.state.CATALOG_URL + "/catalog?date=" + this.state.vis.timestamp + '&lat='+ lat + '&lon=' + lon //"&lat=-45.85177&lon=170.5456"
+                } else {
+                    api_call = this.state.CATALOG_URL + "/catalog?date=" + (new Date).toISOString() + '&lat='+ lat + '&lon=' + lon //"&lat=-45.85177&lon=170.5456"
+                }
+    
+                Vue.axios.get(api_call).then((response) => {
+                    context.commit('newSatellite', Object.freeze(response.data))
+                })    
             } else {
-                api_call = this.state.CATALOG_URL + "/catalog?date=" + (new Date).toISOString() + "&lat=-45.85177&lon=170.5456"
-            }
+                context.commit('newSatellite', [])
 
-            Vue.axios.get(api_call).then((response) => {
-                context.commit('newSatellite', Object.freeze(response.data))
-            })
+            }
         },
         newBaseline(context, val) {
             context.commit('newBaseline', val)

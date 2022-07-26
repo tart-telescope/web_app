@@ -125,7 +125,6 @@ export default {
 
         container.innerHTML = ret.replace('width="12cm" height="12cm"', "");
         let vm = this;
-        console.log(container);
         // Add listeners to SVG
         [].forEach.call(document.getElementsByTagName("circle"), function (el) {
           if (el.getAttribute("name")) {
