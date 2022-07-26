@@ -106,11 +106,17 @@ export default {
         selected: function (newPostfix) {
             if (newPostfix != 'custom') {
                 this.$store.dispatch("setTART_URL", 'https://tart.elec.ac.nz/' + newPostfix);
+                this.$store.dispatch("renewInfo");
+                this.$store.dispatch("resetVis");
+                this.getData()
+                this.$store.dispatch("renewVisData");
+                this.$store.dispatch("renewRawData");
 
             }
         }
     },
     created: function () {
+        this.$store.dispatch("renewInfo")
         this.$store.dispatch("renewVis");
         this.$store.dispatch("renewGain");
         this.$store.dispatch("renewAntennas");
@@ -133,7 +139,11 @@ export default {
             },
             set: function (newURL) {
                 this.$store.dispatch("setTART_URL", newURL);
+                this.$store.dispatch("resetVis");
                 this.$store.dispatch("renewMode");
+                this.$store.dispatch("renewInfo");
+
+
 
             },
         },
