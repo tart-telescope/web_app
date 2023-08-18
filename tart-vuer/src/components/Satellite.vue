@@ -1,6 +1,6 @@
 <template>
 <g class="satellite">
-    <circle fill="transparent" :cx="sat.pxpos.x" :cy="sat.pxpos.y" :r="satR" stroke-width="1px" stroke="red">
+    <circle vector-effect="non-scaling-stroke" fill="transparent" :cx="sat.pxpos.x" :cy="sat.pxpos.y" :r="satR" stroke-width=1 stroke="green">
     </circle>
     <text text-anchor="middle" dominant-baseline="middle" :x="sat.pxpos.x" :y="sat.pxpos.y+16" fill="white" font-weight="800" font-size="10" class='label'> {{sat.name.split(' (')[0]}} </text>
 </g>

@@ -6,7 +6,7 @@
         "serve": "vue-cli-service serve",
         "build": "vue-cli-service build",
         "lint": "vue-cli-service lint",
-	"serve17": "export NODE_OPTIONS=--openssl-legacy-provider && vue-cli-service serve",
+        "serve17": "export NODE_OPTIONS=--openssl-legacy-provider && vue-cli-service serve",
         "build17": "export NODE_OPTIONS=--openssl-legacy-provider && vue-cli-service build",
         "deploy": "npm run build && now --target production --public"
     },

@@ -16,7 +16,7 @@
       <div id="container" class="mx-2">Getting ready... Loading...</div>
 
       <v-card-actions class="py-0 my-0">
-        <v-slider @change="nside = $event" :value="20" thumb-label="always" label="NSide" min="2" max="64">
+        <v-slider @change="nside = $event" :value="48" thumb-label="always" label="NSide" min="2" max="128">
         </v-slider>
       </v-card-actions>
       <v-card tile elevation="0"> 
@@ -128,7 +128,7 @@ export default {
         // Add listeners to SVG
         [].forEach.call(document.getElementsByTagName("circle"), function (el) {
           if (el.getAttribute("name")) {
-            el.setAttribute("stroke-width", 50);
+            el.setAttribute("stroke-width", 15);
 
             el.addEventListener("click", function (e) {
               vm.srcLoc = [
