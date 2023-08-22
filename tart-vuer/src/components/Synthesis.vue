@@ -82,7 +82,7 @@ export default {
     return {
       show_sat: true,
       show_antennas: false,
-      nside: 16,
+      nside: 48,
       srcLoc: [0, 0, ""],
       antennasIdx: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23],
       antennasUsed: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23],

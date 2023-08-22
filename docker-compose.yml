@@ -11,3 +11,6 @@ services:
         ports:
           - '8080:80'
 
+networks:
+    default:
+        enable_ipv6: false
