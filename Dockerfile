@@ -7,7 +7,7 @@ COPY rust /app/rust
 RUN RUST_LOG=info wasm-pack build --release --out-dir ./pkg
 
 # Web App build stage
-FROM node:lts-alpine as node-build-stage
+FROM node:12 as node-build-stage
 COPY tart-vuer /app/tart-vuer
 COPY --from=rust-build /app/rust/pkg /app/tart-vuer/pkg
 WORKDIR /app/tart-vuer
