@@ -5,7 +5,7 @@
 extern crate cfg_if;
 extern crate wasm_bindgen;
 extern crate web_sys;
-
+extern crate gloo_utils;
 
 
 extern crate ndarray;
@@ -37,7 +37,8 @@ use tart_api::Source;
 use utils::{VectorReal, VectorComplex};
 use tart_obs::Observation;
 
-
+use gloo_utils::format::JsValueSerdeExt;
+use wasm_bindgen::JsValue;
 
 use cfg_if::cfg_if;
 use wasm_bindgen::prelude::*;
@@ -85,7 +86,6 @@ pub fn json_to_svg_ext(json: String, nside: u32, show_sources: bool) -> JsValue 
     };
     let svg = make_svg(&obs.vis_arr, &u, &v, &w,  nside, sources);
     JsValue::from_serde(&svg).unwrap()
-
 }
 
 pub fn json_to_svg(json: &String, nside: u32, show_sources: bool) -> (String, DateTime<Utc>) {
