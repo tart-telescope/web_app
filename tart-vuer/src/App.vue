@@ -71,10 +71,10 @@ export default {
         selected: 'UdM',
         enabled: false,
         refresher: null,
-        longTermRefresher: null,
-        longTermRefreshInterval: 15,
-        refreshInterval: 5,
-        refreshIntervals: [1, 5, 10],
+        satelliteRefresher: null,
+        satelliteRefreshInterval: 20,
+        refreshInterval: 60,
+        refreshIntervals: [5,10,20,60,120],
     }),
     methods: {
         getData: function () {
@@ -98,9 +98,9 @@ export default {
         updateCatalogData() {
             this.$store.dispatch("renewVisData");
             this.$store.dispatch("renewRawData");
-            this.longTermRefresher = window.setTimeout(
+            this.satelliteRefresher = window.setTimeout(
                 this.updateCatalogData,
-                this.longTermRefreshInterval * 1000
+                this.satelliteRefreshInterval * 1000
             );
 
         },
@@ -132,7 +132,7 @@ export default {
     },
     beforeDestroy() {
         window.clearTimeout(this.refresher);
-        window.clearTimeout(this.longTermRefresher);
+        window.clearTimeout(this.satelliteRefresher);
     },
     computed: {
 
