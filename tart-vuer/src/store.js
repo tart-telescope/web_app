@@ -6,7 +6,7 @@ Vue.use(Vuex)
 export default new Vuex.Store({
     strict: process.env.NODE_ENV !== 'production',
     state: {
-        TART_URL: "https://tart.elec.ac.nz/signal",
+        TART_URL: "https://tart.elec.ac.nz/UdM",
         CATALOG_URL: "https://tart.elec.ac.nz/catalog",
         num_bin: 512,
         nw: 128,

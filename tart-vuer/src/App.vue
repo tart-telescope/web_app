@@ -26,14 +26,17 @@
                     <v-text-field :disabled="selected != 'custom'" v-model="TART_URL" label="Telescope API Endpoint" />
                 </v-list-item>
                 <v-list-item-group v-model="selected" active-class="primary--text" mandatory>
-                    <v-list-item value="signal">
-                        Dunedin
+                    <v-list-item value="UdM">
+                        Bel Air - UdM
                     </v-list-item>
                     <v-list-item value="rhodes">
                         Rhodes
                     </v-list-item>
                     <v-list-item value="stellenbosch">
                         Stellenbosch
+                    </v-list-item>
+                    <v-list-item disabled value="signal">
+                        Dunedin
                     </v-list-item>
                     <v-list-item value="custom">
                         Custom
@@ -65,7 +68,7 @@ export default {
     name: "App",
     data: () => ({
         drawer: false,
-        selected: 'signal',
+        selected: 'UdM',
         enabled: false,
         refresher: null,
         longTermRefresher: null,
