@@ -21,9 +21,10 @@ gloo-utils = { version = "0.1", features = ["serde"] }
 # reqwest="^0.9"
 
 wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
+wee_alloc = "0.4.5"
 
 
-cfg-if = "0.1"
+#cfg-if = "0.1"
 
 [dependencies.web-sys]
 version = "0.3"
