@@ -26,17 +26,17 @@
                     <v-text-field :disabled="selected != 'custom'" v-model="TART_URL" label="Telescope API Endpoint" />
                 </v-list-item>
                 <v-list-item-group v-model="selected" active-class="primary--text" mandatory>
-                    <v-list-item value="UdM">
+                    <v-list-item value="mu-udm">
                         Bel Air - UdM
                     </v-list-item>
-                    <v-list-item value="rhodes">
+                    <v-list-item value="za-rhodes">
                         Rhodes
                     </v-list-item>
-                    <v-list-item value="stellenbosch">
+                    <v-list-item disabled value="stellenbosch">
                         Stellenbosch
                     </v-list-item>
-                    <v-list-item disabled value="signal">
-                        Dunedin
+                    <v-list-item value="nz-dunedin">
+                        NZ - Dunedin
                     </v-list-item>
                     <v-list-item value="custom">
                         Custom
@@ -108,7 +108,7 @@ export default {
     watch: {
         selected: function (newPostfix) {
             if (newPostfix != 'custom') {
-                this.$store.dispatch("setTART_URL", 'https://tart.elec.ac.nz/' + newPostfix);
+                this.$store.dispatch("setTART_URL", 'https://api.elec.ac.nz/tart/' + newPostfix);
                 this.$store.dispatch("renewInfo");
                 this.$store.dispatch("resetVis");
                 this.getData()
