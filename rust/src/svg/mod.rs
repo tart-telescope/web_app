@@ -22,7 +22,6 @@
 #![allow(dead_code)]
 
 pub use self::shapes::{Circle, Rect, RoundedRect, Ellipse, Line, PolyLine, Polygon};
-pub use self::common::{rgb, rgba};
 pub use self::text::Text;
 pub use self::transform::Transform;
 

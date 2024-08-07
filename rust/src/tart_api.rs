@@ -78,20 +78,10 @@ pub struct TARTinfo {
 #[allow(non_snake_case)]
 #[derive(Deserialize, Debug)]
 pub struct TARTdetail {
-    pub L0_frequency: f64,
-    pub baseband_frequency: f64,
-    pub location: Location,
-    pub name: String,
-    pub num_antenna: u32,
-    pub operating_frequency: f64,
-    pub sampling_frequency: f64
 }
 
 #[derive(Deserialize, Debug)]
 pub struct Location {
-    pub alt: f64,
-    pub lat: f64,
-    pub lon: f64,
 }
 
 #[allow(dead_code)]
