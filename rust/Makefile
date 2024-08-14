@@ -10,7 +10,8 @@ build_wasm_pkg:
 	RUST_LOG=info wasm-pack build --release
 
 build_wasm_tart:
-	RUST_LOG=info wasm-pack build --release --out-dir ../tart-vuer/pkg
+	#RUST_LOG=info wasm-pack build --release --out-dir ../tart-vuer/pkg
+	RUST_LOG=info wasm-pack build --release --out-dir ../tart-viewer/pkg
 	
 HOST=https://tart.elec.ac.nz
 API=${HOST}/signal/api/v1/
@@ -37,6 +38,9 @@ profile:
 speed:
 	#cargo clean
 	RUSTFLAGS='-C opt-level=2 -C target-cpu=native' cargo build --release
+api:
+	RUSTFLAGS='-C opt-level=3 -C target-cpu=native' cargo build --release
+	cp ./target/release/gridless ../image_server/	
 
 test:
 	./target/release/gridless --nside 2 --sources --file data.json

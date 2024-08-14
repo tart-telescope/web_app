@@ -1,16 +1,24 @@
 <template>
-<v-card flat outlined elevation="3">
-    <v-card-title class="my-0 mx-0 pt-1 pb-0">
-        <h4 class="teal--text text--lighten-2 text-uppercase">
-            Radio Spectrum
-        </h4>
-    </v-card-title>
-    <VueApexCharts height="400" type="line" :options="apex.options" :series="series" />
-</v-card>
+    <v-card flat outlined elevation="3">
+        <v-card-title class="my-0 mx-0 pt-1 pb-0">
+            <h4 class="teal--text text--lighten-2 text-uppercase">
+                Radio Spectrum
+            </h4>
+        </v-card-title>
+        <VueApexCharts
+            height="400"
+            type="line"
+            :options="apex.options"
+            :series="series"
+        />
+    </v-card>
 </template>
 
 <script>
-import VueApexCharts from "vue-apexcharts";
+import VueApexCharts from "vue3-apexcharts";
+
+import { useAppStore } from "@/stores/app";
+import { mapState, mapActions } from "pinia";
 
 export default {
     name: "BaselineComponent",
@@ -19,11 +27,17 @@ export default {
     },
 
     computed: {
+        ...mapState(useAppStore, ["channels"]),
+
         aMin() {
-            return Math.min(...this.series.map(ant => ant.data.map(el => el.y)).flat())
+            return Math.min(
+                ...this.series.map((ant) => ant.data.map((el) => el.y)).flat(),
+            );
         },
         aMax() {
-            return Math.max(...this.series.map(ant => ant.data.map(el => el.y)).flat())
+            return Math.max(
+                ...this.series.map((ant) => ant.data.map((el) => el.y)).flat(),
+            );
         },
         apex() {
             return {
@@ -33,7 +47,7 @@ export default {
                             top: -20,
                             right: 0,
                             bottom: 0,
-                            left: 0
+                            left: 0,
                         },
                     },
                     yaxis: {
@@ -44,6 +58,10 @@ export default {
                         curve: "smooth",
                         width: 0.8,
                     },
+                    tooltip: {
+                        theme: "dark",
+                    },
+
                     chart: {
                         id: "vuechart",
                         toolbar: {
@@ -64,26 +82,26 @@ export default {
                         },
                     },
                 },
-            }
-        },
-
-        channels() {
-            return this.$store.state.channels;
+            };
         },
         series() {
             var series = [];
             if (this.channels.length) {
-                series = this.channels.filter(ch => ch.radio_mean.ok).map((ch) => {
-                    return {
-                        name: ch.id,
-                        data: ch.freq.map((fi, xi) => {
-                            return {
-                                x: fi,
-                                y: ch.power[xi],
-                            };
-                        }).filter((f, fi) => ((fi % 4) === 0)),
-                    };
-                });
+                series = this.channels
+                    .filter((ch) => ch.radio_mean.ok)
+                    .map((ch) => {
+                        return {
+                            name: ch.id,
+                            data: ch.freq
+                                .map((fi, xi) => {
+                                    return {
+                                        x: fi,
+                                        y: ch.power[xi],
+                                    };
+                                })
+                                .filter((f, fi) => fi % 4 === 0),
+                        };
+                    });
             }
             return series;
         },
