@@ -1,11 +1,7 @@
 // Utilities
 import { defineStore } from "pinia";
-
 import { Axios, all } from "axios";
 import axios from "axios";
-// import { setupCache } from "axios-cache-interceptor";
-// const instance = Axios.create();
-// const axios = setupCache(instance);
 
 export const useAppStore = defineStore("app", {
   state: () => ({
@@ -52,8 +48,8 @@ export const useAppStore = defineStore("app", {
       this.setCustomTART_URL(this.TART_API_HUB_URL + postFix);
     },
     setCustomTART_URL(newUrl) {
+      this.resetUI();
       this.TART_URL = newUrl;
-      this.resetVis();
       this.renewMode();
       this.renewInfo();
       this.renewAntennas();
@@ -155,6 +151,7 @@ export const useAppStore = defineStore("app", {
       );
     },
     resetUI() {
+      delete this.vis_history;
       this.vis_history = [];
       this.vis = null;
       this.gain = null;

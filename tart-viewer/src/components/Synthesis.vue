@@ -33,6 +33,7 @@
                 :max="128"
             />
         </v-card-actions>
+
         <v-card elevation="0" class="py-0 my-0">
             <v-overlay
                 v-model="overlay"
@@ -98,7 +99,25 @@
 import { useAppStore } from "@/stores/app";
 import { mapActions, mapState } from "pinia";
 const wasm = await import("wasm-tart-imaging");
-// import axios from "axios";
+const json_to_svg_ext = wasm.json_to_svg_ext;
+
+import axios from "axios";
+function remoteRender(newJ, nside, show_sat, vm) {
+    var start = performance.now();
+    axios
+        .post("https://maxscheel--tart-imaging-hello.modal.run/", {
+            params: newJ,
+            nside,
+            show_sat,
+        })
+        .then((response) => {
+            var ret = Object.freeze(response.data);
+            var container = document.getElementById("container");
+            container.innerHTML = ret.replace('width="12cm" height="12cm"', "");
+            addHover(vm);
+            vm.render_ms = performance.now() - start;
+        });
+}
 
 function addHover(vm) {
     [].forEach.call(document.getElementsByTagName("circle"), function (el) {
@@ -126,7 +145,6 @@ export default {
     components: {},
     data: function () {
         return {
-            wasm: wasm,
             render_ms: 0,
             loaded: false,
             show_sat: true,
@@ -147,12 +165,6 @@ export default {
         sat_list: function () {
             this.redraw();
         },
-        // wasm: function () {
-        //     this.redraw();
-        // },
-        // reducedVis: function () {
-        //     this.redraw();
-        // },
         show_sat: function () {
             this.redraw();
         },
@@ -166,19 +178,16 @@ export default {
             this.redraw();
         },
         redraw: function () {
-            if (
-                this.reducedVis &&
-                this.antennas &&
-                this.gain &&
-                this.wasm.json_to_svg_ext
-            ) {
+            if (this.reducedVis && this.antennas && this.gain) {
                 let start = performance.now();
-                let newJ = {
-                    info: { info: this.info },
-                    ant_pos: this.antennas,
-                    gains: this.gain,
-                    data: [[this.reducedVis, this.sat_list]],
-                };
+                let newJ = JSON.parse(
+                    JSON.stringify({
+                        info: { info: this.info },
+                        ant_pos: this.antennas,
+                        gains: this.gain,
+                        data: [[this.reducedVis, this.sat_list]],
+                    }),
+                );
                 if (
                     newJ.ant_pos === null ||
                     newJ.gains === null ||
@@ -187,12 +196,14 @@ export default {
                 ) {
                     return;
                 }
-
+                const nside = this.nside;
+                const show_ant = this.show_sat;
+                // remoteRender(newJ, nside, show_ant, this);
                 try {
-                    let ret = wasm.json_to_svg_ext(
+                    let ret = json_to_svg_ext(
                         JSON.stringify(newJ),
-                        this.nside,
-                        this.show_sat,
+                        nside,
+                        show_ant,
                     );
                     var container = document.getElementById("container");
                     container.innerHTML = ret.replace(
@@ -206,24 +217,6 @@ export default {
                     this.render_ms = performance.now() - start;
                     addHover(this);
                 }
-
-                // axios
-                //     .post("http://localhost:8000/", {
-                //         params: newJ,
-                //         nside: this.nside,
-                //         show_sat: this.show_sat,
-                //     })
-                //     .then((response) => {
-                //         var ret = Object.freeze(response.data);
-                //         var container = document.getElementById("container");
-                //         container.innerHTML = ret.replace(
-                //             'width="12cm" height="12cm"',
-                //             "",
-                //         );
-                //         let vm = this;
-                //         addHover(vm);
-                //         this.render_ms = performance.now() - start;
-                //     });
             }
         },
     },
