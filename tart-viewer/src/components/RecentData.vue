@@ -14,71 +14,65 @@
         <v-tabs-window v-model="tab">
             <v-tabs-window-item :key="1" :value="1">
                 <v-container fluid>
-                    <v-row>
-                        <!-- <v-col cols="12" md="4"> -->
-                        <v-data-table
-                            dense
-                            :headers="headers"
-                            :items="visFileList"
-                            hide-default-footer
-                        >
-                            <template v-slot:item.timestamp="{ item }">
-                                <v-chip
-                                    small
-                                    :href="TART_URL + '/' + item.filename"
-                                >
-                                    <v-icon x-small left> mdi-download </v-icon>
-                                    {{ item.timestamp }}
-                                </v-chip>
-                            </template>
+                    <v-data-table
+                        dense
+                        :headers="headers"
+                        :items="visFileList"
+                        hide-default-footer
+                        hide-default-header
+                    >
+                        <template v-slot:item.timestamp="{ item }">
+                            <v-chip
+                                small
+                                :href="TART_URL + '/' + item.filename"
+                            >
+                                <v-icon x-small left> mdi-download </v-icon>
+                                {{ item.timestamp }}
+                            </v-chip>
+                        </template>
 
-                            <template v-slot:item.checksum="{ item }">
-                                <v-btn
-                                    small
-                                    icon
-                                    @click="copyToClipboard(item.checksum)"
-                                >
-                                    <v-icon small> mdi-clipboard </v-icon>
-                                </v-btn>
-                            </template>
-                        </v-data-table>
-                        <!-- </v-col> -->
-                    </v-row>
+                        <template v-slot:item.checksum="{ item }">
+                            <v-btn
+                                small
+                                icon
+                                @click="copyToClipboard(item.checksum)"
+                            >
+                                <v-icon small> mdi-clipboard </v-icon>
+                            </v-btn>
+                        </template>
+                    </v-data-table>
                 </v-container>
             </v-tabs-window-item>
 
             <v-tabs-window-item :key="2" :value="2">
                 <v-container fluid>
-                    <v-row>
-                        <!-- <v-col cols="12" md="4"> -->
-                        <v-data-table
-                            dense
-                            :headers="headers"
-                            :items="rawFileList"
-                            hide-default-footer
-                        >
-                            <template v-slot:item.timestamp="{ item }">
-                                <v-chip
-                                    small
-                                    :href="TART_URL + '/' + item.filename"
-                                >
-                                    <v-icon x-small left> mdi-download </v-icon>
-                                    {{ item.timestamp }}
-                                </v-chip>
-                            </template>
+                    <v-data-table
+                        dense
+                        :headers="headers"
+                        :items="rawFileList"
+                        hide-default-footer
+                        hide-default-header
+                    >
+                        <template v-slot:item.timestamp="{ item }">
+                            <v-chip
+                                small
+                                :href="TART_URL + '/' + item.filename"
+                            >
+                                <v-icon x-small left> mdi-download </v-icon>
+                                {{ item.timestamp }}
+                            </v-chip>
+                        </template>
 
-                            <template v-slot:item.checksum="{ item }">
-                                <v-btn
-                                    small
-                                    icon
-                                    @click="copyToClipboard(item.checksum)"
-                                >
-                                    <v-icon small> mdi-clipboard </v-icon>
-                                </v-btn>
-                            </template>
-                        </v-data-table>
-                        <!-- </v-col> -->
-                    </v-row>
+                        <template v-slot:item.checksum="{ item }">
+                            <v-btn
+                                small
+                                icon
+                                @click="copyToClipboard(item.checksum)"
+                            >
+                                <v-icon small> mdi-clipboard </v-icon>
+                            </v-btn>
+                        </template>
+                    </v-data-table>
                 </v-container>
             </v-tabs-window-item>
         </v-tabs-window>
@@ -113,13 +107,13 @@ export default {
                 {
                     text: "Timestamp",
                     value: "timestamp",
-                    align: "center",
+                    align: "left",
                     sortable: false,
                 },
                 {
                     text: "SHA256 Checksum",
                     value: "checksum",
-                    align: "center",
+                    align: "right",
                     sortable: false,
                 },
             ],

@@ -31,6 +31,8 @@
             <TelescopeModeChange />
             <LoginField />
             <v-divider></v-divider>
+            <v-divider></v-divider>
+
             <v-list
                 density="compact"
                 v-model:selected="selected"

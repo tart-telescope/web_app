@@ -3,34 +3,21 @@
         <v-col cols="12" sm="12" md="12" lg="12">
             <GeneralInfo />
         </v-col>
-        <v-col
-            cols="12"
-            :sm="enlarge ? 12 : 12"
-            :md="enlarge ? 12 : 6"
-            :lg="enlarge ? 12 : 6"
-            v-if="telescope_mode == 'vis'"
-        >
-            <Synthesis>
-                <template slot="enlarge">
-                    <v-btn icon @click="enlarge = ~enlarge">
-                        <v-icon small v-if="enlarge">
-                            mdi-magnify-minus
-                        </v-icon>
-                        <v-icon small v-else> mdi-magnify-plus </v-icon>
-                    </v-btn>
-                </template>
-            </Synthesis>
-        </v-col>
-        <v-col cols="12" sm="12" md="6" lg="6" v-if="telescope_mode == 'vis'">
-            <Baseline />
-        </v-col>
-        <v-col cols="12" sm="12" md="6" lg="6" v-if="telescope_mode == 'vis'">
-            <ArrayLayout />
-        </v-col>
-        <v-col cols="12" sm="12" md="6" lg="6" v-if="telescope_mode == 'diag'">
+        <template v-if="telescope_mode == 'vis'">
+            <v-col cols="12" sm="12" md="6" lg="4">
+                <Synthesis />
+            </v-col>
+            <v-col cols="12" sm="12" md="6" lg="4">
+                <Baseline />
+            </v-col>
+            <v-col cols="12" sm="12" md="6" lg="4">
+                <ArrayLayout />
+            </v-col>
+        </template>
+        <v-col cols="12" sm="12" md="6" lg="4" v-if="telescope_mode == 'diag'">
             <RadioSpectrum />
         </v-col>
-        <v-col cols="12" sm="12" md="6" lg="6">
+        <v-col cols="12" sm="12" md="6" lg="4">
             <RecentData />
         </v-col>
     </v-row>
