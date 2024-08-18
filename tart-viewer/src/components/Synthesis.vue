@@ -98,8 +98,7 @@
 <script>
 import { useAppStore } from "@/stores/app";
 import { mapActions, mapState } from "pinia";
-const wasm = await import("wasm-tart-imaging");
-const json_to_svg_ext = wasm.json_to_svg_ext;
+import { SVG } from "gridless";
 
 import axios from "axios";
 function remoteRender(newJ, nside, show_sat, vm) {
@@ -180,42 +179,36 @@ export default {
         redraw: function () {
             if (this.reducedVis && this.antennas && this.gain) {
                 let start = performance.now();
-                let newJ = JSON.parse(
-                    JSON.stringify({
-                        info: { info: this.info },
-                        ant_pos: this.antennas,
-                        gains: this.gain,
-                        data: [[this.reducedVis, this.sat_list]],
-                    }),
-                );
                 if (
-                    newJ.ant_pos === null ||
-                    newJ.gains === null ||
-                    newJ.data[0][0] === null ||
-                    newJ.data[0][1].length === 0
+                    this.antennas === null ||
+                    this.gain === null ||
+                    this.reducedVis === null ||
+                    this.sat_list.length === 0
                 ) {
                     return;
                 }
+                let payload = JSON.stringify({
+                    info: { info: this.info },
+                    ant_pos: this.antennas,
+                    gains: this.gain,
+                    data: [[this.reducedVis, this.sat_list]],
+                });
                 const nside = this.nside;
-                const show_ant = this.show_sat;
-                // remoteRender(newJ, nside, show_ant, this);
+                const show_sat = this.show_sat;
+                let vm = this;
                 try {
-                    let ret = json_to_svg_ext(
-                        JSON.stringify(newJ),
-                        nside,
-                        show_ant,
-                    );
-                    var container = document.getElementById("container");
-                    container.innerHTML = ret.replace(
-                        'width="12cm" height="12cm"',
-                        "",
+                    let svg = new SVG();
+                    svg.json_to_svg_ext(payload, nside, show_sat);
+                    let container = document.getElementById("container");
+                    container.innerHTML = Object.freeze(
+                        svg.get().replace('width="12cm" height="12cm"', ""),
                     );
                 } catch (e) {
                     console.error(e);
                     return;
                 } finally {
                     this.render_ms = performance.now() - start;
-                    addHover(this);
+                    addHover(vm);
                 }
             }
         },
