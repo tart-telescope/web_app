@@ -1,3 +1,5 @@
+test:
+	docker compose -f docker-compose-test.yml up --build
 
 deploy:
 	docker compose build

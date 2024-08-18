@@ -13,8 +13,8 @@ build_wasm_tart:
 	#RUST_LOG=info wasm-pack build --release --out-dir ../tart-vuer/pkg
 	RUST_LOG=info wasm-pack build --release --out-dir ../tart-viewer/pkg
 	
-HOST=https://tart.elec.ac.nz
-API=${HOST}/signal/api/v1/
+HOST=https://api.elec.ac.nz
+API=${HOST}/tart/mu-udm/api/v1/
 
 get:
 	tart_calibration_data --n 1 --file data.json
