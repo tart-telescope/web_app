@@ -6,7 +6,7 @@ services:
       dockerfile: Dockerfile
       args:
         CI_PROJECT_NAME: viewer # needed if exposed as /viewer
-        # BASE_URL: /viewer
+        BASE_URL: ${BASE_URL}
         CI_COMMIT_SHA: ${CI_COMMIT_SHA} # CI_COMMIT_SHA short bash: export CI_COMMIT_SHA=$(git rev-parse --short HEAD)
 
     ports:
