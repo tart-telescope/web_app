@@ -14,9 +14,7 @@
                 <ArrayLayout />
             </v-col>
         </template>
-        <v-col cols="12" sm="12" md="6" lg="4" v-if="telescope_mode == 'diag'">
-            <RadioSpectrum />
-        </v-col>
+        <RadioSpectrum v-if="telescope_mode == 'diag'" />
         <v-col cols="12" sm="12" md="6" lg="4">
             <RecentData />
         </v-col>
@@ -43,11 +41,6 @@ export default {
         GeneralInfo,
         RadioSpectrum,
         RecentData,
-    },
-    data() {
-        return {
-            enlarge: false,
-        };
     },
     computed: {
         ...mapState(useAppStore, ["telescope_mode"]),
