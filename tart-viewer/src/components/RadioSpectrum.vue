@@ -1,17 +1,54 @@
 <template>
-    <v-card flat outlined elevation="3">
-        <v-card-title class="my-0 mx-0 pt-1 pb-0">
-            <h4 class="teal--text text--lighten-2 text-uppercase">
-                Radio Spectrum
-            </h4>
-        </v-card-title>
-        <VueApexCharts
-            height="400"
-            type="line"
-            :options="apex.options"
-            :series="series"
-        />
-    </v-card>
+    <v-col cols="12" sm="12" md="12" lg="12">
+        <v-card flat outlined elevation="3">
+            <v-card-title class="my-0 mx-0 pt-1 pb-0">
+                <h4 class="teal--text text--lighten-2 text-uppercase">
+                    View Options
+                </h4>
+            </v-card-title>
+            <v-card-text>
+                <v-row>
+                    <v-col cols="12" sm="12" md="12" lg="12">
+                        <v-select
+                            v-model="partition_size"
+                            :items="partition_sizes"
+                            label="Partition Size"
+                            outlined
+                            dense
+                        ></v-select>
+                    </v-col>
+                </v-row>
+            </v-card-text>
+        </v-card>
+    </v-col>
+    <v-col
+        cols="12"
+        sm="12"
+        :md="partition_size == 24 ? 12 : 6"
+        :lg="partition_size == 24 ? 12 : 6"
+        v-for="partition in partitions"
+    >
+        <v-card flat outlined elevation="3">
+            <v-card-title class="my-0 mx-0 pt-1 pb-0">
+                <h4 class="teal--text text--lighten-2 text-uppercase">
+                    Baseband Spectrum
+                </h4>
+            </v-card-title>
+            <v-card-text>
+                <VueApexCharts
+                    height="400"
+                    type="line"
+                    :options="apex.options"
+                    :series="
+                        series.slice(
+                            partition_size * partition,
+                            partition_size * (partition + 1),
+                        )
+                    "
+                />
+            </v-card-text>
+        </v-card>
+    </v-col>
 </template>
 
 <script>
@@ -20,15 +57,36 @@ import VueApexCharts from "vue3-apexcharts";
 import { useAppStore } from "@/stores/app";
 import { mapState, mapActions } from "pinia";
 
+import { useTheme } from "vuetify";
+
 export default {
     name: "BaselineComponent",
     components: {
         VueApexCharts,
     },
-
+    setup() {
+        const theme = useTheme();
+        return { theme };
+    },
+    data() {
+        return {
+            partition_size: 6,
+            partition_sizes: [4, 6, 24],
+            ctheme: this.theme,
+        };
+    },
     computed: {
         ...mapState(useAppStore, ["channels"]),
-
+        partitions() {
+            return Array.from(
+                {
+                    length: Math.ceil(
+                        this.channels.length / this.partition_size,
+                    ),
+                },
+                (_, i) => i,
+            );
+        },
         aMin() {
             return Math.min(
                 ...this.series.map((ant) => ant.data.map((el) => el.y)).flat(),
@@ -39,10 +97,14 @@ export default {
                 ...this.series.map((ant) => ant.data.map((el) => el.y)).flat(),
             );
         },
+        currentTheme() {
+            return this.ctheme.name === "dark" ? "dark" : "light";
+        },
         apex() {
             return {
                 options: {
                     grid: {
+                        theme: this.currentTheme,
                         padding: {
                             top: -20,
                             right: 0,
@@ -54,12 +116,39 @@ export default {
                         min: this.aMin || -80,
                         max: this.aMax || -50,
                     },
+                    colors: [
+                        "#1A73E8",
+                        "#B32824",
+                        "#F4B400",
+                        "#0F9D58",
+                        "#AB47BC",
+                        "#00ACC1",
+                        "#FF7043",
+                        "#9E9D24",
+                        "#3F51B5",
+                        "#FF4081",
+                    ],
                     stroke: {
                         curve: "smooth",
-                        width: 0.8,
+                        width: 4,
+                        dashArray: [0, 8, 5, 4],
                     },
                     tooltip: {
                         theme: "dark",
+                        style: {
+                            fontSize: "15px",
+                        },
+                        x: {
+                            show: false,
+                        },
+                        y: {
+                            formatter: function (value) {
+                                return value.toFixed(1) + " dBm";
+                            },
+                        },
+                    },
+                    theme: {
+                        mode: this.currentTheme,
                     },
 
                     chart: {
@@ -91,15 +180,18 @@ export default {
                     .filter((ch) => ch.radio_mean.ok)
                     .map((ch) => {
                         return {
-                            name: ch.id,
+                            name: "Ch" + ch.id.toString(),
                             data: ch.freq
                                 .map((fi, xi) => {
                                     return {
-                                        x: fi,
+                                        x: fi.toFixed(1),
                                         y: ch.power[xi],
                                     };
                                 })
                                 .filter((f, fi) => fi % 4 === 0),
+                            label: {
+                                text: "Ch" + ch.id.toString(),
+                            },
                         };
                     });
             }

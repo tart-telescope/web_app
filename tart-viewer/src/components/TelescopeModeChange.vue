@@ -45,8 +45,7 @@ export default {
     methods: {
         ...mapActions(useAppStore, ["setTelescopeMode", "logout"]),
         setMode(mode) {
-            console.log(mode);
-            // this.setTelescopeMode(mode);
+            this.setTelescopeMode(mode);
         },
     },
     computed: {

@@ -48,6 +48,7 @@ export const useAppStore = defineStore("app", {
       this.setCustomTART_URL(this.TART_API_HUB_URL + postFix);
     },
     setCustomTART_URL(newUrl) {
+      this.logout();
       this.resetUI();
       this.TART_URL = newUrl;
       this.renewMode();

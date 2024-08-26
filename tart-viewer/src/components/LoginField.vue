@@ -1,7 +1,7 @@
 <template>
     <v-list-item>
         <template v-if="authenticated">
-            <v-btn color="error" @click="logout">Logout</v-btn>
+            <v-btn block color="error" @click="logout">Logout</v-btn>
         </template>
         <template v-else>
             <v-text-field
