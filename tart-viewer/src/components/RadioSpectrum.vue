@@ -112,6 +112,14 @@ export default {
                             left: 0,
                         },
                     },
+                    xaxis: {
+                        type: "numeric",
+                        labels: {
+                            formatter: function (value) {
+                                return value.toFixed(1) + "MHz";
+                            },
+                        },
+                    },
                     yaxis: {
                         min: this.aMin || -80,
                         max: this.aMax || -50,
@@ -176,24 +184,20 @@ export default {
         series() {
             var series = [];
             if (this.channels.length) {
-                series = this.channels
-                    .filter((ch) => ch.radio_mean.ok)
-                    .map((ch) => {
-                        return {
-                            name: "Ch" + ch.id.toString(),
-                            data: ch.freq
-                                .map((fi, xi) => {
-                                    return {
-                                        x: fi.toFixed(1),
-                                        y: ch.power[xi],
-                                    };
-                                })
-                                .filter((f, fi) => fi % 4 === 0),
-                            label: {
-                                text: "Ch" + ch.id.toString(),
-                            },
-                        };
-                    });
+                series = this.channels.map((ch) => {
+                    return {
+                        name: "Ch" + ch.id.toString(),
+                        data: ch.freq.map((fi, xi) => {
+                            return {
+                                x: fi,
+                                y: ch.power[xi],
+                            };
+                        }),
+                        label: {
+                            text: "Ch" + ch.id.toString(),
+                        },
+                    };
+                });
             }
             return series;
         },
