@@ -33,12 +33,13 @@ ENV VITE_COMMIT_SHA=$CI_COMMIT_SHA
 
 RUN pnpm build --base=$BASE_URL/
 # Compress static files
-RUN find ./dist -type f -regex '.*\.\(htm\|html\|wasm\|txt\|text\|js\|css\)$' -exec gzip -f -k {} \;
+RUN find ./dist -type f -regex '.*\.\(htm\|html\|wasm\|eot\|ttf\|txt\|text\|js\|css\)$' -exec gzip -f --best -k {} \;
 
 
 FROM jauderho/nginx-distroless:stable AS production-stage
 
 ARG BASE_URL
 ENV BASE_URL=$BASE_URL
+COPY nginx.conf /etc/nginx/nginx.conf
 COPY --from=node-build-stage /app/tart-viewer/dist /usr/share/nginx/html$BASE_URL/
 EXPOSE 80

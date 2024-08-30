@@ -8,10 +8,10 @@ local:
 
 deploy:
 	CI_COMMIT_SHA=${BUILD} BASE_URL=${BASE_URL} docker compose build
-	docker compose down
-	docker compose up -d
+	CI_COMMIT_SHA=${BUILD} BASE_URL=${BASE_URL} docker compose down
+	CI_COMMIT_SHA=${BUILD} BASE_URL=${BASE_URL} docker compose up -d
 	rm -rf ./html # deleting old build files
-	docker compose cp frontend:/usr/share/nginx/html .
+	CI_COMMIT_SHA=${BUILD} BASE_URL=${BASE_URL} docker compose cp frontend:/usr/share/nginx/html .
 	cd html/viewer; tar -cf web_app.tar --exclude web_app.tar ./
 	rsync -rv html/viewer/ tart@tart.elec.ac.nz:~/caddy/html
 	rm -rf ./html # deleting build files
