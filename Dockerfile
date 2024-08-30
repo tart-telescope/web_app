@@ -23,9 +23,6 @@ RUN pnpm install --frozen-lockfile
 
 COPY tart-viewer /app/tart-viewer
 
-# ARG CI_PROJECT_NAME
-# ENV CI_PROJECT_NAME=$CI_PROJECT_NAME
-
 # if base url is not set. fallback to /
 ARG BASE_URL
 ENV BASE_URL=$BASE_URL
@@ -35,11 +32,11 @@ ENV CI_COMMIT_SHA=$CI_COMMIT_SHA
 ENV VITE_COMMIT_SHA=$CI_COMMIT_SHA
 
 RUN pnpm build --base=$BASE_URL/
-RUN find ./dist -type f -regex '.*\.\(htm\|html\|txt\|text\|js\|css\)$' -exec gzip -f -k {} \;
+# Compress static files
+RUN find ./dist -type f -regex '.*\.\(htm\|html\|wasm\|txt\|text\|js\|css\)$' -exec gzip -f -k {} \;
 
 
-FROM nginx:1.21.6-alpine AS production-stage
-# COPY --from=node-build-stage /app/tart-viewer/dist /usr/share/nginx/html
+FROM jauderho/nginx-distroless:stable AS production-stage
 
 ARG BASE_URL
 ENV BASE_URL=$BASE_URL
