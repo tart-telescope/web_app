@@ -47,13 +47,21 @@
                 >
                     <v-list-item-title v-text="item.title"></v-list-item-title>
                 </v-list-item>
-            </v-list>
 
-            <v-text-field
-                :disabled="selected[0] != 'custom'"
-                v-model="CUSTOM_TART_URL"
-                label="Telescope API Endpoint"
-            />
+                <v-text-field
+                    :disabled="selected[0] != 'custom'"
+                    v-model="CUSTOM_TART_URL"
+                    label="Telescope API Endpoint"
+                />
+                <v-btn
+                    color="secondary"
+                    outlined
+                    @click="setCustom"
+                    :disabled="selected[0] != 'custom'"
+                    block
+                    >Apply Custom Endpoint</v-btn
+                >
+            </v-list>
         </v-navigation-drawer>
         <v-main>
             <v-container fluid>
@@ -116,6 +124,11 @@ export default {
                 this.refreshInterval * 1000,
             );
         },
+        setCustom() {
+            window.clearTimeout(this.refresher);
+            this.setCustomTART_URL(this.CUSTOM_TART_URL);
+            this.getData();
+        },
         getData: async function () {
             this.renewMode();
             if (this.telescope_mode == "vis") {
@@ -135,12 +148,7 @@ export default {
             if (newVal.length > 0) {
                 window.clearTimeout(this.refresher);
                 let newPostfix = newVal[0];
-
-                if (newPostfix == "custom") {
-                    let url = this.CUSTOM_TART_URL;
-                    this.setCustomTART_URL(url);
-                    this.getData();
-                } else {
+                if (newPostfix != "custom") {
                     this.setTART_URL(newPostfix);
                     this.CUSTOM_TART_URL = this.TART_URL;
                     this.getData();
@@ -149,6 +157,7 @@ export default {
         },
     },
     created: function () {
+        this.CUSTOM_TART_URL = this.TART_URL;
         this.getData();
     },
     beforeDestroy() {
@@ -156,15 +165,6 @@ export default {
     },
     computed: {
         ...mapState(useAppStore, ["telescope_mode", "TART_URL"]),
-
-        TART_URL_LOCAL: {
-            get: function () {
-                return this.TART_URL;
-            },
-            set: function (newURL) {
-                this.setCustomTART_URL(newURL);
-            },
-        },
     },
 };
 </script>
