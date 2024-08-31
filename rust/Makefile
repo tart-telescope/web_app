@@ -9,10 +9,10 @@ pixels:
 build_wasm_pkg:
 	RUST_LOG=info wasm-pack build --release
 
+# This is needed to build the wasm for the viewer, when developing the viewer native with hmr enabled
 build_wasm_tart:
-	#RUST_LOG=info wasm-pack build --release --out-dir ../tart-vuer/pkg
 	RUST_LOG=info wasm-pack build --release --out-dir ../tart-viewer/pkg
-	
+
 HOST=https://api.elec.ac.nz
 API=${HOST}/tart/mu-udm/api/v1/
 
@@ -38,22 +38,19 @@ profile:
 speed:
 	#cargo clean
 	RUSTFLAGS='-C opt-level=2 -C target-cpu=native' cargo build --release
-api:
-	RUSTFLAGS='-C opt-level=3 -C target-cpu=native' cargo build --release
-	cp ./target/release/gridless ../image_server/	
 
 test:
-	./target/release/gridless --nside 2 --sources --file data.json
-	./target/release/gridless --nside 4 --sources --file data.json
-	./target/release/gridless --nside 6 --sources --file data.json
-	./target/release/gridless --nside 8 --sources --file data.json
-	./target/release/gridless --nside 10 --sources --file data.json
-	./target/release/gridless --nside 12 --sources --file data.json
-	./target/release/gridless --nside 14 --sources --file data.json
-	./target/release/gridless --nside 16 --sources --file data.json
-	./target/release/gridless --nside 18 --sources --file data.json
-	./target/release/gridless --nside 20 --sources --file data.json
-	./target/release/gridless --nside 22 --sources --file data.json
+	./target/release/gridless --sources --file data.json --nside 2
+	./target/release/gridless --sources --file data.json --nside 4
+	./target/release/gridless --sources --file data.json --nside 6
+	./target/release/gridless --sources --file data.json --nside 8
+	./target/release/gridless --sources --file data.json --nside 10
+	./target/release/gridless --sources --file data.json --nside 12
+	./target/release/gridless --sources --file data.json --nside 14
+	./target/release/gridless --sources --file data.json --nside 16
+	./target/release/gridless --sources --file data.json --nside 18
+	./target/release/gridless --sources --file data.json --nside 20
+	./target/release/gridless --sources --file data.json --nside 22
 	./target/release/gridless --sources --file data.json --nside 24
 	./target/release/gridless --sources --file data.json --nside 28
 	./target/release/gridless --sources --file data.json --nside 32
