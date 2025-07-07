@@ -4,17 +4,43 @@
  * Bootstraps Vuetify and other plugins then mounts the App`
  */
 
-// Plugins
-import { registerPlugins } from '@/plugins'
-
-// Components
-import App from './App.vue'
+// WASM
+import init from "gridless";
 
 // Composables
-import { createApp } from 'vue'
+import { createApp } from "vue";
 
-const app = createApp(App)
+// Plugins
+import { registerPlugins } from "@/plugins";
 
-registerPlugins(app)
+// Components
+import App from "./App.vue";
 
-app.mount('#app')
+// Note: Using individual SVG icons instead of full MDI font for better performance
+
+const app = createApp(App);
+
+registerPlugins(app);
+
+// Global WASM state
+window.wasmReady = false;
+window.wasmError = null;
+
+// Initialize WASM before mounting the app
+init()
+  .then(() => {
+    try {
+      window.wasmReady = true;
+      console.log("WASM initialized successfully and tested");
+    } catch (testError) {
+      console.error("WASM initialized but functions not working:", testError);
+      window.wasmError = testError;
+    }
+    app.mount("#app");
+  })
+  .catch((error) => {
+    console.error("Failed to initialize WASM:", error);
+    window.wasmError = error;
+    // Mount app anyway - components can fall back to remote rendering
+    app.mount("#app");
+  });

@@ -1,41 +1,51 @@
 [package]
 name = "gridless"
-version = "0.2.1"
+version = "0.3.0"
 authors = ["Tim Molteno <tim@elec.ac.nz>"]
+edition = "2024"
 
 [dependencies]
-cdshealpix = { version = "*"}
-ndarray = "^0.16"
-num = "^0.4"
+cdshealpix = "0.7"
+ndarray = { version = "0.16", features = ["rayon"] }
+num = "0.4"
+rayon = "1.8"
+libm = "0.2"
+ryu = "1.0"
 
 # For data handling
-structopt = "^0.2" # CLI lib (based on clap)
-chrono = "^0.4.7"   # To parse Dates
+chrono = { version = "0.4", features = ["serde"] } # To parse Dates
+
+# CLI dependencies (optional)
+clap = { version = "4.4", features = ["derive"], optional = true }
+
+# For templating
+sailfish = "0.9"
+thiserror = "2.0"
 
 # For requests
-serde = { version = "^1.0", features = ["derive"] }
-serde-wasm-bindgen = "0.4"
-serde_derive = "^1.0"
-serde_json = "^1.0"
-gloo-utils = { version = "0.1", features = ["serde"] }
-
-# reqwest="^0.9"
-
-wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
+serde = { version = "1.0", features = ["derive"] }
+serde-wasm-bindgen = "0.6.5"
+serde_derive = "1.0"
+serde_json = "1.0"
+bitcode = { version = "0.6", features = ["serde"] }
 
 
-#cfg-if = "0.1"
+# reqwest="^0.11"
 
+wasm-bindgen = { version = "0.2.100", features = ["serde-serialize"] }
+js-sys = "0.3"
+itoa = "1.0.15"
+
+# Explicitly configure web-sys for browser compatibility
 [dependencies.web-sys]
 version = "0.3"
-features = [
-]
-
+features = ["console", "Document", "Element", "HtmlElement", "Window"]
 
 
 [[bin]]
 name = "gridless"
 path = "src/main.rs"
+
 
 [lib]
 name = "gridlesslib"
@@ -44,10 +54,18 @@ path = "src/lib.rs"
 crate-type = ["cdylib", "rlib"]
 
 [features]
-nightly = []
+default = ["fast-math", "cli"]
+nightly = ["simd", "fast-math"]
+fast-math = []
+# Browser-specific feature to exclude Node.js dependencies
+browser = []
+# Enable WebAssembly SIMD optimizations
+simd = []
+# CLI functionality
+cli = ["clap"]
 
 [dev-dependencies]
-rand="0.7.0"
+rand = "0.9"
 
 
 [profile.dev]
@@ -55,4 +73,14 @@ opt-level = 0
 
 [profile.release]
 opt-level = 3
-lto = true
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+overflow-checks = false
+debug-assertions = false
+incremental = false
+
+# Profile for profiling with debug info
+[profile.profiling]
+inherits = "release"
+debug = true

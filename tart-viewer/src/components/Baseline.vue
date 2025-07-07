@@ -1,202 +1,188 @@
 <template>
-    <v-card class="mx-auto" flat outlined elevation="3">
-        <v-card-title
-            class="my-0 mx-0 pt-1 pb-0 teal--text text--lighten-2 text-uppercase"
-        >
-            Visibility Amplitude</v-card-title
-        >
-        <VueApexCharts
-            height="160"
-            type="line"
-            :options="apex.options"
-            :series="apex_vis_amp"
+  <v-card class="mx-auto square-card" elevation="3" flat outlined>
+    <div class="card-content">
+      <v-card-title
+        class="my-0 mx-0 pt-1 pb-0 teal--text text--lighten-2 text-uppercase"
+      >
+        Visibility Amplitude
+      </v-card-title>
+      <div class="chart-container">
+        <TreeshakenLineChart
+          :options="chartOptions"
+          :series="amplitudeSeries"
+          @mouse-leave="clearHoveredTimestamp"
+          @mouse-move="handleChartHover"
         />
-        <v-card-title
-            class="my-0 mx-0 pt-0 pb-0 teal--text text--lighten-2 text-uppercase"
-        >
-            Visibility Phase</v-card-title
-        >
-        <VueApexCharts
-            height="160"
-            type="line"
-            :options="apex_options_phase"
-            :series="apex_vis_phase"
+      </div>
+
+      <v-card-title
+        class="my-0 mx-0 pt-0 pb-0 teal--text text--lighten-2 text-uppercase"
+      >
+        Visibility Phase
+      </v-card-title>
+      <div class="chart-container">
+        <TreeshakenLineChart
+          :options="phaseChartOptions"
+          :series="phaseSeries"
+          @mouse-leave="clearHoveredTimestamp"
+          @mouse-move="handleChartHover"
         />
-        <v-card-actions class="pb-0">
-            <v-range-slider
-                v-model="selected_baseline"
-                @update:modelValue="selectBaseline($event)"
-                label="Baseline"
-                thumb-label="always"
-                step="1"
-                :thumb-size="20"
-                min="0"
-                max="23"
-                outlined
-            />
-        </v-card-actions>
-    </v-card>
+      </div>
+
+      <v-card-actions class="pb-0">
+        <v-range-slider
+          v-model="selected_baseline"
+          label="Baseline"
+          max="23"
+          min="0"
+          outlined
+          step="1"
+          thumb-label="always"
+          :thumb-size="20"
+          @update:model-value="selectBaseline"
+        />
+      </v-card-actions>
+    </div>
+  </v-card>
 </template>
 
-<script>
-import VueApexCharts from "vue3-apexcharts";
-import { useAppStore } from "@/stores/app";
-import { mapState, mapActions } from "pinia";
+<script lang="js">
+  import { mapActions, mapState } from "pinia";
+  import { useAppStore } from "@/stores/app";
+  import TreeshakenLineChart from "./TreeshakenLineChart.vue";
 
-export default {
+  export default {
     name: "BaselineComponent",
-    components: {
-        VueApexCharts,
-    },
-    props: {},
-    data: function () {
-        return {
-            selected_baseline: [0, 23],
-            apex: {
-                options: {
-                    grid: {
-                        padding: {
-                            top: -20,
-                            right: 0,
-                            bottom: -25,
-                            left: 0,
-                        },
-                    },
-                    xaxis: {
-                        show: false,
-                        type: "datetime",
-                        labels: {
-                            datetimeFormatter: {
-                                year: "yyyy",
-                                month: "MMM 'yy",
-                                day: "dd MMM",
-                                hour: "HH:mm:ss",
-                                minute: "HH:mm:ss.ff",
-                            },
-                        },
-                    },
-                    stroke: {
-                        curve: "smooth",
-                        width: 2,
-                    },
-                    tooltip: {
-                        theme: "dark",
-                    },
-                    chart: {
-                        id: "vuechart",
-                        group: "vis",
-                        toolbar: {
-                            show: false,
-                        },
-                        animations: {
-                            enabled: false,
-                            easing: "easeinout",
-                            speed: 50,
-                            animateGradually: {
-                                enabled: false,
-                                delay: 50,
-                            },
-                            dynamicAnimation: {
-                                enabled: false,
-                                speed: 50,
-                            },
-                        },
-                    },
-                },
-            },
-        };
-    },
-    methods: {
-        ...mapActions(useAppStore, ["selectBaseline"]),
+    components: { TreeshakenLineChart },
+
+    data() {
+      return {
+        selected_baseline: [0, 23],
+      };
     },
 
     computed: {
-        ...mapState(useAppStore, [
-            "cal",
-            "vis",
-            "gain",
-            "vis_history",
-            "selectedBaseline",
-        ]),
-        ant_sel_i() {
-            return this.selected_baseline[0];
-        },
-        ant_sel_j() {
-            return this.selected_baseline[1];
-        },
-        apex_options_phase() {
-            let options = {
-                ...this.apex.options,
-                yaxis: {
-                    max: 180,
-                    min: -180,
-                },
-            };
-            return options;
-        },
-        apex_vis_amp() {
-            var series = [
-                {
-                    name: "visReal",
-                    data: [],
-                },
-            ];
-            if (this.vis_history.length > 0) {
-                series = [
-                    {
-                        name: "Uncalibrated Amplitude",
-                        data: this.vis_history.map((x_h, idx) => ({
-                            x: this.categories[idx],
-                            y: x_h.data
-                                .filter(
-                                    (x) =>
-                                        x.i == this.ant_sel_i &&
-                                        x.j == this.ant_sel_j,
-                                )
-                                .map((x) =>
-                                    Math.sqrt(x.re ** 2 + x.im ** 2).toFixed(3),
-                                ),
-                        })),
-                    },
-                ];
-            }
-            return series;
-        },
-        apex_vis_phase() {
-            var series = [
-                {
-                    name: "Phase",
-                    data: [],
-                },
-            ];
-            if (this.vis_history.length > 0) {
-                series = [
-                    {
-                        name: "Uncalibrated Phase",
-                        data: this.vis_history.map((x_h, idx) => ({
-                            x: this.categories[idx],
-                            y: x_h.data
-                                .filter(
-                                    (x) =>
-                                        x.i == this.ant_sel_i &&
-                                        x.j == this.ant_sel_j,
-                                )
-                                .map((x) =>
-                                    (
-                                        (Math.atan2(x.im, x.re) * 180) /
-                                        Math.PI
-                                    ).toFixed(0),
-                                ),
-                        })),
-                    },
-                ];
-            }
-            return series;
-        },
+      ...mapState(useAppStore, ["vis_history"]),
 
-        categories() {
-            return this.vis_history.map((x_h) => x_h.timestamp);
-        },
+      // Get filtered data once and reuse
+      filteredData() {
+        if (this.vis_history.length === 0) return [];
+
+        const [i, j] = this.selected_baseline;
+        return this.vis_history.map((x_h, idx) => {
+          const item = x_h.data.find((x) => x.i === i && x.j === j);
+          return {
+            timestamp: x_h.timestamp,
+            amplitude: item ? Math.hypot(item.re, item.im) : null,
+            phase: item ? (Math.atan2(item.im, item.re) * 180) / Math.PI : null,
+          };
+        });
+      },
+
+      amplitudeSeries() {
+        return [
+          {
+            name: "Uncalibrated Amplitude",
+            data: this.filteredData.map((d) => ({
+              x: d.timestamp,
+              y: d.amplitude?.toFixed(3) || null,
+            })),
+          },
+        ];
+      },
+
+      phaseSeries() {
+        return [
+          {
+            name: "Uncalibrated Phase",
+            data: this.filteredData.map((d) => ({
+              x: d.timestamp,
+              y: d.phase?.toFixed(0) || null,
+            })),
+          },
+        ];
+      },
+
+      chartOptions() {
+        return {
+          grid: {
+            padding: { top: -20, right: 20, bottom: 10, left: 0 },
+          },
+          xaxis: {
+            type: "datetime",
+            labels: {
+              datetimeFormatter: {
+                hour: "HH:mm:ss",
+                minute: "HH:mm:ss",
+                second: "HH:mm:ss",
+              },
+            },
+          },
+          stroke: { curve: "smooth", width: 2 },
+          markers: { size: 4, hover: { size: 8 } },
+          tooltip: {
+            theme: "dark",
+            x: {
+              formatter: (value) => {
+                const date = new Date(value);
+                return Number.isNaN(date.getTime())
+                  ? value
+                  : date.toLocaleTimeString("en-US", { hour12: false });
+              },
+            },
+          },
+        };
+      },
+
+      phaseChartOptions() {
+        return {
+          ...this.chartOptions,
+          yaxis: { max: 180, min: -180 },
+        };
+      },
     },
-};
+
+    methods: {
+      ...mapActions(useAppStore, [
+        "selectBaseline",
+        "setHoveredTimestamp",
+        "clearHoveredTimestamp",
+      ]),
+
+      handleChartHover(event, chartContext) {
+        if (this.filteredData.length === 0) return;
+
+        const { clientX } = event;
+        const chartEl = chartContext.el;
+        const rect = chartEl.getBoundingClientRect();
+        const ratio = (clientX - rect.left) / rect.width;
+        const index = Math.round(ratio * (this.filteredData.length - 1));
+
+        if (index >= 0 && index < this.filteredData.length) {
+          this.setHoveredTimestamp(this.filteredData[index].timestamp);
+        }
+      },
+    },
+  };
 </script>
+
+<style scoped>
+.square-card {
+  aspect-ratio: 1;
+  max-height: 80vh;
+  max-width: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.chart-container {
+  flex: 1;
+  min-height: 0;
+}
+</style>

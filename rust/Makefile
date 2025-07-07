@@ -1,10 +1,28 @@
 NSIDE=40
 
 all:
-	cargo run -- --nside ${NSIDE} --sources --file data.json
+	cargo run --bin gridless -- --nside ${NSIDE} --sources --file data.json
 
 pixels:
-	cargo run -- --nside 3 --file data.json --pixels
+	cargo run --bin gridless -- --nside 3 --file data.json
+
+# SVG Generation Targets with Enhanced Features
+
+# Generate full-featured SVG with colorbar and statistics overlay
+# This creates a comprehensive visualization including:
+# - Radio source markers (--sources)
+# - Statistical information overlay (--stats)
+# - Color scale legend/colorbar (--colorbar)
+full:
+	cargo run --bin gridless -- --nside ${NSIDE} --sources --stats --colorbar --file data.json
+
+# Generate SVG with just statistics overlay (no colorbar)
+stats:
+	cargo run --bin gridless -- --nside ${NSIDE} --sources --stats --file data.json
+
+# Generate SVG with just colorbar (no statistics overlay)
+colorbar:
+	cargo run --bin gridless -- --nside ${NSIDE} --sources --colorbar --file data.json
 
 build_wasm_pkg:
 	RUST_LOG=info wasm-pack build --release
@@ -14,7 +32,7 @@ build_wasm_tart:
 	RUST_LOG=info wasm-pack build --release --out-dir ../tart-viewer/pkg
 
 HOST=https://api.elec.ac.nz
-API=${HOST}/tart/mu-udm/api/v1/
+API=${HOST}/tart/zm-cbu/api/v1/
 
 get:
 	tart_calibration_data --n 1 --file data.json
@@ -29,37 +47,37 @@ catalog:
 	curl -o catalog.json "${HOST}/catalog/catalog?lat=-45.85&lon=170.54"
 
 
+# Performance measurement and profiling targets
+
 # Requires perf-tools-unstable
 # echo -1 > /proc/sys/kernel/perf_event_paranoid
 profile:
-	RUSTFLAGS='-g'; cargo build --release
-	perf record --call-graph=dwarf ./target/release/gridless --nside 7 --file data.json
+	RUSTFLAGS='-g' cargo build --profile profiling
+	perf record --call-graph=dwarf ./target/profiling/gridless --nside 128 --file data.json
+	perf report
+
+# Optimized build for native CPU
 
 speed:
-	#cargo clean
-	RUSTFLAGS='-C opt-level=2 -C target-cpu=native' cargo build --release
+	RUSTFLAGS='-C target-cpu=native' cargo build --timings --release --features fast-math
 
+# Performance testing across different nside values
 test:
-	./target/release/gridless --sources --file data.json --nside 2
-	./target/release/gridless --sources --file data.json --nside 4
-	./target/release/gridless --sources --file data.json --nside 6
-	./target/release/gridless --sources --file data.json --nside 8
-	./target/release/gridless --sources --file data.json --nside 10
-	./target/release/gridless --sources --file data.json --nside 12
-	./target/release/gridless --sources --file data.json --nside 14
-	./target/release/gridless --sources --file data.json --nside 16
-	./target/release/gridless --sources --file data.json --nside 18
-	./target/release/gridless --sources --file data.json --nside 20
-	./target/release/gridless --sources --file data.json --nside 22
-	./target/release/gridless --sources --file data.json --nside 24
-	./target/release/gridless --sources --file data.json --nside 28
-	./target/release/gridless --sources --file data.json --nside 32
-	./target/release/gridless --sources --file data.json --nside 36
-	./target/release/gridless --sources --file data.json --nside 40
-	./target/release/gridless --sources --file data.json --nside 44
-	./target/release/gridless --sources --file data.json --nside 48
-	./target/release/gridless --sources --file data.json --nside 64
-	./target/release/gridless --sources --file data.json --nside 96
-	./target/release/gridless --sources --file data.json --nside 128
-	./target/release/gridless --sources --file data.json --nside 192
-	./target/release/gridless --sources --file data.json --nside 256
+	cargo build --release
+	# RUSTFLAGS='-C opt-level=3 -C target-cpu=native' cargo build --release
+	@echo "Running performance tests..."
+	@for nside in 32 64 128 256; do \
+		echo "Testing nside=$$nside"; \
+		hyperfine './target/release/gridless --file data.json --nside '$$nside; \
+	done
+
+# WASM Build Targets - Optimized for different deployment scenarios
+
+# Production WASM build with maximum optimization (recommended)
+export-wasm-production:
+	RUSTFLAGS='-C target-feature=+simd128,+bulk-memory,+nontrapping-fptoint -C opt-level=3 -C codegen-units=1' \
+	wasm-pack build --release --target web --out-dir ../tart-viewer/pkg \
+		-- --features fast-math,simd,browser --no-default-features
+
+export-wasm-production-legacy:
+	CARGO_FEATURES=fast-math wasm-pack build --release --target web --out-dir ../tart-viewer/pkg -- --features fast-math,simd

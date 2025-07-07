@@ -1,0 +1,9 @@
+<?xml version="1.0" standalone="<%= if standalone %>yes<% else %>no<% endif %>"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="<%= width %>cm" height="<%= height %>cm"
+     <% if let Some((vx, vy, vw, vh)) = view_box %>viewBox="<%= vx %> <%= vy %> <%= vw %> <%= vh %>"<% endif %>
+     version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<% if let Some(ref title) = title %><title><%= title %></title><% endif %>
+<% if let Some(ref desc) = desc %><desc><%= desc %></desc><% endif %>
+<%= content %>
+</svg>

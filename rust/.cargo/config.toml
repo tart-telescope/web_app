@@ -1,0 +1,33 @@
+[build]
+# Default to WASM for web builds, but allow override for native builds
+# target = "wasm32-unknown-unknown"
+
+[target.wasm32-unknown-unknown]
+rustflags = [
+	"-C",
+	"target-feature=+simd128",
+	"-C",
+	"target-feature=+bulk-memory",
+	"-C",
+	"target-feature=+mutable-globals",
+	"-C",
+	"target-feature=+reference-types",
+]
+
+[target.x86_64-unknown-linux-gnu]
+rustflags = ["-C", "target-cpu=native"]
+
+[env]
+# Enable SIMD features by default for development
+CARGO_CFG_TARGET_FEATURE = "simd128"
+
+# Optimize for WebAssembly
+[profile.release]
+lto = true
+opt-level = "s"
+panic = "abort"
+codegen-units = 1
+
+# Development profile with SIMD support
+[profile.dev]
+panic = "abort"

@@ -1,59 +1,19 @@
 //
-// Copyright (c) 2019-2021 Tim Molteno tim@elec.ac.nz
+// Copyright (c) 2019-2024 Tim Molteno tim@elec.ac.nz
 //
-use utils::{VectorReal, VectorComplex, C64, PI};
-use sphere::Hemisphere;
+//! Gridless deconvolution algorithms for radio astronomy imaging.
+//!
+//! This module provides both standard and SIMD-optimized implementations
+//! of gridless imaging techniques that avoid the traditional gridding step,
+//! directly computing sky brightness from visibility measurements using
+//! spherical harmonics.
 
-use ndarray::{Ix1};
+// Re-export core functions
+pub use crate::gridless_core::{compute_fourier_harmonics, reconstruct_sky_image};
 
-pub fn get_harmonics(
-            sky: &Hemisphere,
-            u_arr: &VectorReal, 
-            v_arr: &VectorReal, 
-            w_arr: &VectorReal) -> Vec::<VectorComplex> {
-                        
-    let mut harmonics = Vec::new();
-    
-    let n_arr_minus_1 = &sky.n - 1.0;
+// Re-export SIMD functions
+#[cfg(target_arch = "wasm32")]
+pub use crate::wasm::gridless_simd::reconstruct_sky_image_simd;
 
-    let p2j = C64::new(0.0, 2.0*PI);
-    
-    for i in 0..u_arr.len() {
-        let u = u_arr[i];
-        let v = v_arr[i];
-        let w = w_arr[i];
-        
-        let theta = u*&sky.l + v*&sky.m + w*&n_arr_minus_1;
-        let harmonic = theta.mapv(|x| (-p2j*x).exp() / (sky.npix as f64).sqrt());
-        harmonics.push(harmonic);
-    }
-
-    return harmonics
-}
-
-
-pub fn image_visibilities( 
-            vis: &VectorComplex,
-            u: &VectorReal,
-            v: &VectorReal,
-            w: &VectorReal,
-            sky: &mut Hemisphere,
-            real_only: bool)
-{
-    let n_s = &sky.visible_pix.len();
-
-    let mut pixels = VectorComplex::zeros(Ix1(*n_s));
-
-    let harmonics = get_harmonics(sky, u, v, w);
-    
-    for i in 0..vis.len() {
-        let v = vis[i];
-        pixels = pixels + v * &harmonics[i];
-    }
-    
-    if real_only {
-        sky.visible_pix = pixels.mapv(|p| p.re);
-    } else { 
-        sky.visible_pix = pixels.mapv(|p| p.norm());
-    }
-}
+#[cfg(not(target_arch = "wasm32"))]
+pub use crate::gridless_core::reconstruct_sky_image as reconstruct_sky_image_simd;

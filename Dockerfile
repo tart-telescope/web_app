@@ -4,10 +4,12 @@ WORKDIR /app/rust
 RUN apt-get update && apt-get install -y curl
 RUN curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 COPY rust /app/rust
-RUN RUST_LOG=info wasm-pack build --release --out-dir ./pkg
+RUN RUSTFLAGS='-C target-feature=+simd128,+bulk-memory,+nontrapping-fptoint -C opt-level=3 -C codegen-units=1' \
+	RUST_LOG=info wasm-pack build --release --target web --out-dir ./pkg \
+		-- --features fast-math,simd,browser --no-default-features
 
 # Web App build stage
-FROM node:20 AS node-build-stage
+FROM node:24-alpine AS node-build-stage
 WORKDIR /app/tart-viewer
 RUN npm install -g pnpm
 
