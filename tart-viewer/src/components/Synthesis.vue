@@ -20,6 +20,22 @@
         Realtime View
         <v-spacer />
         <v-btn
+          :color="show_sat ? 'primary' : 'default'"
+          icon
+          size="small"
+          @click="show_sat = !show_sat"
+        >
+          <v-icon>mdi-satellite-variant</v-icon>
+        </v-btn>
+        <v-btn
+          :color="is3D ? 'primary' : 'default'"
+          icon
+          size="small"
+          @click="is3D = !is3D"
+        >
+          <v-icon>mdi-rotate-3d-variant</v-icon>
+        </v-btn>
+        <v-btn
           icon
           size="small"
           @click="fullscreen = true"
@@ -36,10 +52,6 @@
 
 
       <v-card class="py-0 my-0" elevation="0">
-        <v-card-actions class="py-0 my-0 justify-space-between">
-          <v-switch v-model="show_sat" label="Overlay Satellites" />
-          <v-switch v-model="is3D" label="3D View" />
-        </v-card-actions>
 
         <!-- Timing Info Display -->
         <div v-if="showTimings" class="pa-3 text-lowercase">

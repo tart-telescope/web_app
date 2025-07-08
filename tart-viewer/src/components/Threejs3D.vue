@@ -176,7 +176,10 @@
     // No background - use transparent
 
     // Camera setup - orthographic for uniform view
-    const aspect = props.width / props.height;
+    const { width, height } = props.autoResize
+      ? getContainerSize()
+      : { width: props.width, height: props.height };
+    const aspect = width / height;
     const frustumSize = CAMERA_DEFAULTS.sphereView.frustumSize;
     camera = new OrthographicCamera(
       (-frustumSize * aspect) / 2,
@@ -259,15 +262,16 @@
     canvasRef.value.addEventListener("mousemove", onMouseMove);
     canvasRef.value.addEventListener("mouseup", onMouseUp);
     canvasRef.value.addEventListener("mouseleave", onMouseLeave);
-    canvasRef.value.addEventListener("wheel", onMouseWheel);
+    canvasRef.value.addEventListener("wheel", onMouseWheel, { passive: false });
 
     // Touch events for mobile
-    canvasRef.value.addEventListener("touchstart", onTouchStart);
-    canvasRef.value.addEventListener("touchmove", onTouchMove);
-    canvasRef.value.addEventListener("touchend", onTouchEnd);
+    canvasRef.value.addEventListener("touchstart", onTouchStart, { passive: false });
+    canvasRef.value.addEventListener("touchmove", onTouchMove, { passive: false });
+    canvasRef.value.addEventListener("touchend", onTouchEnd, { passive: false });
   }
 
   function onMouseDown(event) {
+    event.preventDefault();
     isMouseDown = true;
     mouseX = event.clientX;
     mouseY = event.clientY;
@@ -284,7 +288,7 @@
   }
 
   function onMouseMove(event) {
-    // Update mouse position for raycasting
+    // Update mouse position for coordinate sprite
     const rect = canvasRef.value.getBoundingClientRect();
     mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
@@ -299,13 +303,14 @@
       return;
     }
 
+    event.preventDefault();
+
+    // Handle mouse dragging rotation
     const deltaX = event.clientX - mouseX;
     const deltaY = event.clientY - mouseY;
 
     targetRotationY += deltaX * (INTERACTION_DEFAULTS.rotationSensitivity / 200);
     targetRotationX -= deltaY * (INTERACTION_DEFAULTS.rotationSensitivity / 200);
-
-    // Clamp vertical rotation
     targetRotationX = Math.max(
       -INTERACTION_DEFAULTS.verticalRotationLimit,
       Math.min(INTERACTION_DEFAULTS.verticalRotationLimit, targetRotationX),
@@ -348,6 +353,8 @@
   }
 
   function onMouseWheel(event) {
+    event.preventDefault();
+    
     const delta =
       event.deltaY > 0
         ? INTERACTION_DEFAULTS.zoomSensitivity
@@ -372,6 +379,8 @@
 
   // Touch events
   function onTouchStart(event) {
+    event.preventDefault();
+    
     if (event.touches.length === 1) {
       mouseX = event.touches[0].clientX;
       mouseY = event.touches[0].clientY;
@@ -406,6 +415,8 @@
         return;
       }
 
+      event.preventDefault();
+
       // Handle touch dragging rotation
       const deltaX = event.touches[0].clientX - mouseX;
       const deltaY = event.touches[0].clientY - mouseY;
@@ -423,14 +434,16 @@
   }
 
   function onTouchEnd(event) {
+    event.preventDefault();
+    
     isMouseDown = false;
 
-    // Show coordinate sprite again when touch dragging ends
+    // Show coordinate sprite when touch dragging ends
     if (coordinateDiv) {
       coordinateDiv.style.display = "block";
     }
 
-    // Show position indicator again when touch dragging ends
+    // Show position indicator when touch dragging ends
     if (positionIndicator) {
       positionIndicator.visible = true;
     }
@@ -1175,6 +1188,11 @@
 
     // Initial resize to fit container
     handleResize();
+    
+    // Reset camera to ensure proper initial zoom level
+    setTimeout(() => {
+      resetCamera();
+    }, 100);
   });
 
   onUnmounted(() => {
@@ -1280,6 +1298,22 @@
 
 .threejs-canvas:active {
   cursor: grabbing;
+}
+
+.threejs-3d-container {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  touch-action: none;
+}
+
+.threejs-canvas {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  touch-action: none;
 }
 
 .controls {

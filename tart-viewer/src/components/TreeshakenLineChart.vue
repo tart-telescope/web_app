@@ -50,6 +50,19 @@
           height: props.height,
           toolbar: { show: false },
           animations: { enabled: false },
+          selection: {
+            enabled: false,
+          },
+          zoom: {
+            enabled: false,
+          },
+          pan: {
+            enabled: false,
+          },
+          background: 'transparent',
+          dropShadow: {
+            enabled: false,
+          },
           events: {
             dataPointSelection: (event, chartContext, config) =>
               emit("data-point-selection", event, chartContext, config),
@@ -118,5 +131,20 @@
 .treeshaken-line-chart {
   width: 100%;
   height: 100%;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  overflow: hidden;
+}
+
+.treeshaken-line-chart :deep(.apexcharts-canvas) {
+  touch-action: pan-y;
+  pointer-events: auto;
+}
+
+.treeshaken-line-chart :deep(.apexcharts-svg) {
+  touch-action: pan-y;
 }
 </style>
