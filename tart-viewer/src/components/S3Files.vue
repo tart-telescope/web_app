@@ -145,6 +145,11 @@
       },
     },
     computed: {
+      tomorrowDate() {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        return tomorrow;
+      },
       todayDate() {
         return new Date();
       },
@@ -176,10 +181,11 @@
         const minDesiredFiles = 50; // Adjust this threshold as needed
 
         try {
+          const tomorrowPrefix = this.generateDatePrefix(this.tomorrowDate);
           const todayPrefix = this.generateDatePrefix(this.todayDate);
           const yesterdayPrefix = this.generateDatePrefix(this.yesterdayDate);
 
-          // Fetch today's files first
+          const tomorrowFiles = await this.fetchSingleDay(tomorrowPrefix);
           const todayFiles = await this.fetchSingleDay(todayPrefix);
           let yesterdayFiles = [];
           if (todayFiles.length < minDesiredFiles) {
@@ -187,7 +193,7 @@
           }
 
           // Combine all files
-          this.allFiles = [...todayFiles, ...yesterdayFiles];
+          this.allFiles = [...tomorrowFiles, ...todayFiles, ...yesterdayFiles];
 
           // Sort by lastModified date (newest first) and limit to 50
           this.allFiles.sort((a, b) => {
@@ -441,7 +447,7 @@
                 continue;
               }
 
-              const ts = new Date(timestamp.slice(0, -3) + "Z");
+              const ts = new Date(timestamp);
               // skip if timestamp already exists
               if (
                 history.some((record) => Math.abs(record.timestamp - ts) < 0.01)
