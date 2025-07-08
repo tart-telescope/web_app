@@ -1,62 +1,56 @@
 <template>
-  <v-container fluid>
-    <!-- Thinning Control -->
-    <v-card class="mb-4">
-      <v-card-title class="text-h6">Data Thinning</v-card-title>
-      <v-card-text>
-        <v-select
-          v-model="thinningFactor"
-          dense
-          hint="Higher values = faster loading, less data"
-          :items="thinningOptions"
-          label="Load every Nth record"
-          outlined
-          persistent-hint
-        />
-      </v-card-text>
-    </v-card>
+  <v-card v-if="files.length > 0" class="mx-auto" elevation="3">
+    <v-card-title class="py-3 teal--text text--lighten-2 d-flex align-center">
+      <v-icon class="mr-2">mdi-folder</v-icon>
+      Cloud Files
+      <v-spacer />
+      <v-chip
+        color="primary"
+        size="small"
+        variant="flat"
+      >
+        Add to timeline
+      </v-chip>
+    </v-card-title>
 
-    <!-- Content (when not loading) -->
-    <div v-if="!loading && !error">
-      <!-- Files -->
-      <div v-if="files.length > 0">
-        <v-list-subheader>Files (most recent 50 from last 24h)</v-list-subheader>
-        <v-row>
-          <v-col
-            v-for="file in files"
-            :key="file.name"
-            cols="12"
-            lg="3"
-            md="4"
-            sm="6"
+    <v-card-text class="pa-2">
+      <v-row>
+        <v-col
+          v-for="file in files"
+          :key="file.name"
+          cols="12"
+          xl="3"
+          lg="4"
+          md="4"
+          sm="6"
+        >
+          <v-card
+            class="file-card"
+            :disabled="loadingFile === file.name"
+            :loading="loadingFile === file.name"
+            @click="handleFileClick(file)"
           >
-            <v-card
-              class="file-card"
-              :disabled="loadingFile === file.name"
-              hover
-              :loading="loadingFile === file.name"
-              @click="handleFileClick(file)"
-            >
-              <v-card-text>
-                <div class="d-flex align-center mb-2">
-                  <v-icon
-                    class="me-2"
-                    :class="{ 'text-primary': loadingFile === file.name }"
-                    size="large"
-                  >
-                    {{
-                      loadingFile === file.name
-                        ? "mdi-loading"
-                        : "mdi-file-document"
-                    }}
-                  </v-icon>
-                  <div class="flex-grow-1">
-                    <div class="text-body-2 font-weight-bold text-wrap">
-                      {{ file.name }}
-                    </div>
+            <v-card-text class="pa-2">
+              <div class="d-flex align-center mb-2">
+                <v-icon
+                  class="me-2"
+                  :class="{ 'text-primary': loadingFile === file.name }"
+                  size="large"
+                >
+                  {{
+                    loadingFile === file.name
+                      ? "mdi-loading"
+                      : "mdi-file-document"
+                  }}
+                </v-icon>
+                <div class="flex-grow-1">
+                  <div class="text-body-2 font-weight-bold text-wrap">
+                    {{ file.name }}
                   </div>
                 </div>
-                <div class="d-flex justify-space-between align-center">
+              </div>
+              <div class="d-flex justify-space-between align-center">
+                <div class="d-flex gap-2">
                   <v-chip size="small" variant="outlined">
                     {{ formatFileSize(file.size) }}
                   </v-chip>
@@ -69,25 +63,23 @@
                     {{ formatTimeAgo(file.lastModified) }}
                   </v-chip>
                 </div>
-              </v-card-text>
-            </v-card>
-          </v-col>
-        </v-row>
-      </div>
-
-      <!-- Empty State -->
-      <v-card
-        v-if="folders.length === 0 && files.length === 0"
-        variant="outlined"
-      >
-        <v-card-text class="text-center pa-8">
-          <v-icon class="mb-4" size="64">mdi-folder-open</v-icon>
-          <div class="text-h6 mb-2">No files in bucket</div>
-          <div class="text-body-2">No files found in the last 24 hours</div>
-        </v-card-text>
-      </v-card>
-    </div>
-  </v-container>
+                <v-chip
+                  color="primary"
+                  :href="getFileUrl(file)"
+                  size="small"
+                  target="_blank"
+                  variant="flat"
+                  @click.stop
+                >
+                  <v-icon size="small">mdi-download</v-icon>
+                </v-chip>
+              </div>
+            </v-card-text>
+          </v-card>
+        </v-col>
+      </v-row>
+    </v-card-text>
+  </v-card>
 </template>
 
 <script>
@@ -109,7 +101,12 @@
         type: String,
         default: "",
       },
+      dataThinning: {
+        type: Number,
+        default: 1,
+      },
     },
+    emits: ['path-changed'],
     setup() {
       const store = useAppStore();
       return { store };
@@ -124,14 +121,7 @@
         folders: [], // Array: folder/prefix names
         currentPrefix: this.basePath, // String: current S3 prefix being viewed
         allFiles: [], // Array: combined files from both days
-        thinningFactor: 10, // Number: load every Nth record (1=all, 2=every 2nd, etc.)
-        thinningOptions: [
-          { title: "All records (1:1)", value: 1 },
-          { title: "Every 2nd record (1:2)", value: 2 },
-          { title: "Every 3rd record (1:3)", value: 3 },
-          { title: "Every 5th record (1:5)", value: 5 },
-          { title: "Every 10th record (1:10)", value: 10 },
-        ],
+
       };
     },
     // Watchers for reactive data changes
@@ -142,6 +132,9 @@
       },
       currentPrefix() {
         this.$emit("path-changed", this.currentPrefix);
+      },
+      dataThinning() {
+        this.fetchLast24Hours();
       },
     },
     computed: {
@@ -203,8 +196,14 @@
             return new Date(b.lastModified) - new Date(a.lastModified);
           });
 
-          const totalFiles = this.allFiles.length;
-          this.files = this.allFiles.slice(0, minDesiredFiles);
+          // Apply data thinning
+          let thinnedFiles = this.allFiles;
+          if (this.dataThinning > 1) {
+            thinnedFiles = this.allFiles.filter((_, index) => index % this.dataThinning === 0);
+          }
+
+          const totalFiles = thinnedFiles.length;
+          this.files = thinnedFiles.slice(0, minDesiredFiles);
 
           this.loading = false;
         } catch (error) {
@@ -556,3 +555,13 @@
     },
   };
 </script>
+
+<style scoped>
+.file-card {
+  border: 2px solid transparent;
+}
+
+.file-card:hover:not([disabled]) {
+  border-color: rgb(var(--v-theme-primary));
+}
+</style>

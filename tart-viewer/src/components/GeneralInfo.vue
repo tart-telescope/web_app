@@ -56,7 +56,9 @@
             </div>
           </v-col>
         </v-row>
-        <RecentData />
+
+        <ConfigTile />
+
       </v-card-text>
     </v-expand-transition>
   </v-card>
@@ -64,17 +66,17 @@
 
 <script>
   import { mapState } from "pinia";
-  import RecentData from "@/components/RecentData.vue";
+  import ConfigTile from "@/components/ConfigTile.vue";
   import { useAppStore } from "@/stores/app";
 
   export default {
     name: "GeneralInfo",
     components: {
-      RecentData,
+      ConfigTile,
     },
     data() {
       return {
-        show: false,
+        show: true,
       };
     },
     computed: {

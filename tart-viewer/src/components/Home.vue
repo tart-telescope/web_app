@@ -3,15 +3,16 @@
     <v-col cols="12" lg="4" md="6" sm="12">
       <GeneralInfo />
     </v-col>
+
     <template v-if="telescope_mode == 'vis'">
       <v-col cols="12" lg="4" md="6" sm="12">
         <Synthesis />
       </v-col>
       <v-col cols="12" lg="4" md="6" sm="12">
-        <Baseline />
+        <ArrayLayout />
       </v-col>
       <v-col cols="12" lg="4" md="6" sm="12">
-        <ArrayLayout />
+        <Baseline />
       </v-col>
       <v-col cols="12" lg="4" md="6" sm="12">
         <GainPhase />
@@ -19,7 +20,10 @@
     </template>
     <RadioSpectrum v-if="telescope_mode == 'diag'" />
     <v-col cols="12" lg="4" md="6" sm="12">
-      <S3Files :base-path="s3BasePath" />
+      <RecentData />
+    </v-col>
+    <v-col cols="12">
+      <S3Files :base-path="s3BasePath" :data-thinning="dataThinning" />
     </v-col>
   </v-row>
 </template>
@@ -28,10 +32,12 @@
   import { mapState } from "pinia";
   import ArrayLayout from "@/components/ArrayLayout.vue";
   import Baseline from "@/components/Baseline.vue";
+
   import GainPhase from "@/components/GainPhase.vue";
   import GeneralInfo from "@/components/GeneralInfo.vue";
 
   import RadioSpectrum from "@/components/RadioSpectrum.vue";
+  import RecentData from "@/components/RecentData.vue";
   import S3Files from "@/components/S3Files.vue";
 
   import Synthesis from "@/components/Synthesis.vue";
@@ -43,13 +49,15 @@
       Synthesis,
       Baseline,
       ArrayLayout,
+
       GeneralInfo,
       RadioSpectrum,
+      RecentData,
       S3Files,
       GainPhase,
     },
     computed: {
-      ...mapState(useAppStore, ["telescope_mode"]),
+      ...mapState(useAppStore, ["telescope_mode", "dataThinning"]),
       telescopeName() {
         return useAppStore().telescopeName;
       },

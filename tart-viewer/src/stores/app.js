@@ -34,6 +34,10 @@ export const useAppStore = defineStore("app", {
       hoveredTimestamp: null,
       lastVisDataUpdate: 0,
       lastRawDataUpdate: 0,
+      dataThinning: 1,
+      showTimings: false,
+      nside: 64,
+      antennasUsed: Array.from({ length: 24 }, (_, i) => i),
     };
 
     // Configure satellite API service
@@ -109,6 +113,27 @@ export const useAppStore = defineStore("app", {
       const response = await telescopeApi.createRawData();
       if (response) {
         this.rawDataList = response;
+      }
+    },
+    setDataThinning(value) {
+      this.dataThinning = value;
+    },
+    setShowTimings(value) {
+      this.showTimings = value;
+    },
+    setNside(value) {
+      this.nside = value;
+    },
+    setAntennasUsed(antennas) {
+      this.antennasUsed = antennas;
+    },
+    toggleAntenna(antennaId) {
+      const index = this.antennasUsed.indexOf(antennaId);
+      if (this.antennasUsed.includes(antennaId)) {
+        this.antennasUsed.splice(index, 1);
+      } else {
+        this.antennasUsed.push(antennaId);
+        this.antennasUsed.sort((a, b) => a - b);
       }
     },
     async renewChannels() {

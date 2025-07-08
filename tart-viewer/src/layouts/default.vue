@@ -128,6 +128,48 @@
           </div>
         </v-expand-transition>
       </v-list>
+
+      <!-- Data Thinning Control at bottom -->
+      <v-divider />
+      <v-list-item class="pt-3">
+        <v-select
+          v-model="dataThinning"
+          dense
+          hide-details
+          :items="dataThinningOptions"
+          label="Data Thinning"
+          outlined
+          @update:model-value="setDataThinning"
+        />
+      </v-list-item>
+
+      <!-- Timing Toggle -->
+      <v-list-item>
+        <v-checkbox
+          v-model="showTimings"
+          dense
+          hide-details
+          label="Show Timing Info"
+          @update:model-value="setShowTimings"
+        />
+      </v-list-item>
+
+      <!-- NSide Slider -->
+      <v-list-item class="px-3 pb-5">
+        <div class="w-100">
+          <v-label class="text-caption mb-2">NSide</v-label>
+          <v-slider
+            v-model="nside"
+            dense
+            hide-details
+            :max="128"
+            :min="2"
+            step="2"
+            thumb-label="always"
+            @update:model-value="setNside"
+          />
+        </div>
+      </v-list-item>
     </v-navigation-drawer>
     <v-main>
       <v-container fluid>
@@ -206,6 +248,13 @@
       refreshIntervals: [5, 10, 20, 60, 120],
       CUSTOM_TART_URL: "",
       applyingCustomUrl: false,
+      dataThinningOptions: [
+        { title: "All records (1:1)", value: 1 },
+        { title: "Every 2nd record (1:2)", value: 2 },
+        { title: "Every 3rd record (1:3)", value: 3 },
+        { title: "Every 5th record (1:5)", value: 5 },
+        { title: "Every 10th record (1:10)", value: 10 },
+      ],
     }),
     methods: {
       ...mapActions(useAppStore, [
@@ -217,6 +266,9 @@
         "setTART_URL",
         "setCustomTART_URL",
         "synthesisData",
+        "setDataThinning",
+        "setShowTimings",
+        "setNside",
       ]),
       ...mapActions(useTelescopeRegistryStore, [
         "initialize",
@@ -358,7 +410,7 @@
       this.stopPolling();
     },
     computed: {
-      ...mapState(useAppStore, ["telescope_mode", "TART_URL"]),
+      ...mapState(useAppStore, ["telescope_mode", "TART_URL", "dataThinning", "showTimings", "nside"]),
       ...mapState(useTelescopeRegistryStore, {
         telescopes: 'telescopeList',
         loadingTelescopes: 'isLoading'

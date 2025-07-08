@@ -349,6 +349,106 @@ class TelescopeApiService {
       };
     }, 'Get synthesis data');
   }
+
+  /**
+   * Get raw data save flag
+   * @returns {Promise} Promise that resolves to save flag status
+   */
+  async getRawSaveFlag() {
+    return await this._handleRequest(async () => {
+      const client = this._getClient();
+      const response = await client.get('/acquire/raw/save', this._getRequestConfig());
+      return response.data;
+    }, 'Get raw save flag');
+  }
+
+  /**
+   * Set raw data save flag
+   * @param {number} flag - Save flag (0 or 1)
+   * @returns {Promise} Promise that resolves to save flag response
+   */
+  async setRawSaveFlag(flag) {
+    return await this._handleRequest(async () => {
+      const client = this._getClient();
+      const response = await client.put(`/acquire/raw/save/${flag}`, {}, this._getRequestConfig());
+      return response.data;
+    }, `Set raw save flag to ${flag}`);
+  }
+
+  /**
+   * Get visibility data save flag
+   * @returns {Promise} Promise that resolves to save flag status
+   */
+  async getVisSaveFlag() {
+    return await this._handleRequest(async () => {
+      const client = this._getClient();
+      const response = await client.get('/acquire/vis/save', this._getRequestConfig());
+      return response.data;
+    }, 'Get vis save flag');
+  }
+
+  /**
+   * Set visibility data save flag
+   * @param {number} flag - Save flag (0 or 1)
+   * @returns {Promise} Promise that resolves to save flag response
+   */
+  async setVisSaveFlag(flag) {
+    return await this._handleRequest(async () => {
+      const client = this._getClient();
+      const response = await client.put(`/acquire/vis/save/${flag}`, {}, this._getRequestConfig());
+      return response.data;
+    }, `Set vis save flag to ${flag}`);
+  }
+
+  /**
+   * Get raw data number of samples exponent
+   * @returns {Promise} Promise that resolves to samples exponent
+   */
+  async getRawNumSamplesExp() {
+    return await this._handleRequest(async () => {
+      const client = this._getClient();
+      const response = await client.get('/acquire/raw/num_samples_exp', this._getRequestConfig());
+      return response.data;
+    }, 'Get raw num samples exp');
+  }
+
+  /**
+   * Set raw data number of samples exponent
+   * @param {number} exp - Exponent for number of samples (16-24)
+   * @returns {Promise} Promise that resolves to samples exponent response
+   */
+  async setRawNumSamplesExp(exp) {
+    return await this._handleRequest(async () => {
+      const client = this._getClient();
+      const response = await client.put(`/acquire/raw/num_samples_exp/${exp}`, {}, this._getRequestConfig());
+      return response.data;
+    }, `Set raw num samples exp to ${exp}`);
+  }
+
+  /**
+   * Get visibility data number of samples exponent
+   * @returns {Promise} Promise that resolves to samples exponent
+   */
+  async getVisNumSamplesExp() {
+    return await this._handleRequest(async () => {
+      const client = this._getClient();
+      const response = await client.get('/acquire/vis/num_samples_exp', this._getRequestConfig());
+      return response.data;
+    }, 'Get vis num samples exp');
+  }
+
+  /**
+   * Set visibility data number of samples exponent
+   * @param {number} exp - Exponent for number of samples (16-24)
+   * @returns {Promise} Promise that resolves to samples exponent response
+   */
+  async setVisNumSamplesExp(exp) {
+    return await this._handleRequest(async () => {
+      const client = this._getClient();
+      const response = await client.put(`/acquire/vis/num_samples_exp/${exp}`, {}, this._getRequestConfig());
+      return response.data;
+    }, `Set vis num samples exp to ${exp}`);
+  }
 }
 
 // Export a singleton instance

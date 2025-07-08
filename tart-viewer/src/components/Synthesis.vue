@@ -15,49 +15,17 @@
 
   <v-card class="mx-auto square-card" elevation="3">
     <div class="card-content">
-      <v-card-title class="my-0 py-0 teal--text text--lighten-2 text-uppercase">
-        <v-row>
-          <v-col>Realtime View</v-col>
-          <v-col v-if="currentTimestamp">
-            {{ hoveredTimestamp ? "Hovered" : "Current" }} Time:
-            {{ formattedTimestamp }}
-          </v-col>
-          <v-col cols="auto">
-            <v-btn
-              color="teal"
-              size="small"
-              variant="outlined"
-              @click="show_timings = !show_timings"
-            >
-              Timing
-            </v-btn>
-            <v-btn
-              class="ml-2"
-              color="white"
-              size="small"
-              variant="outlined"
-              @click="fullscreen = true"
-            >
-              <v-icon>mdi-fullscreen</v-icon>
-              Fullscreen
-            </v-btn>
-          </v-col>
-        </v-row>
-        <v-row v-if="show_timings" class="text-lowercase">
-          <v-col class="text-right">pl{{ timings.payload }} ms</v-col>
-          <v-col class="text-right">wasm {{ timings.render }} ms</v-col>
-          <v-col class="text-right">gl {{ timings.setting }} ms</v-col>
-          <v-col class="text-right">
-            <v-switch
-              v-model="use_simd"
-              class="ma-0 pa-0"
-              dense
-              hide-details
-              inset
-              label="SIMD"
-            />
-          </v-col>
-        </v-row>
+      <v-card-title class="py-3 teal--text text--lighten-2 d-flex align-center">
+        <v-icon class="mr-2">mdi-eye</v-icon>
+        Realtime View
+        <v-spacer />
+        <v-btn
+          icon
+          size="small"
+          @click="fullscreen = true"
+        >
+          <v-icon>mdi-fullscreen</v-icon>
+        </v-btn>
       </v-card-title>
 
       <div class="svg-container">
@@ -65,56 +33,33 @@
         <Threejs3D v-else ref="threejsRef" :auto-resize="true" />
       </div>
 
-      <v-card-actions class="py-0 my-0">
-        <v-slider
-          v-model="nside"
-          label="NSide"
-          :max="128"
-          :min="2"
-          step="2"
-          thumb-label="always"
-          @end="handleNsideChange"
-        />
-      </v-card-actions>
+
 
       <v-card class="py-0 my-0" elevation="0">
         <v-card-actions class="py-0 my-0 justify-space-between">
           <v-switch v-model="show_sat" label="Overlay Satellites" />
           <v-switch v-model="is3D" label="3D View" />
-          <v-switch v-model="show_antennas" label="Toggle Antennas" />
         </v-card-actions>
-      </v-card>
 
-      <v-expand-transition>
-        <div v-show="show_antennas">
-          <v-divider />
-          <v-card-title
-            class="my-0 py-1 pr-0 teal--text text--lighten-2 text-uppercase"
-          >
-            Antennas for Imaging
-          </v-card-title>
-          <v-card-actions class="py-0 my-0">
-            <v-row class="ma-0 pa-0">
-              <v-col
-                v-for="ant in ANTENNA_INDICES"
-                :key="ant"
-                class="ma-0 pa-0 mx-auto"
-                cols="2"
-              >
-                <v-checkbox
-                  v-model="antennasUsed"
-                  class="mx-auto"
-                  :label="ant.toString()"
-                  :value="ant"
-                />
-              </v-col>
-            </v-row>
-          </v-card-actions>
-          <v-card-actions v-if="filteredVisData">
-            Contributing baselines: {{ filteredVisData.length }}
-          </v-card-actions>
+        <!-- Timing Info Display -->
+        <div v-if="showTimings" class="pa-3 text-lowercase">
+          <v-row>
+            <v-col class="text-right">pl{{ timings.payload }} ms</v-col>
+            <v-col class="text-right">wasm {{ timings.render }} ms</v-col>
+            <v-col class="text-right">gl {{ timings.setting }} ms</v-col>
+            <v-col class="text-right">
+              <v-switch
+                v-model="use_simd"
+                class="ma-0 pa-0"
+                dense
+                hide-details
+                inset
+                label="SIMD"
+              />
+            </v-col>
+          </v-row>
         </div>
-      </v-expand-transition>
+      </v-card>
     </div>
   </v-card>
 
@@ -159,7 +104,6 @@
 
   // Constants
   const ANTENNA_INDICES = Array.from({ length: 24 }, (_, i) => i);
-  const DEFAULT_ANTENNAS = [...ANTENNA_INDICES];
 
   // Cache for expensive computations
   let polygonCache = null;
@@ -177,13 +121,9 @@
       return {
         ANTENNA_INDICES,
         timings: { payload: 0, render: 0, setting: 0 },
-        show_timings: false,
         use_simd: true,
         show_sat: true,
-        show_antennas: false,
-        nside: 64,
         srcLoc: { elevation: 0, azimuth: 0, name: "" },
-        antennasUsed: [...DEFAULT_ANTENNAS],
         isInitialized: false,
         is3D: true,
         fullscreen: false,
@@ -200,6 +140,9 @@
         "telescope_mode",
         "vis_history",
         "hoveredTimestamp",
+        "showTimings",
+        "nside",
+        "antennasUsed",
       ]),
 
       currentVisData() {
@@ -373,9 +316,7 @@
     },
 
     methods: {
-      handleNsideChange(value) {
-        this.nside = value;
-      },
+
 
       // Single method that does a complete update (geometry + colors + overlays)
       doFullUpdate() {
