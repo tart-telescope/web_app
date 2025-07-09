@@ -69,7 +69,7 @@ export const COLORS = {
 
 // Material defaults
 export const MATERIAL_DEFAULTS = {
-  antialias: false,
+  antialias: true,
   alpha: true,
   premultipliedAlpha: false,
   preserveDrawingBuffer: false,

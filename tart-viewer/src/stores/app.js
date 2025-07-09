@@ -7,6 +7,7 @@ export const useAppStore = defineStore("app", {
     const state = {
       VERSION_HASH: process.env.CI_COMMIT_SHA,
       TART_API_HUB_URL: "https://api.elec.ac.nz/tart/",
+      TART_URL_DEFAULT: "https://api.elec.ac.nz/tart/zm-cbu",
       TART_URL: "https://api.elec.ac.nz/tart/zm-cbu",
       CATALOG_URL: "https://tart.elec.ac.nz/catalog",
       API_PREFIX: "/api/v1",
@@ -38,11 +39,12 @@ export const useAppStore = defineStore("app", {
       showTimings: false,
       nside: 64,
       antennasUsed: Array.from({ length: 24 }, (_, i) => i),
+      localMode: false,
     };
 
     // Configure satellite API service
     satelliteApi.setUrl(state.CATALOG_URL);
-    
+
     // Initialize telescope API with default URL
     telescopeApi.setUrl(state.TART_URL);
     telescopeApi.setApiPrefix(state.API_PREFIX);
@@ -52,6 +54,9 @@ export const useAppStore = defineStore("app", {
   getters: {
     // Extract telescope name from TART_URL (e.g., "zm-cbu" from "https://api.elec.ac.nz/tart/zm-cbu")
     telescopeName: (state) => {
+      if (state.localMode) {
+        return "local";
+      }
       if (!state.TART_URL) {
         return "zm-cbu";
       }
@@ -73,7 +78,12 @@ export const useAppStore = defineStore("app", {
     },
 
     setTART_URL(postFix) {
-      this.setCustomTART_URL(this.TART_API_HUB_URL + postFix);
+      if (postFix === 'local') {
+        this.setLocalMode(true);
+      } else {
+        this.setLocalMode(false);
+        this.setCustomTART_URL(this.TART_API_HUB_URL + postFix);
+      }
     },
     setCustomTART_URL(newUrl) {
       this.logout();
@@ -83,6 +93,20 @@ export const useAppStore = defineStore("app", {
       telescopeApi.setUrl(newUrl);
       telescopeApi.setApiPrefix(this.API_PREFIX);
       // Note: API calls will be made after router confirms telescope is valid
+    },
+    setLocalMode(enabled) {
+      this.localMode = enabled;
+      if (enabled) {
+        // Local mode: empty TART_URL (same origin) with API_PREFIX
+        this.logout();
+        this.resetUI();
+        this.TART_URL = "";
+        telescopeApi.setUrl("");
+        telescopeApi.setApiPrefix(this.API_PREFIX);
+      } else {
+        // Exit local mode: restore default URL
+        this.setCustomTART_URL(this.TART_URL_DEFAULT);
+      }
     },
     async setTelescopeMode(newMode) {
       const response = await telescopeApi.setMode(newMode);

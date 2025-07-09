@@ -18,7 +18,7 @@ class TelescopeApiService {
     if (this.baseURL !== url) {
       // Only cancel requests if we've been using the old URL for a while
       // This prevents canceling requests during initial app load/routing
-      if (this.baseURL && this._shouldCancelRequests()) {
+      if (this.baseURL !== null && this._shouldCancelRequests()) {
         this._cancelPendingRequests();
       }
       this.baseURL = url;
@@ -77,7 +77,7 @@ class TelescopeApiService {
    * @returns {Object} Configured axios instance
    */
   _getClient() {
-    if (!this.client && this.baseURL) {
+    if (!this.client && this.baseURL !== null) {
       this._recreateClient();
     }
     if (!this.client) {
@@ -91,7 +91,7 @@ class TelescopeApiService {
    * @private
    */
   _recreateClient() {
-    if (!this.baseURL) {
+    if (this.baseURL === null) {
       this.client = null;
       return;
     }

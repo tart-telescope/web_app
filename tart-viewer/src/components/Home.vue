@@ -6,7 +6,18 @@
 
     <template v-if="telescope_mode == 'vis'">
       <v-col cols="12" lg="4" md="6" sm="12">
-        <Synthesis />
+        <v-card v-if="!isSynthesisDataReady" class="d-flex align-center justify-center" min-height="400">
+          <div class="text-center">
+            <v-progress-circular
+              class="mb-4"
+              color="primary"
+              indeterminate
+              size="48"
+            />
+            <div class="text-h6 text-grey">Loading synthesis data...</div>
+          </div>
+        </v-card>
+        <Synthesis v-else :key="`synthesis-${TART_URL}-${localMode}-${synthesisUpdateTrigger}`" ref="synthesis" />
       </v-col>
       <v-col cols="12" lg="4" md="6" sm="12">
         <ArrayLayout />
@@ -45,6 +56,11 @@
 
   export default {
     name: "Home",
+    data() {
+      return {
+        synthesisUpdateTrigger: 0,
+      };
+    },
     components: {
       Synthesis,
       Baseline,
@@ -57,7 +73,7 @@
       GainPhase,
     },
     computed: {
-      ...mapState(useAppStore, ["telescope_mode", "dataThinning"]),
+      ...mapState(useAppStore, ["telescope_mode", "dataThinning", "TART_URL", "localMode", "vis", "gain", "antennas"]),
       telescopeName() {
         return useAppStore().telescopeName;
       },
@@ -76,6 +92,23 @@
         console.log("  - current date:", now.toDateString());
         return path;
       },
+      isSynthesisDataReady() {
+        // Check if all required synthesis data is available
+        return !!(
+          this.antennas &&
+          this.antennas.length > 0 &&
+          this.gain &&
+          this.vis
+        );
+      },
+    },
+    methods: {
+      triggerSynthesisUpdate() {
+        this.synthesisUpdateTrigger++;
+      },
+    },
+    mounted() {
+      // Component is now ready for direct method calls via ref
     },
   };
 </script>

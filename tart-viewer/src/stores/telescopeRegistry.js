@@ -4,10 +4,11 @@ import { mapApi } from '@/services'
 export const useTelescopeRegistryStore = defineStore('telescopeRegistry', {
   state: () => ({
     telescopes: new Map(),
-    validTelescopeIds: new Set(['custom']), // Always include custom
+    validTelescopeIds: new Set(['custom', 'local']), // Always include custom and local
     lastUpdated: null,
     isLoading: false,
-    pollInterval: null
+    pollInterval: null,
+    localMode: false
   }),
 
   getters: {
@@ -15,25 +16,33 @@ export const useTelescopeRegistryStore = defineStore('telescopeRegistry', {
      * Get list of telescopes for UI display
      */
     telescopeList: (state) => {
-      const telescopes = Array.from(state.telescopes.values())
-        .map(telescope => ({
-          title: telescope.telescopeName || telescope.hostname || telescope.nodeName,
-          value: telescope.hostname,
-          online: telescope.online || false,
-          lastSeen: telescope.lastSeen,
-          currentMode: telescope.currentMode,
-          fallback: telescope.fallback || false
-        }))
-        .sort((a, b) => {
-          // Sort by online status first, then alphabetically
-          if (a.online !== b.online) {
-            return b.online - a.online
-          }
-          return a.title.localeCompare(b.title)
-        })
+      let telescopes = []
+      
+      // In local mode, only show local telescope
+      if (state.localMode) {
+        telescopes = [{ title: 'Local', value: 'local', online: true }]
+      } else {
+        // Normal mode: show all fetched telescopes
+        telescopes = Array.from(state.telescopes.values())
+          .map(telescope => ({
+            title: telescope.telescopeName || telescope.hostname || telescope.nodeName,
+            value: telescope.hostname,
+            online: telescope.online || false,
+            lastSeen: telescope.lastSeen,
+            currentMode: telescope.currentMode,
+            fallback: telescope.fallback || false
+          }))
+          .sort((a, b) => {
+            // Sort by online status first, then alphabetically
+            if (a.online !== b.online) {
+              return b.online - a.online
+            }
+            return a.title.localeCompare(b.title)
+          })
 
-      // Add custom option at the end
-      telescopes.push({ title: 'Custom', value: 'custom' })
+        // Add custom option at the end
+        telescopes.push({ title: 'Custom', value: 'custom' })
+      }
 
       return telescopes
     },
@@ -61,8 +70,9 @@ export const useTelescopeRegistryStore = defineStore('telescopeRegistry', {
      * Initialize store
      */
     initialize() {
-      // Just ensure custom is in validTelescopeIds
+      // Just ensure custom and local are in validTelescopeIds
       this.validTelescopeIds.add('custom')
+      this.validTelescopeIds.add('local')
     },
 
     /**
@@ -81,6 +91,7 @@ export const useTelescopeRegistryStore = defineStore('telescopeRegistry', {
           this.telescopes.clear()
           this.validTelescopeIds.clear()
           this.validTelescopeIds.add('custom')
+          this.validTelescopeIds.add('local')
 
           for (const telescope of response.telescopes) {
             // Use hostname for routing consistency (what appears in URLs)
@@ -118,6 +129,11 @@ export const useTelescopeRegistryStore = defineStore('telescopeRegistry', {
     startPolling(interval = 30_000) {
       this.stopPolling()
 
+      // Don't poll in local mode
+      if (this.localMode) {
+        return
+      }
+
       // Only do initial fetch if data is stale (avoid duplicate API calls)
       if (this.isDataStale()) {
         this.fetchTelescopes()
@@ -144,6 +160,16 @@ export const useTelescopeRegistryStore = defineStore('telescopeRegistry', {
      */
     async refresh() {
       return await this.fetchTelescopes()
+    },
+
+    /**
+     * Set local mode
+     */
+    setLocalMode(enabled) {
+      this.localMode = enabled
+      if (enabled) {
+        this.stopPolling()
+      }
     }
   }
 })

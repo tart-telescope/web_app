@@ -238,7 +238,7 @@
                 data: this.filteredVisData,
                 timestamp: this.currentVisData.timestamp,
               },
-              [], // this.currentSatelliteData,
+              [],
             ],
           ],
         };
@@ -260,12 +260,13 @@
       // Single watcher for all data that should trigger a full update
       isReadyToRender: {
         handler(newVal) {
-          console.log("isReadyToRender watcher:", newVal);
           if (newVal) {
-            this.doFullUpdate();
+            this.$nextTick(() => {
+              this.doFullUpdate();
+            });
           }
         },
-        immediate: true,
+        // immediate: true,
       },
 
       // Geometry changes (nside or 2D/3D mode)
@@ -276,6 +277,8 @@
       is3D() {
         this.$nextTick(() => {
           this.doFullUpdate();
+          // Handle resize when switching between 2D/3D modes
+          this.handleResize();
         });
       },
 
@@ -308,13 +311,24 @@
         }
       },
     },
+    created() {
+      this.updateGeometry();
+    },
 
     mounted() {
       this.isInitialized = true;
-      this.doFullUpdate();
+      this.$nextTick(() => {
+        this.updateGeometry();
+        this.doColorUpdate();
+        // Ensure proper resize after mount
+        this.handleResize();
+      });
 
       // Add ESC key listener for fullscreen overlay
       document.addEventListener("keydown", this.handleKeyDown);
+      
+      // Add resize listener
+      window.addEventListener("resize", this.handleResize);
     },
 
     beforeUnmount() {
@@ -323,13 +337,12 @@
       lastFilteredVis = null;
       antennaSetCache.clear();
 
-      // Remove ESC key listener
+      // Remove event listeners
       document.removeEventListener("keydown", this.handleKeyDown);
+      window.removeEventListener("resize", this.handleResize);
     },
 
     methods: {
-
-
       // Single method that does a complete update (geometry + colors + overlays)
       doFullUpdate() {
         console.log("doFullUpdate called");
@@ -340,7 +353,14 @@
 
       // Just update colors (fast)
       doColorUpdate() {
-        if (!this.isReadyToRender) return;
+        if (!this.renderPayload) {
+          return;
+        }
+        if (!sphereCache && this.$refs.threejsRef && this.$refs.threejsRef.createSphereFromCorners) {
+          sphereCache = get_hemisphere_pixel_corners(this.nside);
+          this.$refs.threejsRef.createSphereFromCorners(sphereCache);
+        }
+
         let start = performance.now();
         const payload = JSON.stringify(this.renderPayload);
         this.timings.payload = (performance.now() - start).toFixed(1);
@@ -355,17 +375,20 @@
         this.timings.render = (performance.now() - start).toFixed(1);
         start = performance.now();
 
-        if (this.is3D) {
-          this.$refs.threejsRef.updateSphereColors(bytes);
+        // Ensure rendering component is ready before painting pixels
+        this.$nextTick(() => {
+          if (this.is3D && this.$refs.threejsRef && this.$refs.threejsRef.updateSphereColors) {
+            this.$refs.threejsRef.updateSphereColors(bytes);
 
-          // Also update fullscreen component if active
-          if (this.fullscreen && this.$refs.fullscreenThreejsRef) {
-            this.$refs.fullscreenThreejsRef.updateSphereColors(bytes);
+            // Also update fullscreen component if active
+            if (this.fullscreen && this.$refs.fullscreenThreejsRef && this.$refs.fullscreenThreejsRef.updateSphereColors) {
+              this.$refs.fullscreenThreejsRef.updateSphereColors(bytes);
+            }
+          } else if (!this.is3D && this.$refs.svgRef && this.$refs.svgRef.updatePolygonColors) {
+            this.$refs.svgRef.updatePolygonColors(bytes);
           }
-        } else {
-          this.$refs.svgRef.updatePolygonColors(bytes);
-        }
-        this.timings.setting = (performance.now() - start).toFixed(1);
+          this.timings.setting = (performance.now() - start).toFixed(1);
+        });
       },
 
       updateGeometry() {
@@ -381,13 +404,9 @@
             if (nsideChanged || !sphereCache) {
               sphereCache = get_hemisphere_pixel_corners(this.nside);
             }
-            if (nsideChanged || !polygonCache) {
-              polygonCache = get_pixel_coords_only_simd(this.nside);
-            }
             this.timings.render = (performance.now() - start).toFixed(1);
             start = performance.now();
-
-            if (this.$refs.threejsRef) {
+            if (this.$refs.threejsRef && this.$refs.threejsRef.createSphereFromCorners) {
               this.$refs.threejsRef.createSphereFromCorners(sphereCache);
             }
           } else {
@@ -456,6 +475,22 @@
         if (event.key === "Escape" && this.fullscreen) {
           this.fullscreen = false;
         }
+      },
+
+      handleResize() {
+        // Trigger resize on both 2D and 3D components
+        this.$nextTick(() => {
+          if (this.is3D && this.$refs.threejsRef && this.$refs.threejsRef.handleResize) {
+            this.$refs.threejsRef.handleResize();
+          } else if (!this.is3D && this.$refs.svgRef && this.$refs.svgRef.handleResize) {
+            this.$refs.svgRef.handleResize();
+          }
+          
+          // Also handle fullscreen component
+          if (this.fullscreen && this.$refs.fullscreenThreejsRef && this.$refs.fullscreenThreejsRef.handleResize) {
+            this.$refs.fullscreenThreejsRef.handleResize();
+          }
+        });
       },
     },
   };

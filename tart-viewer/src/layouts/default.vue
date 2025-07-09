@@ -13,7 +13,19 @@
     </v-app-bar>
 
     <v-navigation-drawer v-model="drawer" app dark temporary>
-      <v-list-item class="pt-5">
+      <!-- Local Mode Toggle at top -->
+      <v-list-item class="pt-3 pb-2">
+        <v-switch
+          v-model="localModeToggle"
+          color="cyan"
+          hide-details
+          label="Local Mode"
+        />
+      </v-list-item>
+      
+      <v-divider />
+      
+      <v-list-item class="pt-3">
         <v-select
           v-model="refreshInterval"
           :items="refreshIntervals"
@@ -28,7 +40,7 @@
       <v-divider />
 
       <v-progress-circular
-        v-if="loadingTelescopes"
+        v-if="loadingTelescopes && !appLocalMode"
         class="ma-4"
         color="primary"
         indeterminate
@@ -159,14 +171,13 @@
         <div class="w-100">
           <v-label class="text-caption mb-2">NSide</v-label>
           <v-slider
-            v-model="nside"
+            v-model="nsideModel"
             dense
             hide-details
             :max="128"
             :min="2"
             step="2"
             thumb-label="always"
-            @update:model-value="setNside"
           />
         </div>
       </v-list-item>
@@ -211,7 +222,7 @@
         </div>
 
         <!-- Normal router view when telescopes are available -->
-        <router-view v-else />
+        <router-view v-else ref="homeComponent" />
       </v-container>
     </v-main>
     <AppFooter />
@@ -241,6 +252,7 @@
       drawer: false,
       selectedArray: [],
       initialLoading: true,
+      synthesisKey: 0,
 
       enabled: false,
       refresher: null,
@@ -275,7 +287,53 @@
         "startPolling",
         "stopPolling",
         "refresh",
+        "setLocalMode",
       ]),
+      forceSynthesisUpdate() {
+        // Force synthesis component to update by calling method directly via ref
+        const homeComponent = this.$refs.homeComponent;
+        if (homeComponent && homeComponent.triggerSynthesisUpdate) {
+          homeComponent.triggerSynthesisUpdate();
+        }
+      },
+      toggleLocalMode(enabled) {
+        // Update both stores
+        this.setLocalMode(enabled);
+        this.setTART_URL(enabled ? 'local' : this.TART_URL_DEFAULT.split('/').pop());
+        
+        if (enabled) {
+          // Entering local mode
+          this.selectedArray = ['local'];
+          // Navigate to root route (no telescope parameter)
+          if (this.$route.path !== '/') {
+            this.$router.replace('/');
+          }
+        } else {
+          // Exiting local mode - restore default and restart polling
+          this.startPolling(30_000);
+          // Redirect to first available telescope
+          if (this.telescopes.length > 0) {
+            const firstTelescope = this.telescopes[0].value;
+            if (firstTelescope !== 'custom') {
+              this.selectedArray = [firstTelescope];
+              this.$router.replace('/' + firstTelescope);
+            }
+          }
+        }
+        
+        // Refresh data after mode switch to ensure synthesis renders
+        setTimeout(async () => {
+          try {
+            await this.getData();
+            // Force synthesis update after data loads
+            this.$nextTick(() => {
+              this.forceSynthesisUpdate();
+            });
+          } catch (error) {
+            console.error('Failed to refresh data after mode switch:', error);
+          }
+        }, 200);
+      },
       setRefresher() {
         window.clearTimeout(this.refresher);
         this.refresher = window.setTimeout(
@@ -317,17 +375,27 @@
         return true;
       },
       getData: async function () {
-        // Load telescope info first (needed for coordinates in synthesisData)
-        await this.renewInfo();
-        await this.renewMode();
-        if (this.telescope_mode == "vis") {
-          this.synthesisData();
-          this.renewVisData();
-          this.renewRawData();
-        }
-        if (this.telescope_mode == "diag") {
-          this.renewChannels();
-          this.renewRawData();
+        try {
+          // Load telescope info first (needed for coordinates in synthesisData)
+          await this.renewInfo();
+          await this.renewMode();
+          
+          if (this.telescope_mode == "vis") {
+            // Wait for synthesis data to complete before continuing
+            await this.synthesisData();
+            this.renewVisData();
+            this.renewRawData();
+            // Force synthesis update after data loads
+            this.$nextTick(() => {
+              this.forceSynthesisUpdate();
+            });
+          }
+          if (this.telescope_mode == "diag") {
+            this.renewChannels();
+            this.renewRawData();
+          }
+        } catch (error) {
+          console.error('Failed to load telescope data:', error);
         }
         this.setRefresher();
       },
@@ -351,15 +419,16 @@
           } else {
             // Switch to predefined telescope
             this.switchToTelescope(newPostfix);
-            // Update route to match selection
-            if (this.$route.params.telescope !== newPostfix) {
+            // Update route to match selection (unless in local mode)
+            if (!this.appLocalMode && this.$route.params.telescope !== newPostfix) {
               this.$router.replace("/" + newPostfix);
             }
           }
         }
       },
       "$route.params.telescope": function (newTelescope) {
-        if (newTelescope && this.currentTelescope !== newTelescope) {
+        // Don't respond to route changes in local mode
+        if (!this.appLocalMode && newTelescope && this.currentTelescope !== newTelescope) {
           this.selectedArray = [newTelescope];
         }
       },
@@ -368,35 +437,42 @@
       // Initialize telescope registry
       this.initialize();
 
-      // Fetch telescope data only if not already loaded
-      if (this.telescopes.length === 0) {
+      // Fetch telescope data only if not in local mode and not already loaded
+      if (!this.appLocalMode && this.telescopes.length === 0) {
         await this.refresh();
       }
       this.initialLoading = false;
 
-      // Start polling for telescope updates
-      this.startPolling(30_000);
+      // Start polling for telescope updates (unless in local mode)
+      if (!this.appLocalMode) {
+        this.startPolling(30_000);
+      }
 
-      // Initialize from route parameter
-      const telescopeParam = this.$route.params.telescope;
-      if (telescopeParam) {
-        this.selectedArray = [telescopeParam];
-      } else if (this.$route.path === "/") {
-        // Redirect to first available telescope
-        if (this.telescopes.length > 0) {
-          const firstTelescope = this.telescopes[0].value;
-          if (firstTelescope !== 'custom') {
-            this.$router.replace("/" + firstTelescope);
-            return;
-          }
-        }
-        // If no telescopes available, stay on root
+      // Initialize from route parameter (unless in local mode)
+      if (this.appLocalMode) {
+        // In local mode, always select local telescope
+        this.selectedArray = ['local'];
       } else {
-        // No route param, use first available telescope
-        if (this.telescopes.length > 0) {
-          const firstTelescope = this.telescopes[0].value;
-          if (firstTelescope !== 'custom') {
-            this.selectedArray = [firstTelescope];
+        const telescopeParam = this.$route.params.telescope;
+        if (telescopeParam) {
+          this.selectedArray = [telescopeParam];
+        } else if (this.$route.path === "/") {
+          // Redirect to first available telescope
+          if (this.telescopes.length > 0) {
+            const firstTelescope = this.telescopes[0].value;
+            if (firstTelescope !== 'custom') {
+              this.$router.replace("/" + firstTelescope);
+              return;
+            }
+          }
+          // If no telescopes available, stay on root
+        } else {
+          // No route param, use first available telescope
+          if (this.telescopes.length > 0) {
+            const firstTelescope = this.telescopes[0].value;
+            if (firstTelescope !== 'custom') {
+              this.selectedArray = [firstTelescope];
+            }
           }
         }
       }
@@ -410,15 +486,36 @@
       this.stopPolling();
     },
     computed: {
-      ...mapState(useAppStore, ["telescope_mode", "TART_URL", "dataThinning", "showTimings", "nside"]),
+      ...mapState(useAppStore, ["telescope_mode", "TART_URL", "TART_URL_DEFAULT", "dataThinning", "showTimings", "nside", "localMode"]),
       ...mapState(useTelescopeRegistryStore, {
         telescopes: 'telescopeList',
         loadingTelescopes: 'isLoading'
       }),
+      appLocalMode() {
+        return this.localMode;
+      },
+      localModeToggle: {
+        get() {
+          return this.localMode;
+        },
+        set(value) {
+          this.toggleLocalMode(value);
+        }
+      },
+      nsideModel: {
+        get() {
+          return this.nside;
+        },
+        set(value) {
+          this.setNside(value);
+        }
+      },
       currentTelescope() {
         return this.selectedArray.length > 0 ? this.selectedArray[0] : "";
       },
       showNoTelescopesError() {
+        // Don't show error in local mode
+        if (this.appLocalMode) return false;
         // Show error if not loading and no telescopes available
         if (this.initialLoading || this.loadingTelescopes) return false;
         const availableTelescopes = this.telescopes.filter(t =>

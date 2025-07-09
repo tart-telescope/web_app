@@ -11,6 +11,7 @@ import { createRouter, createWebHistory } from "vue-router/auto";
 // eslint-disable-next-line import/no-duplicates
 import { routes } from "vue-router/auto-routes";
 import { useTelescopeRegistryStore } from "@/stores/telescopeRegistry";
+import { useAppStore } from "@/stores/app";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -19,8 +20,43 @@ const router = createRouter({
 
 // Add route guard for telescope validation
 router.beforeEach(async (to, from, next) => {
-  // If route has telescope parameter, validate it
+  const appStore = useAppStore();
+  
+  // In local mode, handle routing differently
+  if (appStore.localMode) {
+    // If trying to access a telescope route in local mode, redirect to root
+    if (to.params.telescope && to.params.telescope !== 'local') {
+      next('/');
+      return;
+    }
+    // Allow local mode routes to pass through
+    next();
+    return;
+  }
+  
+  // Normal mode: validate telescope parameter
   if (to.params.telescope) {
+    // Don't validate 'local' telescope in normal mode - redirect to first available
+    if (to.params.telescope === 'local') {
+      const telescopeRegistry = useTelescopeRegistryStore();
+      
+      // Initialize telescope registry
+      telescopeRegistry.initialize();
+      
+      // If we don't have telescope data yet, try to fetch it
+      if (telescopeRegistry.telescopes.size === 0 && !telescopeRegistry.isLoading) {
+        await telescopeRegistry.refresh();
+      }
+      
+      const firstTelescope = Array.from(telescopeRegistry.telescopes.keys())[0];
+      if (firstTelescope && firstTelescope !== 'custom') {
+        next("/" + firstTelescope);
+        return;
+      }
+      next('/');
+      return;
+    }
+    
     const telescopeRegistry = useTelescopeRegistryStore();
     
     // Initialize telescope registry
@@ -32,15 +68,16 @@ router.beforeEach(async (to, from, next) => {
     }
     
     // Check if telescope is valid (after potential fetch)
-    if (!telescopeRegistry.isValidTelescope(to.params.telescope) && // If telescope is not valid and we have some data, redirect to first available telescope
+    if (!telescopeRegistry.isValidTelescope(to.params.telescope) && 
       telescopeRegistry.telescopes.size > 0) {
-        const firstTelescope = Array.from(telescopeRegistry.telescopes.keys())[0];
-        if (firstTelescope !== 'custom') {
-          next("/" + firstTelescope);
-          return;
-        }
+      // If telescope is not valid and we have some data, redirect to first available telescope
+      const firstTelescope = Array.from(telescopeRegistry.telescopes.keys())[0];
+      if (firstTelescope !== 'custom') {
+        next("/" + firstTelescope);
+        return;
       }
-      // If no telescopes available, let it proceed (will show error page)
+    }
+    // If no telescopes available, let it proceed (will show error page)
   }
   next();
 });
