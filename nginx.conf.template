@@ -59,24 +59,19 @@ http {
     server {
         listen 80;
         server_name localhost;
-        
         root /usr/share/nginx/html;
         index index.html;
 
-        # For root deployment - serve everything from /
+        # SPA routing with BASE_URL support
         location / {
-            try_files $uri $uri/ /index.html;
+            # For root deployment, serve directly
+            # For subpath deployment, handle the prefix
+            try_files $uri $uri/ @fallback;
         }
 
-        # For subpath deployment - serve from the BASE_URL prefix
-        location ${BASE_URL}/ {
-            alias /usr/share/nginx/html${BASE_URL}/;
-            try_files $uri $uri/ ${BASE_URL}/index.html;
-        }
-
-        # Redirect exact BASE_URL to BASE_URL/ (for subpath only)
-        location = ${BASE_URL} {
-            return 301 ${BASE_URL}/;
+        location @fallback {
+            # Fallback to the appropriate index.html based on BASE_URL
+            try_files ${BASE_URL}/index.html /index.html =404;
         }
 
         # Cache static assets
