@@ -33,6 +33,32 @@ jobs:
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
+      with:
+        driver-opts: image=moby/buildkit:buildx-stable-1
+
+    # Cache Rust dependencies
+    - name: Cache Rust
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          rust/target
+        key: rust-${{ runner.os }}-${{ hashFiles('rust/Cargo.lock', 'rust/Cargo.toml') }}
+        restore-keys: |
+          rust-${{ runner.os }}-
+
+    # Cache Node.js dependencies
+    - name: Cache Node modules
+      uses: actions/cache@v4
+      with:
+        path: |
+          tart-viewer/node_modules
+          ~/.cache/pnpm
+          ~/.pnpm-store
+        key: node-${{ runner.os }}-${{ hashFiles('tart-viewer/pnpm-lock.yaml') }}
+        restore-keys: |
+          node-${{ runner.os }}-
 
     - name: Log in to Container Registry
       if: github.event_name != 'pull_request'
@@ -54,8 +80,14 @@ jobs:
           CI_PROJECT_NAME=viewer
           BASE_URL=${{ matrix.base_url }}
           CI_COMMIT_SHA=${{ github.sha }}
-        cache-from: type=gha,key=variant-${{ matrix.variant }}
-        cache-to: type=gha,mode=max,key=variant-${{ matrix.variant }}
+        cache-from: |
+          type=gha,scope=${{ matrix.variant }}
+          type=gha,scope=shared
+          type=gha,scope=rust
+          type=gha,scope=node
+        cache-to: |
+          type=gha,mode=max,scope=${{ matrix.variant }}
+          type=gha,mode=max,scope=shared
 
     - name: Extract assets from variant image
       if: github.event_name != 'pull_request'
@@ -149,8 +181,11 @@ jobs:
         labels: ${{ steps.meta.outputs.labels }}
         build-args: |
           BASE_URL=${{ matrix.base_url }}
-        cache-from: type=gha,key=multiarch-${{ matrix.variant }}
-        cache-to: type=gha,mode=max,key=multiarch-${{ matrix.variant }}
+        cache-from: |
+          type=gha,scope=multiarch-${{ matrix.variant }}
+          type=gha,scope=shared
+          type=gha,scope=${{ matrix.variant }}
+        cache-to: type=gha,mode=max,scope=multiarch-${{ matrix.variant }}
 
   build-proxy:
     runs-on: ubuntu-latest
