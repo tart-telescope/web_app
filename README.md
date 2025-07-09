@@ -8,6 +8,18 @@ A Vue.js frontend application with Rust/WebAssembly components for TART telescop
 - `rust/` - Rust code compiled to WebAssembly
 - `withoutBundler/` - Minimal WASM usage example
 
+
+## UI Dev
+```
+    pnpm dev
+```
+### Optionally forward Backend proxy to 1234
+Expects bare api (no api/v1/)
+```
+    ssh -L 1234:localhost:5000 tart@nz-elec # (optional for local model)
+```
+
+
 ## Deployment Variants
 
 The app builds two Docker image variants:
@@ -25,7 +37,7 @@ make build-all
 ### Build Individual Components
 ```bash
 make build-deps      # Build shared dependencies
-make build-variants  # Build app variants 
+make build-variants  # Build app variants
 make build-docker    # Build multi-platform images
 ```
 
