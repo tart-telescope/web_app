@@ -40,7 +40,7 @@ jobs:
         file: ./Dockerfile
         target: node-build-stage
         platforms: linux/amd64
-        push: ${{ github.event_name != 'pull_request' }}
+        push: true
         tags: ${{ env.REGISTRY }}/${{ github.repository }}/build-deps:${{ github.sha }}
         build-args: |
           CI_PROJECT_NAME=viewer
