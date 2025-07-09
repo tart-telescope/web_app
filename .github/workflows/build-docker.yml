@@ -12,45 +12,7 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  build-deps:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-
-    - name: Log in to Container Registry
-      if: github.event_name != 'pull_request'
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Build shared dependencies up to node-build-stage
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: ./Dockerfile
-        target: node-build-stage
-        platforms: linux/amd64
-        push: true
-        tags: ${{ env.REGISTRY }}/${{ github.repository }}/build-deps:${{ github.sha }}
-        build-args: |
-          CI_PROJECT_NAME=viewer
-          BASE_URL=
-          CI_COMMIT_SHA=${{ github.sha }}
-        cache-from: type=gha,key=deps
-        cache-to: type=gha,mode=max,key=deps
-
   build-variants:
-    needs: build-deps
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -73,47 +35,23 @@ jobs:
       uses: docker/setup-buildx-action@v3
 
     - name: Log in to Container Registry
+      if: github.event_name != 'pull_request'
       uses: docker/login-action@v3
       with:
         registry: ${{ env.REGISTRY }}
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Create variant Dockerfile
-      run: |
-        cat > Dockerfile.variant << 'EOF'
-        FROM ${{ env.REGISTRY }}/${{ github.repository }}/build-deps:${{ github.sha }} AS build-stage
-        
-        ARG BASE_URL
-        ENV BASE_URL=$BASE_URL
-        ARG CI_COMMIT_SHA
-        ENV CI_COMMIT_SHA=$CI_COMMIT_SHA
-        ENV VITE_COMMIT_SHA=$CI_COMMIT_SHA
-        
-        RUN pnpm build --base=$BASE_URL/
-        RUN find ./dist -type f -regex '.*\.\(htm\|html\|wasm\|eot\|ttf\|txt\|text\|js\|css\)$' -exec gzip -f --best -k {} \;
-        
-        FROM nginx:stable-alpine AS production-stage
-        ARG BASE_URL
-        ENV BASE_URL=$BASE_URL
-        COPY nginx.conf.template /etc/nginx/nginx.conf.template
-        COPY --from=build-stage /app/tart-viewer/dist /usr/share/nginx/html$BASE_URL/
-        
-        # Generate nginx.conf from template with environment substitution
-        RUN envsubst '${BASE_URL}' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
-        
-        EXPOSE 80
-        EOF
-
     - name: Build and push variant image
       uses: docker/build-push-action@v5
       with:
         context: .
-        file: ./Dockerfile.variant
+        file: ./Dockerfile
         platforms: linux/amd64
         push: ${{ github.event_name != 'pull_request' }}
         tags: ${{ env.REGISTRY }}/${{ github.repository }}/viewer-${{ matrix.variant }}:${{ github.sha }}-amd64
         build-args: |
+          CI_PROJECT_NAME=viewer
           BASE_URL=${{ matrix.base_url }}
           CI_COMMIT_SHA=${{ github.sha }}
         cache-from: type=gha,key=variant-${{ matrix.variant }}
@@ -217,7 +155,7 @@ jobs:
   build-proxy:
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request'
-    needs: build-deps
+    needs: build-variants
 
     steps:
     - name: Checkout repository
