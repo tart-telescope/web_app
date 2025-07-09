@@ -1,24 +1,64 @@
-# Frontend
+# TART Web App
 
-The web frontend in `tart-viewer/` is served as static files:
+A Vue.js frontend application with Rust/WebAssembly components for TART telescope visualization.
 
-- as part of the software stack on each TART device at `http://<TART_IP_IN_LOCAL_NETWORK>:80/`
-- on hosted on `https://tart.elec.ac.nz/viewer`
+## Architecture
 
-# Deploy to TART elec.ac.nz
-For deployment on custom basepath we need to set the `BASE_URL` env var.
+- `tart-viewer/` - Vue3 frontend with Vite build system
+- `rust/` - Rust code compiled to WebAssembly
+- `withoutBundler/` - Minimal WASM usage example
 
+## Deployment Variants
+
+The app builds two Docker image variants:
+
+1. **Root deployment** (`viewer-root`): Served at `/` (e.g., TART devices)
+2. **Subpath deployment** (`viewer-subpath`): Served at `/viewer/` (e.g., hosted sites)
+
+## Quick Start
+
+### Build All Images
 ```bash
-  make deploy
+make build-all
 ```
 
-Wait for entering password for tart@tart.elec.ac.nz
+### Build Individual Components
+```bash
+make build-deps      # Build shared dependencies
+make build-variants  # Build app variants 
+make build-docker    # Build multi-platform images
+```
 
+### Development
+```bash
+make test           # Test with docker-compose
+make local          # Build locally
+make clean          # Clean build artifacts
+```
 
-# Development
+## Multi-Platform Builds
 
-The `tart-viewer` folder contains the Vue3 frontend code with Vite as the build system.
+The build system creates multi-platform images (amd64 + arm64):
 
-The `rust` folder contains Rust code that is compiled to WebAssembly and used in the frontend.
+1. **Shared Dependencies**: Rust compilation, npm install, wasm-pack (once)
+2. **App Variants**: Different BASE_URL builds using shared deps
+3. **Multi-Platform**: Copy static assets to nginx containers for both architectures
 
-The `withoutBundler` folder contains a minimal example of how to use the compiled Rust code in a frontend without a bundler/build system.
+## GitHub Actions
+
+Automated builds on push/PR:
+- `build-docker.yml` - Full build and push to GHCR
+- `test-build.yml` - Test builds without pushing
+
+## Images
+
+Built images are available at:
+- `ghcr.io/tart-telescope/web_app/viewer-root:latest`
+- `ghcr.io/tart-telescope/web_app/viewer-subpath:latest`
+
+## Legacy Deploy
+
+For deployment to tart.elec.ac.nz:
+```bash
+make deploy  # Requires SSH access
+```
