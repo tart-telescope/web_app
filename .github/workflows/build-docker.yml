@@ -89,6 +89,40 @@ jobs:
           type=gha,mode=max,scope=${{ matrix.variant }}
           type=gha,mode=max,scope=shared
 
+    - name: Comment on PR with build info
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const variant = '${{ matrix.variant }}';
+          const sha = '${{ github.sha }}';
+          const baseUrl = '${{ matrix.base_url }}';
+          const prNumber = context.issue.number;
+          
+          const comment = `### 🐳 Docker Build Complete - ${variant}
+          
+          **Image:** \`ghcr.io/tart-telescope/web_app/viewer-${variant}:pr-${prNumber}\`
+          **Base URL:** \`${baseUrl || '/'}\`
+          **Commit:** \`${sha}\`
+          **PR:** #${prNumber}
+          
+          This image can be tested with:
+          \`\`\`bash
+          docker run -p 808${variant === 'root' ? '1' : '2'}:80 ghcr.io/tart-telescope/web_app/viewer-${variant}:pr-${prNumber}
+          \`\`\`
+          
+          Available tags:
+          - \`pr-${prNumber}\` (latest for this PR)
+          - \`${sha}\` (specific commit)
+          `;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
+
     - name: Extract assets from variant image
       if: github.event_name != 'pull_request'
       run: |
@@ -150,10 +184,15 @@ jobs:
         images: ${{ env.REGISTRY }}/${{ github.repository }}/viewer-${{ matrix.variant }}
         tags: |
           type=ref,event=branch
-          type=ref,event=pr
+          type=ref,event=pr,prefix=pr-
           type=sha,prefix={{branch}}-
           type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
           type=sha
+        labels: |
+          org.opencontainers.image.title=TART Viewer (${{ matrix.variant }})
+          org.opencontainers.image.description=Vue.js frontend with Rust/WASM for TART telescope visualization
+          org.opencontainers.image.base-url=${{ matrix.base_url }}
+          org.opencontainers.image.variant=${{ matrix.variant }}
 
     - name: Create multi-platform Dockerfile
       run: |
@@ -186,6 +225,53 @@ jobs:
           type=gha,scope=shared
           type=gha,scope=${{ matrix.variant }}
         cache-to: type=gha,mode=max,scope=multiarch-${{ matrix.variant }}
+
+  pr-summary:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    needs: build-variants
+    permissions:
+      pull-requests: write
+
+    steps:
+    - name: Add PR summary comment
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const prNumber = context.issue.number;
+          const sha = '${{ github.sha }}';
+          
+          const comment = `## 🎉 Build Complete for PR #${prNumber}
+          
+          Both Docker variants have been successfully built and are ready for testing!
+          
+          ### 📦 Available Images
+          
+          | Variant | Image | Port | Base URL |
+          |---------|-------|------|----------|
+          | **Root** | \`ghcr.io/tart-telescope/web_app/viewer-root:pr-${prNumber}\` | 8081 | \`/\` |
+          | **Subpath** | \`ghcr.io/tart-telescope/web_app/viewer-subpath:pr-${prNumber}\` | 8082 | \`/viewer\` |
+          
+          ### 🧪 Test Commands
+          
+          \`\`\`bash
+          # Test root variant
+          docker run -p 8081:80 ghcr.io/tart-telescope/web_app/viewer-root:pr-${prNumber}
+          
+          # Test subpath variant  
+          docker run -p 8082:80 ghcr.io/tart-telescope/web_app/viewer-subpath:pr-${prNumber}
+          \`\`\`
+          
+          **Commit:** \`${sha}\`
+          **Build:** ✅ Passed
+          `;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
 
   build-proxy:
     runs-on: ubuntu-latest
