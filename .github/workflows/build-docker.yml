@@ -1,0 +1,253 @@
+name: Build Docker Images
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-variants:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      pull-requests: write  # Added for PR comments
+
+    strategy:
+      matrix:
+        variant: [root, subpath]
+        include:
+          - variant: root
+            base_url: ""
+          - variant: subpath
+            base_url: "/viewer"
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      with:
+        driver-opts: image=moby/buildkit:buildx-stable-1
+
+    # Cache Rust dependencies
+    - name: Cache Rust
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          rust/target
+        key: rust-${{ runner.os }}-${{ hashFiles('rust/Cargo.lock', 'rust/Cargo.toml') }}
+        restore-keys: |
+          rust-${{ runner.os }}-
+
+    # Cache Node.js dependencies
+    - name: Cache Node modules
+      uses: actions/cache@v4
+      with:
+        path: |
+          tart-viewer/node_modules
+          ~/.cache/pnpm
+          ~/.pnpm-store
+        key: node-${{ runner.os }}-${{ hashFiles('tart-viewer/pnpm-lock.yaml') }}
+        restore-keys: |
+          node-${{ runner.os }}-
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata for variant
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ github.repository }}/viewer-${{ matrix.variant }}
+        tags: |
+          type=ref,event=branch,suffix=-amd64
+          type=ref,event=pr,prefix=pr-
+          type=sha,suffix=-amd64
+          type=raw,value=latest,enable={{is_default_branch}},suffix=-amd64
+
+    - name: Build and push variant image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        platforms: linux/amd64
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        build-args: |
+          CI_PROJECT_NAME=viewer
+          BASE_URL=${{ matrix.base_url }}
+          CI_COMMIT_SHA=${{ github.sha }}
+        cache-from: |
+          type=gha,scope=${{ matrix.variant }}
+          type=gha,scope=shared
+          type=gha,scope=rust
+          type=gha,scope=node
+        cache-to: |
+          type=gha,mode=max,scope=${{ matrix.variant }}
+          type=gha,mode=max,scope=shared
+
+
+
+    - name: Extract assets from variant image
+      if: github.event_name != 'pull_request'
+      run: |
+        mkdir -p ./assets-${{ matrix.variant }}
+        # Create temporary container and copy files out
+        docker create --name temp-${{ matrix.variant }} ${{ env.REGISTRY }}/${{ github.repository }}/viewer-${{ matrix.variant }}:${{ github.sha }}-amd64
+        docker cp temp-${{ matrix.variant }}:/usr/share/nginx/html${{ matrix.base_url }}/. ./assets-${{ matrix.variant }}/
+        docker rm temp-${{ matrix.variant }}
+
+    - name: Upload assets
+      if: github.event_name != 'pull_request'
+      uses: actions/upload-artifact@v4
+      with:
+        name: assets-${{ matrix.variant }}
+        path: ./assets-${{ matrix.variant }}/
+        retention-days: 1
+
+  build-multiarch:
+    needs: build-variants
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    permissions:
+      contents: read
+      packages: write
+
+    strategy:
+      matrix:
+        variant: [root, subpath]
+        include:
+          - variant: root
+            base_url: ""
+          - variant: subpath
+            base_url: "/viewer"
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Download assets
+      uses: actions/download-artifact@v4
+      with:
+        name: assets-${{ matrix.variant }}
+        path: ./assets
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata for multiarch
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ github.repository }}/viewer-${{ matrix.variant }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr,prefix=pr-
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+          type=sha
+        labels: |
+          org.opencontainers.image.title=TART Viewer (${{ matrix.variant }})
+          org.opencontainers.image.description=Vue.js frontend with Rust/WASM for TART telescope visualization
+          org.opencontainers.image.base-url=${{ matrix.base_url }}
+          org.opencontainers.image.variant=${{ matrix.variant }}
+
+    - name: Create multi-platform Dockerfile
+      run: |
+        cat > Dockerfile.multiarch << 'EOF'
+        FROM nginx:stable-alpine
+        ARG BASE_URL
+        ENV BASE_URL=$BASE_URL
+        COPY nginx.conf.template /etc/nginx/nginx.conf.template
+        COPY assets /usr/share/nginx/html$BASE_URL/
+
+        # Generate nginx.conf from template with environment substitution
+        RUN envsubst '${BASE_URL}' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
+
+        EXPOSE 80
+        EOF
+
+    - name: Build and push multi-platform image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile.multiarch
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        build-args: |
+          BASE_URL=${{ matrix.base_url }}
+        cache-from: |
+          type=gha,scope=multiarch-${{ matrix.variant }}
+          type=gha,scope=shared
+          type=gha,scope=${{ matrix.variant }}
+        cache-to: type=gha,mode=max,scope=multiarch-${{ matrix.variant }}
+
+  pr-summary:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    needs: build-variants
+    permissions:
+      pull-requests: write
+
+    steps:
+    - name: Add PR summary comment
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const prNumber = context.issue.number;
+          
+          const comment = `🐳 **Docker images built for PR #${prNumber}**
+          
+          \`\`\`bash
+          docker run -p 8081:80 ghcr.io/tart-telescope/web_app/viewer-root:pr-${prNumber}      # root variant
+          docker run -p 8082:80 ghcr.io/tart-telescope/web_app/viewer-subpath:pr-${prNumber}  # /viewer variant
+          \`\`\``;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
+
+  build-proxy:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    needs: build-variants
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build and test proxy service
+      run: |
+        cd tart-viewer
+        docker compose build
+        docker compose config

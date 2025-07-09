@@ -1,155 +1,303 @@
 // Utilities
 import { defineStore } from "pinia";
-import { Axios, all } from "axios";
-import axios from "axios";
+import { satelliteApi, telescopeApi } from "@/services";
 
 export const useAppStore = defineStore("app", {
-  state: () => ({
-    VERSION_HASH: process.env.CI_COMMIT_SHA,
-    TART_API_HUB_URL: "https://api.elec.ac.nz/tart/",
-    TART_URL: "https://api.elec.ac.nz/tart/mu-udm",
-    CATALOG_URL: "https://tart.elec.ac.nz/catalog",
-    num_bin: 512,
-    nw: 128,
-    vis: null,
-    gain: null,
-    antennas: [],
-    selectedBaseline: [0, 23],
-    sat_list: [],
-    vis_history: [],
-    telescope_mode: "vis",
-    telescope_modes: ["off", "diag", "raw", "vis"],
-    loading: false,
-    info: {},
-    token: "",
-    visDataList: [],
-    rawDataList: [],
-    visFileList: [],
-    rawFileList: [],
-    channels: [],
-    authenticating: false,
-  }),
+  state: () => {
+    const state = {
+      VERSION_HASH: process.env.CI_COMMIT_SHA,
+      TART_API_HUB_URL: "https://api.elec.ac.nz/tart/",
+      TART_URL_DEFAULT: "https://api.elec.ac.nz/tart/zm-cbu",
+      TART_URL: "https://api.elec.ac.nz/tart/zm-cbu",
+      CATALOG_URL: "https://tart.elec.ac.nz/catalog",
+      API_PREFIX: "/api/v1",
+      // API_PREFIX: "",
+      // CATALOG_URL: "http://tiny:8876",
+      num_bin: 512,
+      nw: 128,
+      vis: null,
+      gain: null,
+      antennas: [],
+      selectedBaseline: [0, 23],
+      sat_list: [],
+      vis_history: [],
+      telescope_mode: "vis",
+      telescope_modes: ["off", "diag", "raw", "vis"],
+      loading: false,
+      info: {},
+      token: "",
+      visDataList: [],
+      rawDataList: [],
+      visFileList: [],
+      rawFileList: [],
+      channels: [],
+      authenticating: false,
+      hoveredTimestamp: null,
+      lastVisDataUpdate: 0,
+      lastRawDataUpdate: 0,
+      dataThinning: 1,
+      showTimings: false,
+      nside: 64,
+      antennasUsed: Array.from({ length: 24 }, (_, i) => i),
+      localMode: false,
+    };
+
+    // Configure satellite API service
+    satelliteApi.setUrl(state.CATALOG_URL);
+
+    // Initialize telescope API with default URL
+    telescopeApi.setUrl(state.TART_URL);
+    telescopeApi.setApiPrefix(state.API_PREFIX);
+
+    return state;
+  },
+  getters: {
+    // Extract telescope name from TART_URL (e.g., "zm-cbu" from "https://api.elec.ac.nz/tart/zm-cbu")
+    telescopeName: (state) => {
+      if (state.localMode) {
+        return "local";
+      }
+      if (!state.TART_URL) {
+        return "zm-cbu";
+      }
+      const urlParts = state.TART_URL.split("/").filter(
+        (part) => part.length > 0,
+      );
+      const telescopeName = urlParts.at(-1);
+      return telescopeName || "zm-cbu";
+    },
+  },
   actions: {
-    auth(pw) {
+    async auth(pw) {
       this.authenticating = true;
-      let data = { username: "admin", password: pw };
-      axios
-        .post(this.TART_URL + "/api/v1/auth", data)
-        .then((response) => {
-          this.token = Object.freeze(response.data).access_token;
-          this.authenticating = false;
-        })
-        .catch(() => {
-          this.authenticating = false;
-        });
+      const response = await telescopeApi.authenticate(pw);
+      if (response) {
+        this.token = response.access_token;
+      }
+      this.authenticating = false;
     },
 
     setTART_URL(postFix) {
-      this.setCustomTART_URL(this.TART_API_HUB_URL + postFix);
+      if (postFix === 'local') {
+        this.setLocalMode(true);
+      } else {
+        this.setLocalMode(false);
+        this.setCustomTART_URL(this.TART_API_HUB_URL + postFix);
+      }
     },
     setCustomTART_URL(newUrl) {
       this.logout();
       this.resetUI();
       this.TART_URL = newUrl;
-      this.renewMode();
-      this.renewInfo();
-      this.renewAntennas();
+      // Configure telescope API with new URL
+      telescopeApi.setUrl(newUrl);
+      telescopeApi.setApiPrefix(this.API_PREFIX);
+      // Note: API calls will be made after router confirms telescope is valid
     },
-    setTelescopeMode(newMode) {
-      let headers = { Authorization: "JWT " + this.token };
-      axios
-        .post(
-          this.TART_URL + "/api/v1/mode/" + newMode,
-          {},
-          { headers: headers },
-        )
-        .then((response) => {
-          this.telescope_mode = Object.freeze(response.data);
-        });
+    setLocalMode(enabled) {
+      this.localMode = enabled;
+      if (enabled) {
+        // Local mode: empty TART_URL (same origin) with API_PREFIX
+        this.logout();
+        this.resetUI();
+        this.TART_URL = "";
+        telescopeApi.setUrl("");
+        telescopeApi.setApiPrefix(this.API_PREFIX);
+      } else {
+        // Exit local mode: restore default URL
+        this.setCustomTART_URL(this.TART_URL_DEFAULT);
+      }
+    },
+    async setTelescopeMode(newMode) {
+      const response = await telescopeApi.setMode(newMode);
+      if (response) {
+        this.telescope_mode = response;
+      }
     },
     selectBaseline(val) {
       this.selectedBaseline = val;
     },
+    setHoveredTimestamp(timestamp) {
+      this.hoveredTimestamp = timestamp;
+    },
+    clearHoveredTimestamp() {
+      this.hoveredTimestamp = null;
+    },
     logout() {
       this.token = "";
+      telescopeApi.clearToken();
     },
-    newVisData() {
-      axios.post(this.TART_URL + "/api/v1/vis/data").then((response) => {
-        this.visDataList = Object.freeze(response.data);
-      });
+    async newVisData() {
+      const response = await telescopeApi.createVisData();
+      if (response) {
+        this.visDataList = response;
+      }
     },
-    newRawData() {
-      axios.post(this.TART_URL + "/api/v1/raw/data").then((response) => {
-        this.rawDataList = Object.freeze(response.data);
-      });
+    async newRawData() {
+      const response = await telescopeApi.createRawData();
+      if (response) {
+        this.rawDataList = response;
+      }
     },
-    renewChannels() {
-      axios.get(this.TART_URL + "/api/v1/status/channel").then((response) => {
-        this.channels = Object.freeze(response.data);
-      });
+    setDataThinning(value) {
+      this.dataThinning = value;
     },
-    renewInfo() {
-      axios.get(this.TART_URL + "/api/v1/info").then((response) => {
-        this.info = Object.freeze(response.data.info);
-      });
+    setShowTimings(value) {
+      this.showTimings = value;
     },
-    renewVisData() {
-      axios.get(this.TART_URL + "/api/v1/vis/data").then((response) => {
-        this.visFileList = Object.freeze(response.data);
-      });
+    setNside(value) {
+      this.nside = value;
     },
-    renewRawData() {
-      axios.get(this.TART_URL + "/api/v1/raw/data").then((response) => {
-        this.rawFileList = Object.freeze(response.data);
-      });
+    setAntennasUsed(antennas) {
+      this.antennasUsed = antennas;
     },
-    renewAntennas() {
-      axios
-        .get(this.TART_URL + "/api/v1/imaging/antenna_positions")
-        .then((response) => {
-          this.antennas = Object.freeze(response.data);
-        });
+    toggleAntenna(antennaId) {
+      const index = this.antennasUsed.indexOf(antennaId);
+      if (this.antennasUsed.includes(antennaId)) {
+        this.antennasUsed.splice(index, 1);
+      } else {
+        this.antennasUsed.push(antennaId);
+        this.antennasUsed.sort((a, b) => a - b);
+      }
     },
-    renewMode() {
-      axios.get(this.TART_URL + "/api/v1/mode/current").then((response) => {
-        this.telescope_mode = Object.freeze(response.data.mode);
-      });
+    async renewChannels() {
+      const response = await telescopeApi.getChannelStatus();
+      if (response) {
+        this.channels = response;
+      }
     },
-    synthesisData() {
-      all([
-        axios.get(this.TART_URL + "/api/v1/imaging/vis"),
-        axios.get(this.TART_URL + "/api/v1/calibration/gain"),
-        axios.get(this.TART_URL + "/api/v1/imaging/antenna_positions"),
-        axios.get(this.TART_URL + "/api/v1/info"),
-      ]).then(
-        axios.spread((data1, data2, data3, data4) => {
-          let vis = Object.freeze(data1.data);
-          let gains = Object.freeze(data2.data);
-          let ant_pos = Object.freeze(data3.data);
-          let info = Object.freeze(data4.data.info);
+    async renewInfo() {
+      const response = await telescopeApi.getInfo();
+      if (response && response.info) {
+        this.info = response.info;
+      }
+    },
+    async renewVisData() {
+      const now = Date.now();
+      // Only update if more than 60 seconds have passed
+      if (now - this.lastVisDataUpdate > 60_000) {
+        this.lastVisDataUpdate = now;
+        const response = await telescopeApi.getVisDataList();
+        if (response) {
+          this.visFileList = response;
+        }
+      }
+    },
+    async renewRawData() {
+      const now = Date.now();
+      // Only update if more than 60 seconds have passed
+      if (now - this.lastRawDataUpdate > 60_000) {
+        this.lastRawDataUpdate = now;
+        const response = await telescopeApi.getRawDataList();
+        if (response) {
+          this.rawFileList = response;
+        }
+      }
+    },
+    async renewAntennas() {
+      const response = await telescopeApi.getAntennaPositions();
+      if (response) {
+        this.antennas = response;
+      }
+    },
+    async renewMode() {
+      const response = await telescopeApi.getCurrentMode();
+      if (response && response.mode) {
+        this.telescope_mode = response.mode;
+      }
+    },
+    async enrichBulkSatellites() {
+      const timestamps = this.vis_history
+        .filter((vis) => vis.satellites?.length === 0)
+        .map((vis) => vis.timestamp);
 
-          const api_call =
-            this.CATALOG_URL +
-            "/catalog?date=" +
-            vis.timestamp +
-            "&lat=" +
-            info.location.lat +
-            "&lon=" +
-            info.location.lon;
-          axios.get(api_call).then((response) => {
-            this.sat_list = Object.freeze(response.data);
-          });
+      if (timestamps.length === 0) {
+        return;
+      }
+      if (
+        this.info.location.lat === undefined ||
+        this.info.location.lon === undefined
+      ) {
+        return;
+      }
 
-          this.antennas = ant_pos;
-          this.gain = gains;
-          this.info = info;
-          this.vis = vis;
-          if (this.vis_history.length > 40) {
-            this.vis_history.shift();
-          }
-          this.vis_history.push(vis);
-        }),
+      const response = await satelliteApi.getBulkAzEl(
+        this.info.location.lat,
+        this.info.location.lon,
+        0, // this.info.location.alt,
+        timestamps
       );
+
+      if (!response) {return;}
+
+      const responseTimestamps = response.dates;
+      for (const [i, timestamp_] of responseTimestamps.entries()) {
+        const timestamp = new Date(timestamp_);
+        const az_el = response.az_el[i];
+        for (const vis of this.vis_history) {
+          // if time_delta is less than 0.01s
+          if (Math.abs(vis.timestamp - timestamp) < 10) {
+            vis.satellites = az_el.map((satellite) => ({
+              name: satellite.name,
+              az: satellite.az,
+              el: satellite.el,
+            }));
+          }
+        }
+      }
+    },
+    async synthesisData() {
+      const synthesisData = await telescopeApi.getSynthesisData();
+      if (!synthesisData) {return;}
+
+      const { vis, gain, antennas } = synthesisData;
+
+      const visData = vis;
+      const gainsData = gain;
+      const antPos = antennas;
+      const info = this.info;
+
+      // Safety check for info.location before accessing coordinates
+      if (!info || !info.location) {
+        console.warn('Telescope info not loaded yet, skipping satellite catalog');
+        return;
+      }
+
+      const catalogData = await satelliteApi.getCatalog(
+        visData.timestamp,
+        info.location.lat,
+        info.location.lon,
+        0
+      );
+
+      if (catalogData) {
+        const satellites = catalogData
+          .filter((sat) => sat.el > 4)
+          .map((sat) => {
+            return {
+              el: sat.el,
+              az: sat.az,
+              name: sat.name,
+            };
+          });
+        this.sat_list = satellites;
+
+        // Store visibility with satellite data in history
+        const visWithSatellites = {
+          ...visData,
+          satellites,
+        };
+
+        while (this.vis_history.length > 500) {
+          this.vis_history.shift();
+        }
+        this.vis_history.push(visWithSatellites);
+      }
+
+      this.antennas = antPos;
+      this.gain = gainsData;
+      this.info = info;
+      this.vis = visData;
     },
     resetUI() {
       delete this.vis_history;
@@ -158,25 +306,28 @@ export const useAppStore = defineStore("app", {
       this.gain = null;
       this.antennas = [];
       this.sat_list = [];
+      this.lastVisDataUpdate = 0;
+      this.lastRawDataUpdate = 0;
+      telescopeApi.reset();
     },
-    renewGain() {
-      axios.get(this.TART_URL + "/api/v1/calibration/gain").then((response) => {
-        this.gain = Object.freeze(response.data);
-      });
+    async renewGain() {
+      const response = await telescopeApi.getGain();
+      if (response) {
+        this.gain = response;
+      }
     },
-    renewSatellite() {
+    async renewSatellite() {
       if (this.info && this.info.location && this.vis && this.vis.timestamp) {
-        const api_call =
-          this.CATALOG_URL +
-          "/catalog?date=" +
-          this.vis.timestamp +
-          "&lat=" +
-          this.info.location.lat +
-          "&lon=" +
-          this.info.location.lon;
-        axios.get(api_call).then((response) => {
-          this.sat_list = Object.freeze(response.data);
-        });
+        const catalogData = await satelliteApi.getCatalog(
+          this.vis.timestamp,
+          this.info.location.lat,
+          this.info.location.lon,
+          0
+        );
+
+        if (catalogData) {
+          this.sat_list = catalogData;
+        }
       }
     },
   },

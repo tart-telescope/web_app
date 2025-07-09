@@ -1,0 +1,53 @@
+name: Test Build Docker Images
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  test-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Test build viewer-root image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        push: false
+        tags: test/viewer-root:${{ github.sha }}
+        build-args: |
+          CI_PROJECT_NAME=viewer
+          BASE_URL=
+          CI_COMMIT_SHA=${{ github.sha }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Test build viewer-subpath image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        push: false
+        tags: test/viewer-subpath:${{ github.sha }}
+        build-args: |
+          CI_PROJECT_NAME=viewer
+          BASE_URL=/viewer
+          CI_COMMIT_SHA=${{ github.sha }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Test nginx proxy build
+      run: |
+        cd tart-viewer
+        docker compose build
+        docker compose config

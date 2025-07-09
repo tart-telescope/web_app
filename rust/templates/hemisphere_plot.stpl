@@ -1,0 +1,112 @@
+<?xml version="1.0" standalone="<%= if standalone %>yes<% else %>no<% endif %>"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="<%= width %>cm" height="<%= height %>cm"
+     viewBox="0 0 <%= view_width %> <%= view_height %>"
+     version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  
+  <% if let Some(ref title) = title %>
+  <title><%= title %></title>
+  <% endif %>
+  
+  <% if let Some(ref desc) = description %>
+  <desc><%= desc %></desc>
+  <% endif %>
+
+  <!-- Background -->
+  <rect width="100%" height="100%" fill="<%= background_color %>"/>
+  
+  <!-- Pixel data polygons -->
+  <g id="pixels" stroke-width="<%= polygon_stroke_width %>" stroke-linejoin="round" stroke-opacity="<%= polygon_stroke_opacity %>">
+    <% for pixel in &pixels %>
+    <polygon points="<%= pixel.points %>" 
+             fill="<%= pixel.color %>" 
+             stroke="<%= pixel.color %>"
+             <% if let Some(ref title) = pixel.title %>title="<%= title %>"<% endif %>/>
+    <% endfor %>
+  </g>
+  
+  <!-- Grid lines -->
+  <% if show_grid %>
+  <g id="grid" fill="none" stroke="<%= grid_color %>" stroke-width="<%= grid_line_width %>" 
+     stroke-linejoin="round" stroke-dasharray="<%= grid_dash_pattern %>">
+    <!-- Elevation circles -->
+    <% for circle in &grid_circles %>
+    <circle cx="<%= circle.cx %>" cy="<%= circle.cy %>" r="<%= circle.radius %>"/>
+    <% endfor %>
+    
+    <!-- Azimuth lines -->
+    <% for line in &grid_lines %>
+    <line x1="<%= line.x1 %>" y1="<%= line.y1 %>" x2="<%= line.x2 %>" y2="<%= line.y2 %>"/>
+    <% endfor %>
+  </g>
+  <% endif %>
+  
+  <!-- Sources -->
+  <% if let Some(ref sources) = sources %>
+  <g id="sources">
+    <% for source in sources %>
+    <circle cx="<%= source.x %>" cy="<%= source.y %>" r="<%= source.radius %>"
+            fill="none" stroke="<%= source.color %>" stroke-width="<%= source.stroke_width %>"
+            el="<%= source.elevation %>" az="<%= source.azimuth %>" name="<%= source.name %>">
+      <title><%= source.name %>: El=<%= source.elevation %>°, Az=<%= source.azimuth %>°</title>
+    </circle>
+    <% endfor %>
+  </g>
+  <% endif %>
+  
+  <!-- Statistics overlay -->
+  <% if show_stats %>
+  <g id="statistics" transform="translate(<%= stats.x %>, <%= stats.y %>)">
+    <rect width="<%= stats.width %>" height="<%= stats.height %>" 
+          fill="<%= stats.background %>" stroke="<%= stats.border_color %>" 
+          stroke-width="<%= stats.border_width %>" opacity="<%= stats.opacity %>" rx="5"/>
+    <text x="10" y="20" fill="<%= stats.text_color %>" font-family="<%= stats.font_family %>" font-size="<%= stats.font_size %>">
+      <tspan x="10" dy="0">Pixels: <%= stats.n_pixels %></tspan>
+      <tspan x="10" dy="15">S/N: <%= stats.signal_noise_ratio %></tspan>
+      <tspan x="10" dy="15">Min: <%= stats.min_value %></tspan>
+      <tspan x="10" dy="15">Max: <%= stats.max_value %></tspan>
+      <tspan x="10" dy="15">Mean: <%= stats.mean_value %></tspan>
+      <tspan x="10" dy="15">StdDev: <%= stats.std_dev %></tspan>
+      <tspan x="10" dy="15">MAD: <%= stats.mad_value %></tspan>
+      <tspan x="10" dy="15">Median: <%= stats.median_value %></tspan>
+    </text>
+  </g>
+  <% endif %>
+  
+  <!-- Color scale legend -->
+  <% if let Some(ref colorbar) = colorbar %>
+  <g id="colorbar" transform="translate(<%= colorbar.x %>, <%= colorbar.y %>)">
+    <!-- Color gradient -->
+    <defs>
+      <linearGradient id="colorGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+        <% for stop in &colorbar.gradient_stops %>
+        <stop offset="<%= stop.offset %>%" stop-color="<%= stop.color %>"/>
+        <% endfor %>
+      </linearGradient>
+    </defs>
+    
+    <rect width="<%= colorbar.width %>" height="<%= colorbar.height %>" 
+          fill="url(#colorGradient)" stroke="<%= colorbar.border_color %>" stroke-width="1"/>
+    
+    <!-- Scale labels -->
+    <% for label in &colorbar.labels %>
+    <text x="<%= colorbar.width + 5 %>" y="<%= label.y %>" 
+          fill="<%= colorbar.text_color %>" font-family="<%= colorbar.font_family %>" 
+          font-size="<%= colorbar.font_size %>" dominant-baseline="middle">
+      <%= label.text %>
+    </text>
+    <% endfor %>
+    
+    <!-- Title -->
+    <text x="<%= colorbar.width / 2 %>" y="-10" 
+          fill="<%= colorbar.text_color %>" font-family="<%= colorbar.font_family %>" 
+          font-size="<%= colorbar.font_size %>" text-anchor="middle">
+      <%= colorbar.title %>
+    </text>
+  </g>
+  <% endif %>
+  
+  <!-- Custom overlays -->
+  <%= custom_content %>
+  
+</svg>

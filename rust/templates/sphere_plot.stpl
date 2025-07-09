@@ -1,0 +1,84 @@
+<?xml version="1.0" standalone="<%= if standalone %>yes<% else %>no<% endif %>"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="<%= width %>cm" height="<%= height %>cm"
+     viewBox="0 0 <%= width %> <%= height %>"
+     version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  
+  <% if let Some(ref title) = title %>
+  <title><%= title %></title>
+  <% endif %>
+  
+  <% if let Some(ref desc) = description %>
+  <desc><%= desc %></desc>
+  <% endif %>
+
+  <!-- Background -->
+  <rect width="100%" height="100%" fill="<%= background_color %>"/>
+  
+  <!-- Grid lines -->
+  <% if show_grid %>
+  <g id="grid" stroke="<%= grid_color %>" stroke-width="<%= grid_width %>" fill="none" opacity="<%= grid_opacity %>">
+    <% for line in &grid_lines %>
+    <path d="<%= line %>"/>
+    <% endfor %>
+  </g>
+  <% endif %>
+  
+  <!-- Coordinate system -->
+  <g id="coordinates" stroke="<%= coord_color %>" stroke-width="<%= coord_width %>" fill="none">
+    <% for coord in &coord_lines %>
+    <path d="<%= coord %>"/>
+    <% endfor %>
+  </g>
+  
+  <!-- Data points -->
+  <g id="data-points">
+    <% for point in &data_points %>
+    <circle cx="<%= point.x %>" cy="<%= point.y %>" r="<%= point.radius %>" 
+            fill="<%= point.color %>" opacity="<%= point.opacity %>"
+            <% if let Some(ref stroke) = point.stroke %>stroke="<%= stroke %>"<% endif %>
+            <% if let Some(stroke_width) = point.stroke_width %>stroke-width="<%= stroke_width %>"<% endif %>>
+      <% if let Some(ref title) = point.title %>
+      <title><%= title %></title>
+      <% endif %>
+    </circle>
+    <% endfor %>
+  </g>
+  
+  <!-- Labels -->
+  <% if show_labels %>
+  <g id="labels" font-family="<%= font_family %>" font-size="<%= font_size %>" fill="<%= label_color %>">
+    <% for label in &labels %>
+    <text x="<%= label.x %>" y="<%= label.y %>" 
+          <% if let Some(ref anchor) = label.text_anchor %>text-anchor="<%= anchor %>"<% endif %>
+          <% if let Some(ref baseline) = label.dominant_baseline %>dominant-baseline="<%= baseline %>"<% endif %>>
+      <%= label.text %>
+    </text>
+    <% endfor %>
+  </g>
+  <% endif %>
+  
+  <!-- Legend -->
+  <% if let Some(ref legend) = legend %>
+  <g id="legend" transform="translate(<%= legend.x %>, <%= legend.y %>)">
+    <rect width="<%= legend.width %>" height="<%= legend.height %>" 
+          fill="<%= legend.background %>" stroke="<%= legend.border_color %>" 
+          stroke-width="<%= legend.border_width %>" opacity="<%= legend.opacity %>"/>
+    <% for (i, item) in legend.items.iter().enumerate() %>
+    <g transform="translate(<%= legend.item_spacing %>, <%= legend.item_spacing + i * legend.item_height %>)">
+      <circle cx="<%= legend.symbol_size / 2 %>" cy="<%= legend.symbol_size / 2 %>" 
+              r="<%= legend.symbol_size / 2 %>" fill="<%= item.color %>"/>
+      <text x="<%= legend.symbol_size + 5 %>" y="<%= legend.symbol_size / 2 %>" 
+            font-family="<%= legend.font_family %>" font-size="<%= legend.font_size %>"
+            fill="<%= legend.text_color %>" dominant-baseline="middle">
+        <%= item.label %>
+      </text>
+    </g>
+    <% endfor %>
+  </g>
+  <% endif %>
+  
+  <!-- Custom content -->
+  <%= custom_content %>
+  
+</svg>

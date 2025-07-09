@@ -4,10 +4,12 @@ WORKDIR /app/rust
 RUN apt-get update && apt-get install -y curl
 RUN curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 COPY rust /app/rust
-RUN RUST_LOG=info wasm-pack build --release --out-dir ./pkg
+RUN RUSTFLAGS='-C target-feature=+simd128,+bulk-memory,+nontrapping-fptoint -C opt-level=3 -C codegen-units=1' \
+	RUST_LOG=info wasm-pack build --release --target web --out-dir ./pkg \
+		-- --features fast-math,simd,browser --no-default-features
 
 # Web App build stage
-FROM node:20 AS node-build-stage
+FROM node:24-alpine AS node-build-stage
 WORKDIR /app/tart-viewer
 RUN npm install -g pnpm
 
@@ -35,11 +37,15 @@ RUN pnpm build --base=$BASE_URL/
 # Compress static files
 RUN find ./dist -type f -regex '.*\.\(htm\|html\|wasm\|eot\|ttf\|txt\|text\|js\|css\)$' -exec gzip -f --best -k {} \;
 
-
-FROM jauderho/nginx-distroless:stable AS production-stage
+# Multi-arch production stage
+FROM nginx:stable-alpine AS production-stage
 
 ARG BASE_URL
 ENV BASE_URL=$BASE_URL
-COPY nginx.conf /etc/nginx/nginx.conf
+COPY nginx.conf.template /etc/nginx/nginx.conf.template
 COPY --from=node-build-stage /app/tart-viewer/dist /usr/share/nginx/html$BASE_URL/
+
+# Generate nginx.conf from template with environment substitution
+RUN envsubst '${BASE_URL}' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
+
 EXPOSE 80

@@ -19,8 +19,6 @@ http {
     access_log  /var/log/nginx/access.log  main;
 
     sendfile        on;
-    #tcp_nopush     on;
-
     keepalive_timeout  65;
 
     gzip on;
@@ -58,5 +56,39 @@ http {
     add_header Cross-Origin-Embedder-Policy "require-corp";
     add_header Cross-Origin-Opener-Policy "same-origin";
 
-    include /etc/nginx/conf.d/*.conf;
+    server {
+        listen 80;
+        server_name localhost;
+        root /usr/share/nginx/html;
+        index index.html;
+
+        # SPA routing with BASE_URL support
+        location / {
+            # For root deployment, serve directly
+            # For subpath deployment, handle the prefix
+            try_files $uri $uri/ @fallback;
+        }
+
+        location @fallback {
+            # Fallback to the appropriate index.html based on BASE_URL
+            try_files ${BASE_URL}/index.html /index.html =404;
+        }
+
+        # Cache static assets
+        location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+            expires 1y;
+            add_header Cache-Control "public, immutable";
+        }
+
+        # Don't cache HTML files
+        location ~* \.html$ {
+            expires -1;
+            add_header Cache-Control "no-store, no-cache, must-revalidate";
+        }
+
+        # Handle pre-compressed files
+        location ~* \.(js|css|html|wasm)$ {
+            gzip_static on;
+        }
+    }
 }
