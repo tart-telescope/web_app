@@ -17,6 +17,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      pull-requests: write  # Added for PR comments
 
     strategy:
       matrix:
@@ -98,24 +99,24 @@ jobs:
           const sha = '${{ github.sha }}';
           const baseUrl = '${{ matrix.base_url }}';
           const prNumber = context.issue.number;
-          
+
           const comment = `### 🐳 Docker Build Complete - ${variant}
-          
+
           **Image:** \`ghcr.io/tart-telescope/web_app/viewer-${variant}:pr-${prNumber}\`
           **Base URL:** \`${baseUrl || '/'}\`
           **Commit:** \`${sha}\`
           **PR:** #${prNumber}
-          
+
           This image can be tested with:
           \`\`\`bash
           docker run -p 808${variant === 'root' ? '1' : '2'}:80 ghcr.io/tart-telescope/web_app/viewer-${variant}:pr-${prNumber}
           \`\`\`
-          
+
           Available tags:
           - \`pr-${prNumber}\` (latest for this PR)
           - \`${sha}\` (specific commit)
           `;
-          
+
           github.rest.issues.createComment({
             issue_number: context.issue.number,
             owner: context.repo.owner,
@@ -202,10 +203,10 @@ jobs:
         ENV BASE_URL=$BASE_URL
         COPY nginx.conf.template /etc/nginx/nginx.conf.template
         COPY assets /usr/share/nginx/html$BASE_URL/
-        
+
         # Generate nginx.conf from template with environment substitution
         RUN envsubst '${BASE_URL}' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
-        
+
         EXPOSE 80
         EOF
 
@@ -240,32 +241,32 @@ jobs:
         script: |
           const prNumber = context.issue.number;
           const sha = '${{ github.sha }}';
-          
+
           const comment = `## 🎉 Build Complete for PR #${prNumber}
-          
+
           Both Docker variants have been successfully built and are ready for testing!
-          
+
           ### 📦 Available Images
-          
+
           | Variant | Image | Port | Base URL |
           |---------|-------|------|----------|
           | **Root** | \`ghcr.io/tart-telescope/web_app/viewer-root:pr-${prNumber}\` | 8081 | \`/\` |
           | **Subpath** | \`ghcr.io/tart-telescope/web_app/viewer-subpath:pr-${prNumber}\` | 8082 | \`/viewer\` |
-          
+
           ### 🧪 Test Commands
-          
+
           \`\`\`bash
           # Test root variant
           docker run -p 8081:80 ghcr.io/tart-telescope/web_app/viewer-root:pr-${prNumber}
-          
-          # Test subpath variant  
+
+          # Test subpath variant
           docker run -p 8082:80 ghcr.io/tart-telescope/web_app/viewer-subpath:pr-${prNumber}
           \`\`\`
-          
+
           **Commit:** \`${sha}\`
           **Build:** ✅ Passed
           `;
-          
+
           github.rest.issues.createComment({
             issue_number: context.issue.number,
             owner: context.repo.owner,
