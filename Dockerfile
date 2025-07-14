@@ -11,20 +11,8 @@ RUN --mount=type=cache,target=/root/.cargo/registry \
     --mount=type=cache,target=/root/.cargo/git \
     curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
-# Copy Cargo files first for better layer caching
-COPY rust/Cargo.toml rust/Cargo.lock ./
-
-# Create dummy lib.rs to build dependencies
-RUN mkdir src && echo "pub fn dummy() {}" > src/lib.rs
-
-# Build dependencies with cache mounts
-RUN --mount=type=cache,target=/root/.cargo/registry \
-    --mount=type=cache,target=/root/.cargo/git \
-    --mount=type=cache,target=target \
-    cargo build --lib --release
-
-# Copy actual source code
-COPY rust/src ./src
+# Copy rust project
+COPY rust ./
 
 # Build WASM with cache mounts
 RUN --mount=type=cache,target=/root/.cargo/registry \
