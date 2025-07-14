@@ -77,7 +77,7 @@ jobs:
           type=ref,event=branch
           type=ref,event=pr,prefix=pr-
           type=sha
-          type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+          type=raw,value=latest,enable={{is_default_branch}}
         labels: |
           org.opencontainers.image.title=TART Viewer (${{ matrix.variant }})
           org.opencontainers.image.description=Vue.js frontend with Rust/WASM for TART telescope visualization
