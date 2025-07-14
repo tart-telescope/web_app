@@ -36,30 +36,9 @@ jobs:
       uses: docker/setup-buildx-action@v3
       with:
         driver-opts: image=moby/buildkit:buildx-stable-1
+        buildkitd-flags: --allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure
 
-    # Cache Rust dependencies
-    - name: Cache Rust
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-          rust/target
-        key: rust-${{ runner.os }}-${{ hashFiles('rust/Cargo.lock', 'rust/Cargo.toml') }}
-        restore-keys: |
-          rust-${{ runner.os }}-
-
-    # Cache Node.js dependencies
-    - name: Cache Node modules
-      uses: actions/cache@v4
-      with:
-        path: |
-          tart-viewer/node_modules
-          ~/.cache/pnpm
-          ~/.pnpm-store
-        key: node-${{ runner.os }}-${{ hashFiles('tart-viewer/pnpm-lock.yaml') }}
-        restore-keys: |
-          node-${{ runner.os }}-
+    # No explicit cache actions needed - using BuildKit cache mounts in Dockerfile
 
     - name: Log in to Container Registry
       uses: docker/login-action@v3
@@ -98,13 +77,15 @@ jobs:
           BASE_URL=${{ matrix.base_url }}
           CI_COMMIT_SHA=${{ github.sha }}
         cache-from: |
-          type=gha,scope=${{ matrix.variant }}
-          type=gha,scope=shared
-          type=gha,scope=rust
-          type=gha,scope=node
+          type=gha,scope=buildx-${{ matrix.variant }}
+          type=gha,scope=buildx-shared
+          type=gha,scope=rust-${{ matrix.variant }}
+          type=gha,scope=node-${{ matrix.variant }}
         cache-to: |
-          type=gha,mode=max,scope=${{ matrix.variant }}
-          type=gha,mode=max,scope=shared
+          type=gha,mode=max,scope=buildx-${{ matrix.variant }}
+          type=gha,mode=max,scope=buildx-shared
+          type=gha,mode=max,scope=rust-${{ matrix.variant }}
+          type=gha,mode=max,scope=node-${{ matrix.variant }}
 
   pr-summary:
     runs-on: ubuntu-latest
