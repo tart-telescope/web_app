@@ -33,10 +33,10 @@
 
               <template #item.actions="{ item }">
                 <v-btn
-                  icon
-                  small
                   :disabled="loadingFile && loadingFile !== item.filename"
+                  icon
                   :loading="loadingFile === item.filename"
+                  small
                   @click="loadVisibilityFile(item)"
                 >
                   <v-icon small> mdi-eye </v-icon>

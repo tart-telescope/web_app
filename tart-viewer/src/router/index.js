@@ -10,8 +10,8 @@ import { setupLayouts } from "virtual:generated-layouts";
 import { createRouter, createWebHistory } from "vue-router/auto";
 // eslint-disable-next-line import/no-duplicates
 import { routes } from "vue-router/auto-routes";
-import { useTelescopeRegistryStore } from "@/stores/telescopeRegistry";
 import { useAppStore } from "@/stores/app";
+import { useTelescopeRegistryStore } from "@/stores/telescopeRegistry";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
