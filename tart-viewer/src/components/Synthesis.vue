@@ -311,9 +311,7 @@
         }
       },
     },
-    created() {
-      this.updateGeometry();
-    },
+    created() {},
 
     mounted() {
       this.isInitialized = true;

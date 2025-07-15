@@ -4,10 +4,10 @@
 </template>
 
 <script setup>
-  import { onMounted, computed } from "vue";
+  import { computed, onMounted } from "vue";
   import { useRouter } from "vue-router";
-  import { useAppStore } from "@/stores/app";
   import Home from "@/components/Home.vue";
+  import { useAppStore } from "@/stores/app";
 
   const router = useRouter();
   const appStore = useAppStore();
