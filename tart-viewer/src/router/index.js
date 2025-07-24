@@ -22,6 +22,11 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   const appStore = useAppStore();
   
+  // Auto-detect local mode based on protocol
+  if (window.location.protocol === 'http:') {
+    appStore.localMode = true;
+  }
+  
   // In local mode, handle routing differently
   if (appStore.localMode) {
     // If trying to access a telescope route in local mode, redirect to root
