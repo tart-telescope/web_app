@@ -43,14 +43,11 @@
   import { mapState } from "pinia";
   import ArrayLayout from "@/components/ArrayLayout.vue";
   import Baseline from "@/components/Baseline.vue";
-
   import GainPhase from "@/components/GainPhase.vue";
   import GeneralInfo from "@/components/GeneralInfo.vue";
-
   import RadioSpectrum from "@/components/RadioSpectrum.vue";
   import RecentData from "@/components/RecentData.vue";
   import S3Files from "@/components/S3Files.vue";
-
   import Synthesis from "@/components/Synthesis.vue";
   import { useAppStore } from "@/stores/app";
 
@@ -62,15 +59,14 @@
       };
     },
     components: {
-      Synthesis,
-      Baseline,
       ArrayLayout,
-
+      Baseline,
+      GainPhase,
       GeneralInfo,
       RadioSpectrum,
       RecentData,
       S3Files,
-      GainPhase,
+      Synthesis,
     },
     computed: {
       ...mapState(useAppStore, ["telescope_mode", "dataThinning", "TART_URL", "localMode", "vis", "gain", "antennas"]),

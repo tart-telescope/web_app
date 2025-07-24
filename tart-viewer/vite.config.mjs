@@ -17,7 +17,6 @@ export default defineConfig({
 	base: process.env.BASE_URL || "/",
 	optimizeDeps: {
 		exclude: ["util", "gridless"],
-		include: ["apexcharts"],
 	},
 	assetsInclude: ["**/*.wasm"],
 	plugins: [
@@ -60,7 +59,6 @@ export default defineConfig({
 		rollupOptions: {
 			output: {
 				manualChunks: {
-					apexcharts: ["apexcharts"],
 				},
 			},
 		},
@@ -78,8 +76,8 @@ export default defineConfig({
 				target: 'http://localhost:1234',
 				changeOrigin: true,
 				secure: false,
-				// rewrite: (path) => path.replace(/^\/api\/v1/, ''),
-				rewrite: (path) => path,
+				rewrite: (path) => path.replace(/^\/api\/v1/, ''),
+				// rewrite: (path) => path,
 				configure: (proxy, _options) => {
 					proxy.on('error', (err, _req, _res) => {
 						console.log('proxy error', err);

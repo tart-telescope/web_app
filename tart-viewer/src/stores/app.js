@@ -40,6 +40,7 @@ export const useAppStore = defineStore("app", {
       nside: 64,
       antennasUsed: Array.from({ length: 24 }, (_, i) => i),
       localMode: false,
+      partition_size: 6,
     };
 
     // Configure satellite API service
@@ -110,8 +111,8 @@ export const useAppStore = defineStore("app", {
     },
     async setTelescopeMode(newMode) {
       const response = await telescopeApi.setMode(newMode);
-      if (response) {
-        this.telescope_mode = response;
+      if (response && response.mode) {
+        this.telescope_mode = response.mode;
       }
     },
     selectBaseline(val) {
@@ -147,6 +148,9 @@ export const useAppStore = defineStore("app", {
     },
     setNside(value) {
       this.nside = value;
+    },
+    setPartitionSize(value) {
+      this.partition_size = value;
     },
     setAntennasUsed(antennas) {
       this.antennasUsed = antennas;

@@ -155,6 +155,19 @@
         />
       </v-list-item>
 
+      <!-- Partition Size Control - only in diag mode -->
+      <v-list-item v-if="telescope_mode === 'diag'" class="pt-3">
+        <v-select
+          v-model="partition_size"
+          dense
+          hide-details
+          :items="[4, 6, 8, 24]"
+          label="Partition Size"
+          outlined
+          @update:model-value="setPartitionSize"
+        />
+      </v-list-item>
+
       <!-- Timing Toggle -->
       <v-list-item>
         <v-checkbox
@@ -281,6 +294,7 @@
         "setDataThinning",
         "setShowTimings",
         "setNside",
+        "setPartitionSize",
       ]),
       ...mapActions(useTelescopeRegistryStore, [
         "initialize",
@@ -486,7 +500,7 @@
       this.stopPolling();
     },
     computed: {
-      ...mapState(useAppStore, ["telescope_mode", "TART_URL", "TART_URL_DEFAULT", "dataThinning", "showTimings", "nside", "localMode"]),
+      ...mapState(useAppStore, ["telescope_mode", "TART_URL", "TART_URL_DEFAULT", "dataThinning", "showTimings", "nside", "localMode", "partition_size"]),
       ...mapState(useTelescopeRegistryStore, {
         telescopes: 'telescopeList',
         loadingTelescopes: 'isLoading'

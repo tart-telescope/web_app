@@ -44,6 +44,34 @@
       type: Boolean,
       default: false,
     },
+    showLegend: {
+      type: Boolean,
+      default: false,
+    },
+    timeAxis: {
+      type: Boolean,
+      default: true,
+    },
+    yAxisLabel: {
+      type: String,
+      default: "",
+    },
+    xAxisLabel: {
+      type: String,
+      default: "",
+    },
+    showCursor: {
+      type: Boolean,
+      default: true,
+    },
+    emitEvents: {
+      type: Boolean,
+      default: true,
+    },
+    cursorFocus: {
+      type: Boolean,
+      default: false,
+    },
   });
 
   const emit = defineEmits(["data-point-selection", "mouse-move", "mouse-leave", "zoom-changed"]);
@@ -63,7 +91,7 @@
   }
 
   function createChart() {
-    if (!chartRef.value || chart || !props.series.length) return;
+    if (!chartRef.value || chart || props.series.length === 0) return;
 
     const { width, height } = getContainerSize();
     const data = transformSeries();
@@ -80,6 +108,7 @@
       axes: createAxesConfig(),
       scales: createScalesConfig(),
       cursor: {
+        show: props.showCursor,
         drag: {
           x: true,
           y: false,
@@ -88,9 +117,24 @@
         sync: {
           key: props.syncKey,
         },
+        focus: props.cursorFocus ? {
+          prox: 1e6,
+        } : undefined,
+        points: {
+          show: props.cursorFocus,
+          size: 6,
+          width: 2,
+          stroke: (u, seriesIdx) => u.series[seriesIdx].stroke(),
+          fill: "#fff",
+        },
+        x: props.cursorFocus,
+        y: props.cursorFocus,
       },
+      focus: props.cursorFocus ? {
+        alpha: 0.3,
+      } : undefined,
       legend: {
-        show: true,
+        show: props.showLegend,
       },
       select: {
         show: true,
@@ -100,38 +144,78 @@
         height: 0,
       },
       hooks: {
+        ...(props.cursorFocus ? {
+          setSeries: [
+            (u, seriesIdx, opts) => {
+              if (opts.focus != null) {
+                u.series.forEach((s, i) => {
+                  if (i > 0) { // Skip x-axis series
+                    s.width = i == seriesIdx ? 3 : 1;
+                  }
+                });
+              }
+            }
+          ]
+        } : {}),
         setCursor: [
           (u) => {
+            if (!props.emitEvents) return;
+            
             const { left, top, idx } = u.cursor;
             if (idx !== null && idx !== undefined) {
-              // Get timestamp for the cursor position
-              const timestamp = u.data[0][idx];
-              const value = u.data[1] ? u.data[1][idx] : null;
-            
-              if (timestamp) {
-                const date = new Date(timestamp * 1000);
-                const options = { 
-                  hour12: false,
-                  year: 'numeric',
-                  month: '2-digit',
-                  day: '2-digit',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  second: '2-digit'
-                };
+              // Get x-axis value (could be timestamp, frequency, etc.)
+              const xValue = u.data[0][idx];
+              const yValue = u.data[1] ? u.data[1][idx] : null;
               
-                if (props.timezone) {
-                  options.timeZone = props.timezone;
+              // Get all y-values for all series at this x position
+              const seriesValues = [];
+              for (let i = 1; i < u.data.length; i++) {
+                const seriesYValue = u.data[i] ? u.data[i][idx] : null;
+                if (seriesYValue !== null && seriesYValue !== undefined) {
+                  seriesValues.push({
+                    seriesIndex: i - 1,
+                    name: u.series[i].label || `Series ${i}`,
+                    value: seriesYValue
+                  });
                 }
+              }
               
-                emit("mouse-move", { 
+              if (xValue !== null && xValue !== undefined) {
+                // Check if this looks like a timestamp (Unix timestamp in seconds)
+                const isTimestamp = xValue > 1000000000 && xValue < 4000000000;
+                
+                let formattedData = {
                   idx, 
                   left, 
                   top, 
-                  timestamp: date.toLocaleString(undefined, options),
-                  value: value,
-                  rawTimestamp: timestamp * 1000
-                });
+                  xValue: xValue,
+                  yValue: yValue,
+                  seriesValues: seriesValues
+                };
+                
+                if (isTimestamp) {
+                  // Add timestamp formatting for time series
+                  const date = new Date(xValue * 1000);
+                  const options = { 
+                    hour12: false,
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                  };
+                
+                  if (props.timezone) {
+                    options.timeZone = props.timezone;
+                  }
+                
+                  formattedData.timestamp = date.toLocaleString(undefined, options);
+                  formattedData.rawTimestamp = xValue * 1000;
+                  formattedData.value = yValue; // backward compatibility
+                }
+                
+                emit("mouse-move", formattedData);
               }
             }
           },
@@ -167,50 +251,55 @@
   }
 
   function transformSeries() {
-    if (!props.series.length) return null;
+    if (props.series.length === 0) return null;
 
-    // Extract timestamps from first series
-    const timestamps = props.series[0]?.data?.map((point, idx) => {
-      let timestamp = point.x;
-      const originalTimestamp = timestamp;
+    // Extract x-axis values from first series
+    const xValues = props.series[0]?.data?.map((point, idx) => {
+      let xValue = point.x;
+      const originalValue = xValue;
     
-      // Handle different timestamp formats
-      if (typeof timestamp === 'string') {
-        // Parse ISO string or other date formats
-        timestamp = new Date(timestamp).getTime();
-      } else if (typeof timestamp === 'number') {
-        // If it's already a timestamp, check if it's in milliseconds or seconds
-        if (timestamp > 1e12) {
-          // Likely milliseconds, keep as is
-        } else if (timestamp > 1e9) {
-          // Likely seconds, convert to milliseconds
-          timestamp = timestamp * 1000;
+      if (props.timeAxis) {
+        // Handle timestamp formatting only if this is a time axis
+        if (typeof xValue === 'string') {
+          // Parse ISO string or other date formats
+          xValue = new Date(xValue).getTime();
+        } else if (typeof xValue === 'number') {
+          // If it's already a timestamp, check if it's in milliseconds or seconds
+          if (xValue > 1e12) {
+            // Likely milliseconds, keep as is
+          } else if (xValue > 1e9) {
+            // Likely seconds, convert to milliseconds
+            xValue = xValue * 1000;
+          }
         }
+        
+        // Debug logging for first few timestamps
+        if (idx < 3) {
+          console.log(`Timestamp ${idx}:`, {
+            original: originalValue,
+            processed: xValue,
+            date: new Date(xValue).toISOString(),
+            uplotValue: xValue / 1000
+          });
+        }
+      
+        // Convert to seconds for uPlot (from milliseconds)
+        return xValue / 1000;
+      } else {
+        // For non-time data (like frequency), use values as-is
+        return typeof xValue === 'number' ? xValue : parseFloat(xValue) || 0;
       }
-    
-      // Debug logging for first few timestamps
-      if (idx < 3) {
-        console.log(`Timestamp ${idx}:`, {
-          original: originalTimestamp,
-          processed: timestamp,
-          date: new Date(timestamp).toISOString(),
-          uplotValue: timestamp / 1000
-        });
-      }
-    
-      // Convert to seconds for uPlot (from milliseconds)
-      return timestamp / 1000;
     }) || [];
 
     // Transform each series data
     const seriesData = props.series.map(series => 
       series.data?.map(point => {
-        const value = parseFloat(point.y);
+        const value = Number.parseFloat(point.y);
         return isNaN(value) ? null : value;
       }) || []
     );
 
-    return [timestamps, ...seriesData];
+    return [xValues, ...seriesData];
   }
 
   function createSeriesConfig() {
@@ -244,75 +333,99 @@
   }
 
   function createAxesConfig() {
-    const axes = [
-      {
-        scale: "x",
-        space: 80,
-        stroke: "#ffffff",
-        grid: { stroke: "#4a5568", width: 1 },
-        ticks: { stroke: "#ffffff", width: 1 },
-        font: "12px system-ui",
-        labelFont: "12px system-ui",
-        values: (u, vals) => vals.map(v => {
-          const date = new Date(v * 1000);
-        
-          // Smart formatting based on zoom range
-          const range = u.scales.x.max - u.scales.x.min;
-          const rangeMs = range * 1000;
-        
-          let options = { hour12: false };
-        
-          if (props.timezone) {
-            options.timeZone = props.timezone;
-          }
-        
-          // Less than 1 minute - show seconds
-          if (rangeMs < 60_000) {
-            options = { ...options, hour: '2-digit', minute: '2-digit', second: '2-digit' };
-          }
-          // Less than 1 hour - show minutes
-          else if (rangeMs < 3_600_000) {
-            options = { ...options, hour: '2-digit', minute: '2-digit' };
-          }
-          // Less than 24 hours - show hours
-          else if (rangeMs < 86_400_000) {
-            options = { ...options, hour: '2-digit', minute: '2-digit' };
-          }
-          // More than 24 hours - show date and time
-          else {
-            options = { ...options, month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
-          }
-        
-          return date.toLocaleString(undefined, options);
-        }),
-        splits: (u, axisIdx, scaleMin, scaleMax, foundIncr, foundSpace) => {
-          // Smart tick distribution based on zoom range
-          const range = scaleMax - scaleMin;
-          const rangeMs = range * 1000;
-        
-          let step;
-          if (rangeMs < 60_000) {
-            step = 5; // 5 seconds
-          } else if (rangeMs < 300_000) {
-            step = 30; // 30 seconds
-          } else if (rangeMs < 3_600_000) {
-            step = 300; // 5 minutes
-          } else if (rangeMs < 86_400_000) {
-            step = 3600; // 1 hour
-          } else {
-            step = 86_400; // 1 day
-          }
-        
-          const splits = [];
-          for (let i = Math.ceil(scaleMin / step) * step; i <= scaleMax; i += step) {
-            splits.push(i);
-          }
-          return splits;
-        },
-      },
+    const xAxisConfig = {
+      scale: "x",
+      space: 80,
+      stroke: "#ffffff",
+      grid: { stroke: "#4a5568", width: 1 },
+      ticks: { stroke: "#ffffff", width: 1 },
+      font: "12px system-ui",
+      labelFont: "12px system-ui",
+      label: props.xAxisLabel || "",
+      labelSize: props.xAxisLabel ? 30 : 0,
+    };
+
+    if (props.timeAxis) {
+      // Time axis configuration
+      xAxisConfig.values = (u, vals) => vals.map(v => {
+        const date = new Date(v * 1000);
+      
+        // Smart formatting based on zoom range
+        const range = u.scales.x.max - u.scales.x.min;
+        const rangeMs = range * 1000;
+      
+        let options = { hour12: false };
+      
+        if (props.timezone) {
+          options.timeZone = props.timezone;
+        }
+      
+        // Less than 1 minute - show seconds
+        if (rangeMs < 60_000) {
+          options = { ...options, hour: '2-digit', minute: '2-digit', second: '2-digit' };
+        }
+        // Less than 1 hour - show minutes
+        else if (rangeMs < 3_600_000) {
+          options = { ...options, hour: '2-digit', minute: '2-digit' };
+        }
+        // Less than 24 hours - show hours
+        else if (rangeMs < 86_400_000) {
+          options = { ...options, hour: '2-digit', minute: '2-digit' };
+        }
+        // More than 24 hours - show date and time
+        else {
+          options = { ...options, month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+        }
+      
+        return date.toLocaleString(undefined, options);
+      });
+
+      xAxisConfig.splits = (u, axisIdx, scaleMin, scaleMax, foundIncr, foundSpace) => {
+        // Smart tick distribution based on zoom range
+        const range = scaleMax - scaleMin;
+        const rangeMs = range * 1000;
+      
+        let step;
+        if (rangeMs < 60_000) {
+          step = 5; // 5 seconds
+        } else if (rangeMs < 300_000) {
+          step = 30; // 30 seconds
+        } else if (rangeMs < 3_600_000) {
+          step = 300; // 5 minutes
+        } else if (rangeMs < 86_400_000) {
+          step = 3600; // 1 hour
+        } else {
+          step = 86_400; // 1 day
+        }
+      
+        const splits = [];
+        const startTime = Math.floor(scaleMin / step) * step;
+        for (let t = startTime; t <= scaleMax; t += step) {
+          if (t >= scaleMin) splits.push(t);
+        }
+        return splits;
+      };
+    } else {
+      // Non-time axis configuration (frequency, etc.)
+      xAxisConfig.values = (u, vals) => vals.map(v => v.toFixed(2));
+      
+      xAxisConfig.splits = (u, axisIdx, scaleMin, scaleMax) => {
+        const range = scaleMax - scaleMin;
+        if (range === 0) return [scaleMin - 0.1, scaleMax + 0.1];
+      
+        const step = range / 6; // Aim for ~6 ticks
+        const splits = [];
+        for (let i = 0; i <= 6; i++) {
+          splits.push(scaleMin + (i * step));
+        }
+        return splits;
+      };
+    }
+
+    const axes = [xAxisConfig,
       {
         scale: "y",
-        label: props.series[0]?.name || "Amplitude",
+        label: props.yAxisLabel || props.series[0]?.name || "Amplitude",
         labelSize: 30,
         space: 80,
         stroke: "#ffffff",
@@ -336,6 +449,7 @@
         ticks: { stroke: "#ffffff", width: 1 },
         font: "12px system-ui",
         labelFont: "12px system-ui",
+        values: (u, vals) => vals.map(v => v.toFixed(0) + '°'),
       });
     }
 
@@ -345,18 +459,26 @@
   function createScalesConfig() {
     const scales = {
       x: {
-        time: true, // Enable uPlot's built-in time support
+        time: props.timeAxis, // Enable uPlot's built-in time support only for time data
         auto: true,
       },
       y: {
         auto: true,
+        range: (u, dataMin, dataMax) => {
+          // Ensure at least 2 ticks on amplitude axis
+          const range = dataMax - dataMin;
+          if (range === 0) {
+            return [dataMin - 0.1, dataMax + 0.1];
+          }
+          return [dataMin, dataMax];
+        },
       },
     };
 
     // Add phase scale for dual axis charts
     if (props.dualAxis) {
       scales.phase = {
-        range: props.phaseRange,
+        range: [-180, 180],
         auto: false,
       };
     }
@@ -399,17 +521,17 @@
         currentScaleMin: currentScale.min,
         currentScaleMax: currentScale.max,
         firstTimestamp: data[0][0],
-        lastTimestamp: data[0][data[0].length - 1]
+        lastTimestamp: data[0].at(-1)
       });
       
       // Check if zoom is valid (not too far from actual data range)
       const maxAllowedRange = (dataRange.max - dataRange.min) * 10; // Allow 10x the actual data range
       const isValidZoom = currentScale.min !== null && currentScale.max !== null &&
-                         currentScale.min >= dataRange.min - maxAllowedRange &&
-                         currentScale.max <= dataRange.max + maxAllowedRange;
+        currentScale.min >= dataRange.min - maxAllowedRange &&
+        currentScale.max <= dataRange.max + maxAllowedRange;
                          
       const isZoomed = isValidZoom && 
-                       (Math.abs(currentScale.min - dataRange.min) > 1 || Math.abs(currentScale.max - dataRange.max) > 1);
+        (Math.abs(currentScale.min - dataRange.min) > 1 || Math.abs(currentScale.max - dataRange.max) > 1);
     
       chart.setData(data);
       lastSeriesHash = currentSeriesHash;
@@ -420,7 +542,7 @@
         logZoomChange('Preserving zoom', currentScale.min, currentScale.max);
       } else {
         // Reset zoom when data changes, invalid zoom, or not previously zoomed
-        const reason = !isValidZoom ? 'invalid zoom range' : (props.resetZoomOnDataChange ? 'telescope change' : 'not zoomed');
+        const reason = isValidZoom ? (props.resetZoomOnDataChange ? 'telescope change' : 'not zoomed') : 'invalid zoom range';
         focusOnDisplayedData(data, { resetFlag: props.resetZoomOnDataChange, wasZoomed: isZoomed, reason });
       }
     } catch (error) {
@@ -515,7 +637,7 @@
     window.removeEventListener("resize", resizeChart);
   });
 
-  // Watch for changes in series data (debounced to avoid excessive updates)
+  // Watch for changes in series data (5ms debounce for performance)
   let updateTimeout = null;
   watch(
     () => props.series,
@@ -527,7 +649,7 @@
         } else {
           createChart();
         }
-      }, 10);
+      }, 5);
     },
     { deep: true }
   );
