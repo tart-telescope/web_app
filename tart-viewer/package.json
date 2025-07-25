@@ -10,14 +10,11 @@
         "test:console": "node puppet.js"
     },
     "dependencies": {
-        "@mdi/font": "^7.4.47",
-        "@mdi/js": "^7.4.47",
         "axios": "^1.11.0",
         "axios-cache-interceptor": "^1.8.0",
         "core-js": "^3.44.0",
         "gridless": "file:pkg",
         "h5wasm": "^0.8.3",
-        "minio-js": "^1.0.7",
         "roboto-fontface": "^0.10.0",
         "three": "^0.177.0",
         "uplot": "^1.6.32",
