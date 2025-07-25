@@ -187,12 +187,19 @@ class Hdf5Service {
         store.baselines = Object.freeze(baselineData);
       }
 
-      // Populate config/info data
+      // Populate config/info data - only update specific fields
       if (configData) {
-        store.info = Object.freeze({
-          ...store.info,
-          ...configData,
-        });
+        const updatedInfo = { ...store.info };
+        
+        // Only update known info fields from configData
+        if (configData.name) {updatedInfo.name = configData.name;}
+        if (configData.location) {updatedInfo.location = configData.location;}
+        if (configData.operating_frequency) {updatedInfo.operating_frequency = configData.operating_frequency;}
+        if (configData.bandwidth) {updatedInfo.bandwidth = configData.bandwidth;}
+        if (configData.sample_rate) {updatedInfo.sample_rate = configData.sample_rate;}
+        if (configData.n_ant) {updatedInfo.n_ant = configData.n_ant;}
+        
+        store.info = Object.freeze(updatedInfo);
       }
 
       // Enrich satellite data
