@@ -68,7 +68,7 @@ jobs:
       with:
         context: .
         file: ./Dockerfile
-        platforms: linux/amd64,linux/arm64
+        platforms: linux/amd64,linux/arm64,linux/arm/v7
         push: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
@@ -100,14 +100,14 @@ jobs:
       with:
         script: |
           const prNumber = context.issue.number;
-          
+
           const comment = `🐳 **Docker images built for PR #${prNumber}**
-          
+
           \`\`\`bash
           docker run -p 8081:80 ghcr.io/tart-telescope/web_app/viewer-root:pr-${prNumber}      # root variant
           docker run -p 8082:80 ghcr.io/tart-telescope/web_app/viewer-subpath:pr-${prNumber}  # /viewer variant
           \`\`\``;
-          
+
           github.rest.issues.createComment({
             issue_number: context.issue.number,
             owner: context.repo.owner,
