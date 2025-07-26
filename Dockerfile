@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # Rust build stage
-FROM rustlang/rust:nightly-slim AS rust-build
+FROM --platform=linux/amd64 rustlang/rust:nightly-slim AS rust-build
 WORKDIR /app/rust
 
 # Install system dependencies
@@ -23,7 +23,7 @@ RUN --mount=type=cache,target=/root/.cargo/registry \
         -- --features fast-math,simd,browser --no-default-features
 
 # Web App build stage
-FROM node:24-alpine AS node-build-stage
+FROM --platform=linux/amd64 node:24-alpine AS node-build-stage
 WORKDIR /app/tart-viewer
 
 # Install pnpm with cache mount
