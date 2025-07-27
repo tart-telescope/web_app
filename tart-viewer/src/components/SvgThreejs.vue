@@ -8,13 +8,24 @@
   import {
     BufferAttribute,
     BufferGeometry,
+    CanvasTexture,
+    CatmullRomCurve3,
+    CircleGeometry,
+    Group,
     LinearSRGBColorSpace,
     LinearToneMapping,
     Mesh,
     MeshBasicMaterial,
     OrthographicCamera,
+    Raycaster,
+    RingGeometry,
     Scene,
     ShaderMaterial,
+    Sprite,
+    SpriteMaterial,
+    TubeGeometry,
+    Vector2,
+    Vector3,
     WebGLRenderer,
   } from "three";
   import { onMounted, onUnmounted, ref, watch } from "vue";
@@ -22,7 +33,10 @@
     CAMERA_DEFAULTS,
     COLORS,
     DEFAULT_DIMENSIONS,
+    GRID_SETTINGS,
     MATERIAL_DEFAULTS,
+    SATELLITE_SETTINGS,
+    SPHERE_DEFAULTS,
   } from "../composables/threeJSConstants.js";
 
   const props = defineProps({
@@ -38,6 +52,22 @@
       type: Boolean,
       default: true,
     },
+    satelliteData: {
+      type: Array,
+      default: () => [],
+    },
+    showGrid: {
+      type: Boolean,
+      default: true,
+    },
+    showSatellites: {
+      type: Boolean,
+      default: true,
+    },
+    minElevation: {
+      type: Number,
+      default: 0,
+    },
   });
 
   const canvasRef = ref(null);
@@ -47,6 +77,12 @@
   let polygonGeometry = null;
   let polygonMaterial = null;
   let resizeObserver = null;
+  let gridGroup = null;
+  let satelliteGroup = null;
+  let satellites = [];
+  let raycaster = null;
+  let sphereRadius = ref(1);
+  let compassGroup = null;
 
   const [vbWidth, vbHeight] = [4000, 4000];
   const scale = 2 / vbWidth;
@@ -82,25 +118,23 @@
     scene = new Scene();
     scene.background = null;
 
-    // Camera setup - simplified view
+    // Camera setup - same as 3D view (looking down from above)
+    const { width, height } = props.autoResize
+      ? getContainerSize()
+      : { width: props.width, height: props.height };
+    const aspect = width / height;
+    const frustumSize = 3;
     camera = new OrthographicCamera(
-      -1,
-      1,
-      1,
-      -1,
+      (-frustumSize * aspect) / 2,
+      (frustumSize * aspect) / 2,
+      frustumSize / 2,
+      -frustumSize / 2,
       CAMERA_DEFAULTS.orthographic.near,
       CAMERA_DEFAULTS.orthographic.far,
     );
-    camera.position.set(
-      CAMERA_DEFAULTS.orthographic.position.x,
-      CAMERA_DEFAULTS.orthographic.position.y,
-      CAMERA_DEFAULTS.orthographic.position.z,
-    );
-    camera.lookAt(
-      CAMERA_DEFAULTS.orthographic.lookAt.x,
-      CAMERA_DEFAULTS.orthographic.lookAt.y,
-      CAMERA_DEFAULTS.orthographic.lookAt.z,
-    );
+    camera.position.set(0, 3.5, 0); // Same as 3D view
+    camera.lookAt(0, 0, 0);
+    camera.rotation.z = Math.PI; // North up orientation
 
     // Renderer setup
     renderer = new WebGLRenderer({
@@ -126,6 +160,22 @@
       wireframe: MATERIAL_DEFAULTS.wireframe,
       side: MATERIAL_DEFAULTS.side, // DoubleSide
     });
+
+    // Create grid, satellite, and compass groups
+    gridGroup = new Group();
+    satelliteGroup = new Group();
+    compassGroup = new Group();
+    scene.add(gridGroup);
+    scene.add(satelliteGroup);
+    scene.add(compassGroup);
+
+    // Initialize raycaster
+    raycaster = new Raycaster();
+
+    // Create initial grid, satellites, and compass
+    createGridLines();
+    updateSatelliteOverlays();
+    createCompassLabels();
 
   // Shader material should work now that geometry is confirmed working
   }
@@ -196,8 +246,12 @@
     );
     polygonGeometry.setIndex(indices);
 
-    // Create mesh
+    // Create mesh and position as flat plane underneath 3D elements
     polygonMesh = new Mesh(polygonGeometry, polygonMaterial);
+    polygonMesh.position.set(0, -0.1, 0); // Position slightly below the sphere
+    polygonMesh.rotation.x = -Math.PI / 2; // Rotate to be horizontal
+    polygonMesh.rotation.z = Math.PI; // Rotate 180 degrees to correct E-W orientation
+    polygonMesh.scale.set(1.05, 1.05, 1.05); // Scale to better match grid size
     scene.add(polygonMesh);
   }
 
@@ -237,10 +291,244 @@
     }
   }
 
+  // Convert azimuth/elevation to 3D cartesian coordinates (same as 3D view)
+  function azElToCartesian(azimuth, elevation, radius = sphereRadius.value) {
+    // Convert degrees to radians
+    const azRad = (azimuth * Math.PI) / 180;
+    const elRad = (elevation * Math.PI) / 180;
+
+    // Convert to cartesian coordinates (same as 3D component)
+    const x = radius * Math.cos(elRad) * Math.sin(azRad);
+    const y = radius * Math.sin(elRad);
+    const z = radius * Math.cos(elRad) * Math.cos(azRad);
+
+    return [x, y, z];
+  }
+
+  // Create grid lines (same as 3D view but for overlay)
+  function createGridLines() {
+    if (!gridGroup || !props.showGrid) return;
+
+    // Clear existing grid lines
+    for (const child of gridGroup.children) {
+      if (child.geometry) child.geometry.dispose();
+      if (child.material) child.material.dispose();
+    }
+    gridGroup.clear();
+
+    const radius = sphereRadius.value;
+    const material = new MeshBasicMaterial({
+      color: COLORS.grid,
+      transparent: true,
+      opacity: GRID_SETTINGS.opacity,
+    });
+
+    // Elevation circles (30°, 60°, 80°) - same as 3D version
+    const elevations = [30, 60, 80];
+    for (const el of elevations) {
+      const elRad = (el * Math.PI) / 180;
+      // Make circles slightly larger than sphere radius
+      const expandedRadius = radius * 1.02;
+      const circleRadius = expandedRadius * Math.cos(elRad);
+      const circleY = expandedRadius * Math.sin(elRad);
+
+      if (circleRadius > 0.01) {
+        // Use ring geometry for clean circular lines
+        const geometry = new RingGeometry(
+          circleRadius - GRID_SETTINGS.lineWidth * 0.003,
+          circleRadius + GRID_SETTINGS.lineWidth * 0.003,
+          64,
+        );
+        const circleMaterial = new MeshBasicMaterial({
+          color: COLORS.grid,
+          transparent: true,
+          opacity: GRID_SETTINGS.opacity,
+          side: MATERIAL_DEFAULTS.side, // DoubleSide
+        });
+        const circle = new Mesh(geometry, circleMaterial);
+        circle.position.y = circleY;
+        circle.rotation.x = Math.PI / 2;
+        gridGroup.add(circle);
+      }
+    }
+
+    // Azimuth lines (every 45°)
+    for (let az = 0; az < 360; az += 45) {
+      const azRad = (az * Math.PI) / 180;
+      const points = [];
+
+      // Create line from horizon to zenith
+      for (let el = 0; el <= 90; el += 1) {
+        const elRad = (el * Math.PI) / 180;
+        const r = radius * Math.cos(elRad);
+        const y = radius * Math.sin(elRad);
+        const x = r * Math.cos(azRad);
+        const z = r * Math.sin(azRad);
+        points.push(new Vector3(x, y, z));
+      }
+
+      const curve = new CatmullRomCurve3(points);
+      const tubeGeometry = new TubeGeometry(
+        curve,
+        40,
+        GRID_SETTINGS.lineWidth * 0.003,
+        8,
+        false,
+      );
+      const tubeMaterial = new MeshBasicMaterial({
+        color: COLORS.grid,
+        transparent: true,
+        opacity: GRID_SETTINGS.opacity,
+      });
+      const tube = new Mesh(tubeGeometry, tubeMaterial);
+      gridGroup.add(tube);
+    }
+  }
+
+  // Create compass direction labels (same as 3D view)
+  function createCompassLabels() {
+    if (!compassGroup) return;
+
+    // Clear existing compass labels
+    for (const child of compassGroup.children) {
+      if (child.geometry) child.geometry.dispose();
+      if (child.material) child.material.dispose();
+    }
+    compassGroup.clear();
+
+    const offset = SPHERE_DEFAULTS.indicatorOffset * 4;
+    const directions = [
+      { label: "N", x: 0, z: sphereRadius.value + offset }, // North
+      { label: "S", x: 0, z: -(sphereRadius.value + offset) }, // South
+      { label: "E", x: sphereRadius.value + offset, z: 0 }, // East
+      { label: "W", x: -(sphereRadius.value + offset), z: 0 }, // West
+    ];
+
+    for (const dir of directions) {
+      // Create text label using canvas texture
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d");
+      canvas.width = 128;
+      canvas.height = 128;
+
+      // Draw background circle
+      context.fillStyle = "rgba(0, 0, 0, 0.7)";
+      context.beginPath();
+      context.arc(64, 64, 60, 0, 2 * Math.PI);
+      context.fill();
+
+      // Draw text
+      context.fillStyle = "white";
+      context.font = "bold 72px Arial";
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillText(dir.label, 64, 64);
+
+      const texture = new CanvasTexture(canvas);
+      const spriteMaterial = new SpriteMaterial({
+        map: texture,
+        transparent: true,
+      });
+
+      const sprite = new Sprite(spriteMaterial);
+      sprite.scale.set(0.3, 0.3, 1);
+
+      // Position at equator level (y = 0)
+      sprite.position.set(dir.x, 0, dir.z);
+
+      compassGroup.add(sprite);
+    }
+  }
+
+  // Update satellite overlays (same as 3D view)
+  function updateSatelliteOverlays() {
+    if (!satelliteGroup) return;
+
+    // Clear existing satellites
+    for (const sat of satellites) {
+      satelliteGroup.remove(sat);
+      if (sat.ringMesh) {
+        satelliteGroup.remove(sat.ringMesh);
+        sat.ringMesh.geometry.dispose();
+        sat.ringMesh.material.dispose();
+      }
+      sat.geometry.dispose();
+      sat.material.dispose();
+    }
+    satellites = [];
+
+    if (!props.showSatellites || !props.satelliteData || props.satelliteData.length === 0) return;
+
+    // Create satellite circles (same as 3D component)
+    for (const sat of props.satelliteData) {
+      // Only show satellites above elevation cut
+      if (sat.el <= props.minElevation) continue;
+
+      // Create ring geometry for clean outline
+      const radius = SATELLITE_SETTINGS.ringOuterRadius;
+      const ringGeometry = new RingGeometry(
+        SATELLITE_SETTINGS.ringInnerRadius,
+        radius,
+        24,
+      );
+      const material = new MeshBasicMaterial({
+        color: COLORS.hoveredSatellite,
+        transparent: true,
+        opacity: 0.8,
+        side: MATERIAL_DEFAULTS.side,
+      });
+
+      // Create invisible full circle for hover detection
+      const hoverGeometry = new CircleGeometry(radius, 12);
+      const hoverMaterial = new MeshBasicMaterial({
+        transparent: true,
+        opacity: 0,
+        side: 2,
+      });
+
+      // Create the visible ring
+      const ringMesh = new Mesh(ringGeometry, material);
+
+      // Create invisible hover target
+      const hoverMesh = new Mesh(hoverGeometry, hoverMaterial);
+
+      // Store reference to ring for hover effects
+      hoverMesh.ringMesh = ringMesh;
+
+      // Mark ring as non-raycastable to avoid interference
+      ringMesh.raycast = () => {};
+
+      // Position satellite using 3D coordinates
+      const [x, y, z] = azElToCartesian(
+        sat.az,
+        sat.el,
+        sphereRadius.value + SPHERE_DEFAULTS.satelliteOffset,
+      );
+
+      // Use exact 3D positioning
+      ringMesh.position.set(x, y, z);
+      hoverMesh.position.set(x, y, z);
+
+      // Make circles face camera (same as 3D view)
+      ringMesh.lookAt(0, 0, 0);
+      hoverMesh.lookAt(0, 0, 0);
+
+      // Store satellite data on hover mesh
+      hoverMesh.userData = sat;
+
+      satelliteGroup.add(ringMesh);
+      satelliteGroup.add(hoverMesh);
+      satellites.push(hoverMesh);
+    }
+  }
+
   // Expose methods to parent component
   defineExpose({
     updatePolygonColors,
     createPolygonCoordinates,
+    updateSatelliteOverlays,
+    createGridLines,
+    createCompassLabels,
   });
 
   // Animation loop
@@ -274,10 +562,13 @@
       ? getContainerSize()
       : { width: props.width, height: props.height };
 
-    camera.left = -1;
-    camera.right = 1;
-    camera.top = 1;
-    camera.bottom = -1;
+    // Update camera bounds to match 3D view
+    const aspect = width / height;
+    const frustumSize = 3;
+    camera.left = (-frustumSize * aspect) / 2;
+    camera.right = (frustumSize * aspect) / 2;
+    camera.top = frustumSize / 2;
+    camera.bottom = -frustumSize / 2;
     camera.updateProjectionMatrix();
     renderer.setSize(width, height);
   }
@@ -315,6 +606,26 @@
       polygonMaterial.dispose();
     }
 
+    // Cleanup grid, satellites, and compass
+    if (gridGroup) {
+      for (const child of gridGroup.children) {
+        if (child.geometry) child.geometry.dispose();
+        if (child.material) child.material.dispose();
+      }
+    }
+
+    if (compassGroup) {
+      for (const child of compassGroup.children) {
+        if (child.geometry) child.geometry.dispose();
+        if (child.material) child.material.dispose();
+      }
+    }
+
+    for (const sat of satellites) {
+      if (sat.geometry) sat.geometry.dispose();
+      if (sat.material) sat.material.dispose();
+    }
+
     if (renderer) {
       renderer.dispose();
     }
@@ -331,6 +642,11 @@
       handleResize();
     }
   });
+
+  // Watch for changes to satellite data and grid visibility
+  watch(() => props.satelliteData, updateSatelliteOverlays, { deep: true });
+  watch(() => props.showGrid, createGridLines);
+  watch(() => props.showSatellites, updateSatelliteOverlays);
 </script>
 
 <style scoped>

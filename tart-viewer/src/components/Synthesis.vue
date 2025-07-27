@@ -45,7 +45,15 @@
       </v-card-title>
 
       <div class="svg-container">
-        <SvgThreejs v-if="!is3D" ref="svgRef" :auto-resize="true" />
+        <SvgThreejs 
+          v-if="!is3D" 
+          ref="svgRef" 
+          :auto-resize="true"
+          :satellite-data="currentSatelliteData"
+          :show-satellites="show_sat"
+          :show-grid="true"
+          :min-elevation="10"
+        />
         <Threejs3D v-else ref="threejsRef" :auto-resize="true" />
       </div>
 
@@ -431,6 +439,8 @@
             this.currentSatelliteData,
             this.show_sat,
           );
+        } else if (!this.is3D && this.$refs.svgRef) {
+          this.$refs.svgRef.updateSatelliteOverlays();
         }
 
         // Also update fullscreen component if it exists
