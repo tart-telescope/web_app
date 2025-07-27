@@ -138,7 +138,7 @@
   }
 `;
 
-  // Fragment shader with basic lighting
+  // Fragment shader without lighting for flat appearance
   const fragmentShader = `
   precision mediump float;
   varying vec3 vColor;
@@ -146,12 +146,8 @@
   varying vec3 vPosition;
 
   void main() {
-    // Simple directional lighting
-    vec3 lightDirection = normalize(vec3(1.0, 1.0, 1.0));
-    float lightIntensity = max(dot(vNormal, lightDirection), 0.3);
-
-    vec3 finalColor = vColor * lightIntensity;
-    gl_FragColor = vec4(finalColor, 1.0);
+    // Use base color without lighting for flat appearance
+    gl_FragColor = vec4(vColor, 1.0);
   }
 `;
 

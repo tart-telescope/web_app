@@ -114,8 +114,8 @@ export const GRID_SETTINGS = {
 export const SATELLITE_SETTINGS = {
   defaultSize: 0.04,
   hoverSize: 0.06,
-  ringInnerRadius: 0.03,
-  ringOuterRadius: 0.05,
+  ringInnerRadius: 0.035,
+  ringOuterRadius: 0.045,
   spriteSize: 64,
 };
 
