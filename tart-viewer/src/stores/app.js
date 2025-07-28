@@ -11,8 +11,6 @@ export const useAppStore = defineStore("app", {
       TART_URL: "https://api.elec.ac.nz/tart/zm-cbu",
       CATALOG_URL: "https://tart.elec.ac.nz/catalog",
       API_PREFIX: "/api/v1",
-      // API_PREFIX: "",
-      // CATALOG_URL: "http://tiny:8876",
       num_bin: 512,
       nw: 128,
       vis: null,

@@ -30,20 +30,15 @@
 </template>
 
 <script setup lang="js">
-  import * as THREE from "three";
   import {
-    AmbientLight,
     BufferAttribute,
     BufferGeometry,
+    CanvasTexture,
     CatmullRomCurve3,
     CircleGeometry,
-    Color,
-    DirectionalLight,
     Group,
-    Line,
     LinearSRGBColorSpace,
     LinearToneMapping,
-    LineBasicMaterial,
     Mesh,
     MeshBasicMaterial,
     OrthographicCamera,
@@ -51,6 +46,8 @@
     RingGeometry,
     Scene,
     ShaderMaterial,
+    Sprite,
+    SpriteMaterial,
     TubeGeometry,
     Vector3,
     WebGLRenderer,
@@ -127,13 +124,9 @@
   const vertexShader = `
   attribute vec3 color;
   varying vec3 vColor;
-  varying vec3 vNormal;
-  varying vec3 vPosition;
 
   void main() {
     vColor = color;
-    vNormal = normalize(normalMatrix * normal);
-    vPosition = position;
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   }
 `;
@@ -142,8 +135,6 @@
   const fragmentShader = `
   precision mediump float;
   varying vec3 vColor;
-  varying vec3 vNormal;
-  varying vec3 vPosition;
 
   void main() {
     // Use base color without lighting for flat appearance
@@ -594,15 +585,13 @@
     context.stroke();
 
     // Create texture and sprite
-    const texture = new THREE.CanvasTexture(canvas);
-    const spriteMaterial = new THREE.SpriteMaterial({
+    const texture = new CanvasTexture(canvas);
+    const spriteMaterial = new SpriteMaterial({
       map: texture,
       transparent: true,
-      depthTest: false, // Always render on top
-      depthWrite: false,
     });
 
-    positionIndicator = new THREE.Sprite(spriteMaterial);
+    positionIndicator = new Sprite(spriteMaterial);
     positionIndicator.scale.set(0.1, 0.1, 1); // Adjust size as needed
     positionIndicator.visible = false;
     scene.add(positionIndicator);
@@ -862,13 +851,13 @@
       context.textBaseline = "middle";
       context.fillText(dir.label, 64, 64);
 
-      const texture = new THREE.CanvasTexture(canvas);
-      const spriteMaterial = new THREE.SpriteMaterial({
+      const texture = new CanvasTexture(canvas);
+      const spriteMaterial = new SpriteMaterial({
         map: texture,
         transparent: true,
       });
 
-      const sprite = new THREE.Sprite(spriteMaterial);
+      const sprite = new Sprite(spriteMaterial);
       sprite.scale.set(0.3, 0.3, 1);
 
       // Position at equator level (y = 0)
