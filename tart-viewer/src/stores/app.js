@@ -43,6 +43,11 @@ export const useAppStore = defineStore("app", {
       partition_size: 6,
     };
 
+    // Auto-detect local mode on first load based on protocol
+    if (window.location.protocol === 'http:') {
+      state.localMode = true;
+    }
+
     // Configure satellite API service
     satelliteApi.setUrl(state.CATALOG_URL);
 

@@ -325,14 +325,23 @@
         } else {
           // Exiting local mode - restore default and restart polling
           this.startPolling(30_000);
-          // Redirect to first available telescope
-          if (this.telescopes.length > 0) {
-            const firstTelescope = this.telescopes[0].value;
-            if (firstTelescope !== 'custom') {
-              this.selectedArray = [firstTelescope];
-              this.$router.replace('/' + firstTelescope);
+          
+          // Wait for telescope list to load, then redirect to first available telescope
+          const navigateToFirstTelescope = () => {
+            if (this.telescopes.length > 0) {
+              const firstTelescope = this.telescopes.find(t => t.value !== 'custom' && t.value !== 'local');
+              if (firstTelescope) {
+                this.selectedArray = [firstTelescope.value];
+                this.$router.replace('/' + firstTelescope.value);
+              }
+            } else {
+              // If no telescopes yet, wait and try again
+              setTimeout(navigateToFirstTelescope, 500);
             }
-          }
+          };
+          
+          // Try immediately, or wait if telescope list is still loading
+          navigateToFirstTelescope();
         }
         
         // Refresh data after mode switch to ensure synthesis renders

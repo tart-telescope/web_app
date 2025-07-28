@@ -17,17 +17,17 @@
       <v-card-text>
         <UPlotChart
           :key="`chart-${partition}-${partition_size}`"
+          :cursor-focus="true"
+          :emit-events="false"
           :height="400"
           :series="partitionedSeries[partition]"
-          :sync-key="`spectrum-${partition}-${partition_size}`"
-          timezone="UTC"
-          :show-legend="true"
-          :time-axis="false"
-          y-axis-label="Power (dBm)"
-          x-axis-label="Frequency (MHz)"
           :show-cursor="true"
-          :emit-events="false"
-          :cursor-focus="true"
+          :show-legend="true"
+          :sync-key="`spectrum-${partition}-${partition_size}`"
+          :time-axis="false"
+          timezone="UTC"
+          x-axis-label="Frequency (MHz)"
+          y-axis-label="Power (dBm)"
         />
       </v-card-text>
     </v-card>
@@ -66,7 +66,7 @@
       },
       
       series() {
-        if (!this.channels.length) return [];
+        if (this.channels.length === 0) return [];
         
         return this.channels.map((ch) => ({
           name: `Ch${ch.id}`,

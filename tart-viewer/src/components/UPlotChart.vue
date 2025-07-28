@@ -82,7 +82,7 @@
 
   function getContainerSize() {
     if (!chartRef.value) return { width: 800, height: props.height };
-  
+
     const rect = chartRef.value.getBoundingClientRect();
     return {
       width: props.width || rect.width || 800,
@@ -95,7 +95,7 @@
 
     const { width, height } = getContainerSize();
     const data = transformSeries();
-  
+
     if (!data || data.length === 0) return;
 
     // Cache series hash to avoid unnecessary updates
@@ -148,11 +148,11 @@
           setSeries: [
             (u, seriesIdx, opts) => {
               if (opts.focus != null) {
-                u.series.forEach((s, i) => {
+                for (const [i, s] of u.series.entries()) {
                   if (i > 0) { // Skip x-axis series
                     s.width = i == seriesIdx ? 3 : 1;
                   }
-                });
+                }
               }
             }
           ]
@@ -160,13 +160,13 @@
         setCursor: [
           (u) => {
             if (!props.emitEvents) return;
-            
+
             const { left, top, idx } = u.cursor;
             if (idx !== null && idx !== undefined) {
               // Get x-axis value (could be timestamp, frequency, etc.)
               const xValue = u.data[0][idx];
               const yValue = u.data[1] ? u.data[1][idx] : null;
-              
+
               // Get all y-values for all series at this x position
               const seriesValues = [];
               for (let i = 1; i < u.data.length; i++) {
@@ -179,24 +179,24 @@
                   });
                 }
               }
-              
+
               if (xValue !== null && xValue !== undefined) {
                 // Check if this looks like a timestamp (Unix timestamp in seconds)
-                const isTimestamp = xValue > 1000000000 && xValue < 4000000000;
-                
+                const isTimestamp = xValue > 1_000_000_000 && xValue < 4_000_000_000;
+
                 let formattedData = {
-                  idx, 
-                  left, 
-                  top, 
+                  idx,
+                  left,
+                  top,
                   xValue: xValue,
                   yValue: yValue,
                   seriesValues: seriesValues
                 };
-                
+
                 if (isTimestamp) {
                   // Add timestamp formatting for time series
                   const date = new Date(xValue * 1000);
-                  const options = { 
+                  const options = {
                     hour12: false,
                     year: 'numeric',
                     month: '2-digit',
@@ -205,16 +205,16 @@
                     minute: '2-digit',
                     second: '2-digit'
                   };
-                
+
                   if (props.timezone) {
                     options.timeZone = props.timezone;
                   }
-                
+
                   formattedData.timestamp = date.toLocaleString(undefined, options);
                   formattedData.rawTimestamp = xValue * 1000;
                   formattedData.value = yValue; // backward compatibility
                 }
-                
+
                 emit("mouse-move", formattedData);
               }
             }
@@ -242,7 +242,7 @@
 
     try {
       chart = new uPlot(opts, data, chartRef.value);
-    
+
       // Always focus on displayed data on initial chart creation
       focusOnDisplayedData(data);
     } catch (error) {
@@ -257,7 +257,7 @@
     const xValues = props.series[0]?.data?.map((point, idx) => {
       let xValue = point.x;
       const originalValue = xValue;
-    
+
       if (props.timeAxis) {
         // Handle timestamp formatting only if this is a time axis
         if (typeof xValue === 'string') {
@@ -272,7 +272,7 @@
             xValue = xValue * 1000;
           }
         }
-        
+
         // Debug logging for first few timestamps
         if (idx < 3) {
           console.log(`Timestamp ${idx}:`, {
@@ -282,20 +282,20 @@
             uplotValue: xValue / 1000
           });
         }
-      
+
         // Convert to seconds for uPlot (from milliseconds)
         return xValue / 1000;
       } else {
         // For non-time data (like frequency), use values as-is
-        return typeof xValue === 'number' ? xValue : parseFloat(xValue) || 0;
+        return typeof xValue === 'number' ? xValue : Number.parseFloat(xValue) || 0;
       }
     }) || [];
 
     // Transform each series data
-    const seriesData = props.series.map(series => 
+    const seriesData = props.series.map(series =>
       series.data?.map(point => {
         const value = Number.parseFloat(point.y);
-        return isNaN(value) ? null : value;
+        return Number.isNaN(value) ? null : value;
       }) || []
     );
 
@@ -349,17 +349,17 @@
       // Time axis configuration
       xAxisConfig.values = (u, vals) => vals.map(v => {
         const date = new Date(v * 1000);
-      
+
         // Smart formatting based on zoom range
         const range = u.scales.x.max - u.scales.x.min;
         const rangeMs = range * 1000;
-      
+
         let options = { hour12: false };
-      
+
         if (props.timezone) {
           options.timeZone = props.timezone;
         }
-      
+
         // Less than 1 minute - show seconds
         if (rangeMs < 60_000) {
           options = { ...options, hour: '2-digit', minute: '2-digit', second: '2-digit' };
@@ -376,7 +376,7 @@
         else {
           options = { ...options, month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
         }
-      
+
         return date.toLocaleString(undefined, options);
       });
 
@@ -384,7 +384,7 @@
         // Smart tick distribution based on zoom range
         const range = scaleMax - scaleMin;
         const rangeMs = range * 1000;
-      
+
         let step;
         if (rangeMs < 60_000) {
           step = 5; // 5 seconds
@@ -397,7 +397,7 @@
         } else {
           step = 86_400; // 1 day
         }
-      
+
         const splits = [];
         const startTime = Math.floor(scaleMin / step) * step;
         for (let t = startTime; t <= scaleMax; t += step) {
@@ -408,11 +408,11 @@
     } else {
       // Non-time axis configuration (frequency, etc.)
       xAxisConfig.values = (u, vals) => vals.map(v => v.toFixed(2));
-      
+
       xAxisConfig.splits = (u, axisIdx, scaleMin, scaleMax) => {
         const range = scaleMax - scaleMin;
         if (range === 0) return [scaleMin - 0.1, scaleMax + 0.1];
-      
+
         const step = range / 6; // Aim for ~6 ticks
         const splits = [];
         for (let i = 0; i <= 6; i++) {
@@ -423,17 +423,17 @@
     }
 
     const axes = [xAxisConfig,
-      {
-        scale: "y",
-        label: props.yAxisLabel || props.series[0]?.name || "Amplitude",
-        labelSize: 30,
-        space: 80,
-        stroke: "#ffffff",
-        grid: { stroke: "#4a5568", width: 1 },
-        ticks: { stroke: "#ffffff", width: 1 },
-        font: "12px system-ui",
-        labelFont: "12px system-ui",
-      },
+                  {
+                    scale: "y",
+                    label: props.yAxisLabel || props.series[0]?.name || "Amplitude",
+                    labelSize: 30,
+                    space: 80,
+                    stroke: "#ffffff",
+                    grid: { stroke: "#4a5568", width: 1 },
+                    ticks: { stroke: "#ffffff", width: 1 },
+                    font: "12px system-ui",
+                    labelFont: "12px system-ui",
+                  },
     ];
 
     // Add second axis for dual axis charts
@@ -504,7 +504,7 @@
     // Check if series actually changed to avoid unnecessary updates
     const currentSeriesHash = JSON.stringify(props.series);
     if (currentSeriesHash === lastSeriesHash) return;
-  
+
     const data = transformSeries();
     if (!data) return;
 
@@ -512,7 +512,7 @@
       // Store current zoom state
       const currentScale = chart.scales.x;
       const dataRange = { min: Math.min(...data[0]), max: Math.max(...data[0]) };
-      
+
       // Debug: log data range calculation
       console.log('Data range calculation:', {
         dataMin: dataRange.min,
@@ -523,19 +523,19 @@
         firstTimestamp: data[0][0],
         lastTimestamp: data[0].at(-1)
       });
-      
+
       // Check if zoom is valid (not too far from actual data range)
       const maxAllowedRange = (dataRange.max - dataRange.min) * 10; // Allow 10x the actual data range
       const isValidZoom = currentScale.min !== null && currentScale.max !== null &&
         currentScale.min >= dataRange.min - maxAllowedRange &&
         currentScale.max <= dataRange.max + maxAllowedRange;
-                         
-      const isZoomed = isValidZoom && 
+
+      const isZoomed = isValidZoom &&
         (Math.abs(currentScale.min - dataRange.min) > 1 || Math.abs(currentScale.max - dataRange.max) > 1);
-    
+
       chart.setData(data);
       lastSeriesHash = currentSeriesHash;
-    
+
       // Restore zoom state if it was zoomed and resetZoomOnDataChange is false
       if (isZoomed && !props.resetZoomOnDataChange) {
         chart.setScale('x', { min: currentScale.min, max: currentScale.max });
@@ -571,11 +571,11 @@
   // Helper function to focus on displayed data
   function focusOnDisplayedData(data, logContext = {}) {
     const timestamps = data[0];
-    const validTimestamps = timestamps.filter(t => t != null && !isNaN(t));
+    const validTimestamps = timestamps.filter(t => t != null && !Number.isNaN(t));
     if (validTimestamps.length > 0) {
       let min = Math.min(...validTimestamps);
       let max = Math.max(...validTimestamps);
-      
+
       // Handle duplicate timestamps by adding a small buffer
       if (min === max) {
         const buffer = 30; // 30 seconds buffer
@@ -583,7 +583,7 @@
         max = max + buffer;
         logContext.duplicateTimestamps = true;
       }
-      
+
       logZoomChange('Focusing on data', min, max, logContext);
       chart.setScale('x', { min, max });
       emit("zoom-changed", { min, max });
@@ -594,7 +594,7 @@
   function logZoomChange(action, min, max, context = {}) {
     const minDate = new Date(min * 1000);
     const maxDate = new Date(max * 1000);
-    console.log(`${action}:`, { 
+    console.log(`${action}:`, {
       min, max,
       minTime: minDate.toISOString() + ' (UTC)',
       maxTime: maxDate.toISOString() + ' (UTC)',
@@ -626,7 +626,7 @@
   onMounted(async () => {
     await nextTick();
     createChart();
-  
+
     // Add resize listener
     window.addEventListener("resize", resizeChart);
   });

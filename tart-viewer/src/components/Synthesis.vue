@@ -49,10 +49,10 @@
           v-if="!is3D" 
           ref="svgRef" 
           :auto-resize="true"
-          :satellite-data="currentSatelliteData"
-          :show-satellites="show_sat"
-          :show-grid="true"
           :min-elevation="10"
+          :satellite-data="currentSatelliteData"
+          :show-grid="true"
+          :show-satellites="show_sat"
         />
         <Threejs3D v-else ref="threejsRef" :auto-resize="true" />
       </div>
