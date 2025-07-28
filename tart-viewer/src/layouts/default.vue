@@ -2,11 +2,14 @@
   <v-app>
     <v-app-bar app dark dense>
       <v-app-bar-nav-icon @click.stop="drawer = !drawer" />
-      <v-toolbar-title class="headline text-uppercase pa-0">
+      <v-toolbar-title class="text-h6 text-sm-h5 text-uppercase pa-0">
         <span class="cyan--text font-weight-bold">TART</span>
-        <span class="font-weight-light">VIEWER</span>
+        <span class="font-weight-light d-none d-sm-inline">VIEWER</span>
+        <span class="font-weight-light d-inline d-sm-none">VIEWER</span>
       </v-toolbar-title>
-      <v-spacer />
+      <v-btn color="cyan" href="https://map.elec.ac.nz" icon>
+        <v-icon>mdi-map-marker</v-icon>
+      </v-btn>
       <v-btn color="cyan" href="https://github.com/tart-telescope/web_app" icon>
         <v-icon>mdi-github</v-icon>
       </v-btn>
@@ -22,9 +25,9 @@
           label="Local Mode"
         />
       </v-list-item>
-      
+
       <v-divider />
-      
+
       <v-list-item class="pt-3">
         <v-select
           v-model="refreshInterval"
@@ -314,7 +317,7 @@
         // Update both stores
         this.setLocalMode(enabled);
         this.setTART_URL(enabled ? 'local' : this.TART_URL_DEFAULT.split('/').pop());
-        
+
         if (enabled) {
           // Entering local mode
           this.selectedArray = ['local'];
@@ -325,7 +328,7 @@
         } else {
           // Exiting local mode - restore default and restart polling
           this.startPolling(30_000);
-          
+
           // Wait for telescope list to load, then redirect to first available telescope
           const navigateToFirstTelescope = () => {
             if (this.telescopes.length > 0) {
@@ -339,11 +342,11 @@
               setTimeout(navigateToFirstTelescope, 500);
             }
           };
-          
+
           // Try immediately, or wait if telescope list is still loading
           navigateToFirstTelescope();
         }
-        
+
         // Refresh data after mode switch to ensure synthesis renders
         setTimeout(async () => {
           try {
@@ -402,7 +405,7 @@
           // Load telescope info first (needed for coordinates in synthesisData)
           await this.renewInfo();
           await this.renewMode();
-          
+
           if (this.telescope_mode == "vis") {
             // Wait for synthesis data to complete before continuing
             await this.synthesisData();
