@@ -33,7 +33,7 @@ export const useAppStore = defineStore("app", {
       hoveredTimestamp: null,
       lastVisDataUpdate: 0,
       lastRawDataUpdate: 0,
-      dataThinning: 1,
+      dataThinning: 3,
       showTimings: false,
       nside: 64,
       antennasUsed: Array.from({ length: 24 }, (_, i) => i),
