@@ -96,10 +96,7 @@
         type: String,
         default: "",
       },
-      dataThinning: {
-        type: Number,
-        default: 1,
-      },
+
     },
     emits: ['path-changed'],
     setup() {
@@ -128,9 +125,7 @@
       currentPrefix() {
         this.$emit("path-changed", this.currentPrefix);
       },
-      dataThinning() {
-        this.fetchLast24Hours();
-      },
+
     },
     computed: {},
 
@@ -155,7 +150,7 @@
         const minDesiredFiles = 50; // Adjust this threshold as needed
 
         try {
-          const result = await s3Service.fetchLast24Hours(this.basePath, this.dataThinning, minDesiredFiles);
+          const result = await s3Service.fetchLast24Hours(this.basePath, minDesiredFiles);
 
           if (result) {
             this.files = result.files;
@@ -189,7 +184,7 @@
               fileUrl, 
               this.store, 
               this.enrichBulkSatellites, 
-              this.dataThinning
+              1
             );
           } catch (error) {
             console.error("Failed to load HDF5 file:", error);

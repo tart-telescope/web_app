@@ -53,10 +53,10 @@ router.beforeEach(async (to, from, next) => {
 
       const firstTelescope = Array.from(telescopeRegistry.telescopes.keys())[0];
       if (firstTelescope && firstTelescope !== 'custom') {
-        next("/" + firstTelescope);
+        next({ path: "/" + firstTelescope, query: to.query });
         return;
       }
-      next('/');
+      next({ path: '/', query: to.query });
       return;
     }
 
@@ -74,7 +74,7 @@ router.beforeEach(async (to, from, next) => {
       // If telescope is not valid and we have some data, redirect to first available telescope
       const firstTelescope = Array.from(telescopeRegistry.telescopes.keys())[0];
       if (firstTelescope !== 'custom') {
-        next("/" + firstTelescope);
+        next({ path: "/" + firstTelescope, query: to.query });
         return;
       }
     }

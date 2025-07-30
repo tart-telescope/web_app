@@ -1,8 +1,16 @@
 <template>
-  <Home />
+  <SimpleView v-if="isSimpleView" />
+  <Home v-else />
 </template>
 
 <script setup>
-// The telescope selection logic is handled in the default layout
-// This page just renders the Home component for any telescope route
+  import { computed } from 'vue'
+  import { useRoute } from 'vue-router'
+  import Home from '@/components/Home.vue'
+  import SimpleView from '@/components/SimpleView.vue'
+
+  // The telescope selection logic is handled in the default layout
+  // This page renders either Home or SimpleView based on query parameter
+  const route = useRoute()
+  const isSimpleView = computed(() => route.query.view === 'simple')
 </script>

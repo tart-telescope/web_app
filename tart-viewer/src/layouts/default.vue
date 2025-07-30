@@ -323,7 +323,7 @@
           this.selectedArray = ['local'];
           // Navigate to root route (no telescope parameter)
           if (this.$route.path !== '/') {
-            this.$router.replace('/');
+            this.$router.replace({ path: '/', query: this.$route.query });
           }
         } else {
           // Exiting local mode - restore default and restart polling
@@ -335,7 +335,7 @@
               const firstTelescope = this.telescopes.find(t => t.value !== 'custom' && t.value !== 'local');
               if (firstTelescope) {
                 this.selectedArray = [firstTelescope.value];
-                this.$router.replace('/' + firstTelescope.value);
+                this.$router.replace({ path: '/' + firstTelescope.value, query: this.$route.query });
               }
             } else {
               // If no telescopes yet, wait and try again
@@ -447,7 +447,7 @@
             this.switchToTelescope(newPostfix);
             // Update route to match selection (unless in local mode)
             if (!this.appLocalMode && this.$route.params.telescope !== newPostfix) {
-              this.$router.replace("/" + newPostfix);
+              this.$router.replace({ path: "/" + newPostfix, query: this.$route.query });
             }
           }
         }
@@ -487,7 +487,7 @@
           if (this.telescopes.length > 0) {
             const firstTelescope = this.telescopes[0].value;
             if (firstTelescope !== 'custom') {
-              this.$router.replace("/" + firstTelescope);
+              this.$router.replace({ path: "/" + firstTelescope, query: this.$route.query });
               return;
             }
           }

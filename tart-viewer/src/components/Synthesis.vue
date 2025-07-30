@@ -15,7 +15,7 @@
 
   <v-card class="mx-auto square-card" elevation="3">
     <div class="card-content">
-      <v-card-title class="py-3 teal--text text--lighten-2 d-flex align-center">
+      <v-card-title class="py-3 teal--text text--lighten-2 d-flex align-center" v-if="showTitle">
         <v-icon class="mr-2">mdi-eye</v-icon>
         Realtime View
         <v-spacer />
@@ -136,6 +136,13 @@
   export default {
     name: "SynthesisComponent",
     components: { SvgThreejs, Threejs3D },
+    
+    props: {
+      showTitle: {
+        type: Boolean,
+        default: true,
+      },
+    },
 
     data() {
       return {

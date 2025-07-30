@@ -57,9 +57,9 @@ class S3Service {
    * @returns {string} Generated S3 prefix
    */
   generateDatePrefix(date, basePath = '') {
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
+    const year = date.getUTCFullYear();
+    const month = date.getUTCMonth() + 1;
+    const day = date.getUTCDate();
 
     // Extract telescope from basePath or use default
     const basePathPart = basePath
@@ -124,7 +124,7 @@ class S3Service {
       });
 
       const url = `https://${this.S3_HOST}/${this.S3_BUCKET}?${params}`;
-      
+
       const requestConfig = {};
       if (this.abortController) {
         requestConfig.signal = this.abortController.signal;
@@ -144,71 +144,40 @@ class S3Service {
   /**
    * Fetch files from the last 24 hours across multiple days
    * @param {string} basePath - Base path for telescope
-   * @param {number} dataThinning - Data thinning factor (default: 1)
    * @param {number} minDesiredFiles - Minimum number of files to fetch (default: 50)
    * @returns {Promise<Object>} Promise that resolves to object with files and metadata
    */
-  async fetchLast24Hours(basePath = '', dataThinning = 1, minDesiredFiles = 50) {
+  async fetchLast24Hours(basePath = '', minDesiredFiles = 50) {
     return await this._handleRequest(async () => {
-      // Create new abort controller for this operation
       this._createAbortController();
 
-      // Calculate date prefixes
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      
-      const today = new Date();
-      
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
+      // Generate prefixes for tomorrow, today, yesterday (in UTC)
+      const dateOffsets = [1, 0, -1];
+      const prefixes = dateOffsets.map(offset => {
+        const date = new Date();
+        date.setUTCDate(date.getUTCDate() + offset);
+        return this.generateDatePrefix(date, basePath);
+      });
 
-      const tomorrowPrefix = this.generateDatePrefix(tomorrow, basePath);
-      const todayPrefix = this.generateDatePrefix(today, basePath);
-      const yesterdayPrefix = this.generateDatePrefix(yesterday, basePath);
-
-      // Fetch files from multiple days
-      const tomorrowFiles = await this.fetchSingleDay(tomorrowPrefix);
-      const todayFiles = await this.fetchSingleDay(todayPrefix);
-      
-      let yesterdayFiles = [];
-      if (todayFiles && todayFiles.length < minDesiredFiles) {
-        yesterdayFiles = await this.fetchSingleDay(yesterdayPrefix);
+      // Fetch files from all days to ensure we get the most recent
+      const allFiles = [];
+      for (const prefix of prefixes) {
+        const files = await this.fetchSingleDay(prefix);
+        if (files) {allFiles.push(...files);}
       }
 
-      // Handle null responses (cancelled requests)
-      const allFiles = [
-        ...(tomorrowFiles || []),
-        ...(todayFiles || []),
-        ...(yesterdayFiles || []),
-      ];
-
-      // Sort by lastModified date (newest first)
-      allFiles.sort((a, b) => {
-        if (!a.lastModified && !b.lastModified) {
-return 0;
-}
-        if (!a.lastModified) {
-return 1;
-}
-        if (!b.lastModified) {
-return -1;
-}
+      // Sort, thin, and limit files
+      const sortedFiles = allFiles.sort((a, b) => {
+        if (!a.lastModified && !b.lastModified) {return 0;}
+        if (!a.lastModified) {return 1;}
+        if (!b.lastModified) {return -1;}
         return new Date(b.lastModified) - new Date(a.lastModified);
       });
 
-      // Apply data thinning
-      let thinnedFiles = allFiles;
-      if (dataThinning > 1) {
-        thinnedFiles = allFiles.filter((_, index) => index % dataThinning === 0);
-      }
-
-      // Limit to desired number of files
-      const files = thinnedFiles.slice(0, minDesiredFiles);
-
       return {
-        files,
-        allFiles,
-        totalFiles: thinnedFiles.length
+        files: sortedFiles.slice(0, minDesiredFiles),
+        allFiles: sortedFiles,
+        totalFiles: sortedFiles.length
       };
     }, 'Fetch last 24 hours');
   }
@@ -247,7 +216,7 @@ return -1;
       });
 
       const url = `https://${this.S3_HOST}/${this.S3_BUCKET}?${params}`;
-      
+
       const requestConfig = {};
       if (this.abortController) {
         requestConfig.signal = this.abortController.signal;
@@ -259,13 +228,13 @@ return -1;
       }
 
       const xmlText = await response.text();
-      
+
       // Parse both files and folders
       const parser = new DOMParser();
       const xmlDoc = parser.parseFromString(xmlText, "text/xml");
 
       const files = this.parseS3ResponseForFiles(xmlText, prefix);
-      
+
       // Parse folders (CommonPrefixes elements)
       const folders = [];
       const commonPrefixes = xmlDoc.querySelectorAll("CommonPrefixes");
