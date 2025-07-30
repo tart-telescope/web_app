@@ -113,6 +113,7 @@
         folders: [], // Array: folder/prefix names
         currentPrefix: this.basePath, // String: current S3 prefix being viewed
         allFiles: [], // Array: combined files from both days
+        refreshInterval: null, // Timer for auto-refresh
 
       };
     },
@@ -132,6 +133,10 @@
     // Lifecycle hooks
     mounted() {
       this.fetchLast24Hours();
+      this.startAutoRefresh();
+    },
+    beforeUnmount() {
+      this.stopAutoRefresh();
     },
     methods: {
       ...mapActions(useAppStore, [
@@ -198,6 +203,22 @@
 
       formatFileSize,
       formatTimeAgo,
+      
+      startAutoRefresh() {
+        // Refresh every 5 minutes (300,000 ms)
+        this.refreshInterval = setInterval(() => {
+          if (!this.loading) {
+            this.fetchLast24Hours();
+          }
+        }, 300000);
+      },
+      
+      stopAutoRefresh() {
+        if (this.refreshInterval) {
+          clearInterval(this.refreshInterval);
+          this.refreshInterval = null;
+        }
+      },
     },
   };
 </script>

@@ -111,33 +111,53 @@ class S3Service {
   }
 
   /**
-   * Fetch files for a single day from S3
+   * Fetch files for a single day from S3 with pagination support
    * @param {string} prefix - S3 prefix to fetch
    * @returns {Promise<Array>} Promise that resolves to array of file objects
    */
   async fetchSingleDay(prefix) {
     return await this._handleRequest(async () => {
-      const params = new URLSearchParams({
-        "list-type": "2",
-        delimiter: "/",
-        prefix,
-      });
+      let allFiles = [];
+      let continuationToken = null;
+      
+      do {
+        const params = new URLSearchParams({
+          "list-type": "2",
+          delimiter: "/",
+          prefix,
+          "max-keys": "1000",
+        });
 
-      const url = `https://${this.S3_HOST}/${this.S3_BUCKET}?${params}`;
+        if (continuationToken) {
+          params.append("continuation-token", continuationToken);
+        }
 
-      const requestConfig = {};
-      if (this.abortController) {
-        requestConfig.signal = this.abortController.signal;
-      }
+        const url = `https://${this.S3_HOST}/${this.S3_BUCKET}?${params}`;
+        
+        const requestConfig = {};
+        if (this.abortController) {
+          requestConfig.signal = this.abortController.signal;
+        }
 
-      const response = await fetch(url, requestConfig);
-      if (!response.ok) {
-        console.warn(`Failed to fetch ${prefix}: HTTP ${response.status}`);
-        return [];
-      }
+        const response = await fetch(url, requestConfig);
+        if (!response.ok) {
+          console.warn(`Failed to fetch ${prefix}: HTTP ${response.status}`);
+          return allFiles;
+        }
 
-      const xmlText = await response.text();
-      return this.parseS3ResponseForFiles(xmlText, prefix);
+        const xmlText = await response.text();
+        const files = this.parseS3ResponseForFiles(xmlText, prefix);
+        allFiles.push(...files);
+
+        // Check for continuation token
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+        const nextContinuationToken = xmlDoc.querySelector("NextContinuationToken");
+        continuationToken = nextContinuationToken ? nextContinuationToken.textContent : null;
+        
+      } while (continuationToken);
+
+      return allFiles;
     }, `Fetch single day: ${prefix}`);
   }
 
@@ -156,14 +176,18 @@ class S3Service {
       const prefixes = dateOffsets.map(offset => {
         const date = new Date();
         date.setUTCDate(date.getUTCDate() + offset);
-        return this.generateDatePrefix(date, basePath);
+        const prefix = this.generateDatePrefix(date, basePath);
+        console.log(`Date offset ${offset}: ${date.toISOString()} -> prefix: ${prefix}`);
+        return prefix;
       });
 
       // Fetch files from all days to ensure we get the most recent
       const allFiles = [];
       for (const prefix of prefixes) {
+        console.log(`Fetching files for prefix: ${prefix}`);
         const files = await this.fetchSingleDay(prefix);
-        if (files) {allFiles.push(...files);}
+        console.log(`Found ${files ? files.length : 0} files for ${prefix}`);
+        if (files) allFiles.push(...files);
       }
 
       // Sort, thin, and limit files
