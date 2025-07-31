@@ -15,7 +15,7 @@
 
   <v-card class="mx-auto square-card" elevation="3">
     <div class="card-content">
-      <v-card-title class="py-3 teal--text text--lighten-2 d-flex align-center" v-if="showTitle">
+      <v-card-title v-if="showTitle" class="py-3 teal--text text--lighten-2 d-flex align-center">
         <v-icon class="mr-2">mdi-eye</v-icon>
         Realtime View
         <v-spacer />

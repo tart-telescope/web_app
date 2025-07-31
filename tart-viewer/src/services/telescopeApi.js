@@ -293,6 +293,18 @@ class TelescopeApiService {
   }
 
   /**
+   * Get FPGA status
+   * @returns {Promise} Promise that resolves to FPGA status
+   */
+  async getFpgaStatus() {
+    return await this._handleRequest(async () => {
+      const client = this._getClient();
+      const response = await client.get('/status/fpga', this._getRequestConfig());
+      return response.data;
+    }, 'Get FPGA status');
+  }
+
+  /**
    * Get antenna positions
    * @returns {Promise} Promise that resolves to antenna positions
    */

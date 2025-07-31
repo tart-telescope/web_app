@@ -287,8 +287,6 @@
     methods: {
       ...mapActions(useAppStore, [
         "renewChannels",
-        "renewVisData",
-        "renewRawData",
         "renewMode",
         "renewInfo",
         "setTART_URL",
@@ -409,8 +407,6 @@
           if (this.telescope_mode == "vis") {
             // Wait for synthesis data to complete before continuing
             await this.synthesisData();
-            this.renewVisData();
-            this.renewRawData();
             // Force synthesis update after data loads
             this.$nextTick(() => {
               this.forceSynthesisUpdate();
@@ -418,7 +414,6 @@
           }
           if (this.telescope_mode == "diag") {
             this.renewChannels();
-            this.renewRawData();
           }
         } catch (error) {
           console.error('Failed to load telescope data:', error);

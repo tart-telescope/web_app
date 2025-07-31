@@ -6,7 +6,7 @@
 
 <script setup>
   import { computed, onMounted } from "vue";
-  import { useRouter, useRoute } from "vue-router";
+  import { useRoute, useRouter } from "vue-router";
   import Home from "@/components/Home.vue";
   import SimpleView from "@/components/SimpleView.vue";
   import { useAppStore } from "@/stores/app";

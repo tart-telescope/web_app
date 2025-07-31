@@ -119,6 +119,7 @@
         tab: null,
         snackbar: false,
         loadingFile: null,
+        refreshInterval: null,
         visHeaders: [
           {
             text: "Timestamp",
@@ -156,10 +157,37 @@
         ],
       };
     },
+    mounted() {
+      this.startAutoRefresh();
+    },
+    beforeUnmount() {
+      this.stopAutoRefresh();
+    },
+    watch: {
+      TART_URL() {
+        // Refresh data when telescope changes
+        this.renewVisData();
+        this.renewRawData();
+      },
+    },
     methods: {
       ...mapActions(useAppStore, [
         "enrichBulkSatellites",
+        "renewVisData",
+        "renewRawData",
       ]),
+      startAutoRefresh() {
+        this.refreshInterval = setInterval(() => {
+          this.renewVisData();
+          this.renewRawData();
+        }, 10000); // Refresh every 10 seconds
+      },
+      stopAutoRefresh() {
+        if (this.refreshInterval) {
+          clearInterval(this.refreshInterval);
+          this.refreshInterval = null;
+        }
+      },
       copyToClipboard(text) {
         navigator.clipboard.writeText(text);
         this.snackbar = true;

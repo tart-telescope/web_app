@@ -273,16 +273,6 @@
           }
         }
 
-        // Debug logging for first few timestamps
-        if (idx < 3) {
-          console.log(`Timestamp ${idx}:`, {
-            original: originalValue,
-            processed: xValue,
-            date: new Date(xValue).toISOString(),
-            uplotValue: xValue / 1000
-          });
-        }
-
         // Convert to seconds for uPlot (from milliseconds)
         return xValue / 1000;
       } else {
@@ -513,17 +503,6 @@
       const currentScale = chart.scales.x;
       const dataRange = { min: Math.min(...data[0]), max: Math.max(...data[0]) };
 
-      // Debug: log data range calculation
-      console.log('Data range calculation:', {
-        dataMin: dataRange.min,
-        dataMax: dataRange.max,
-        dataCount: data[0].length,
-        currentScaleMin: currentScale.min,
-        currentScaleMax: currentScale.max,
-        firstTimestamp: data[0][0],
-        lastTimestamp: data[0].at(-1)
-      });
-
       // Check if zoom is valid (not too far from actual data range)
       const maxAllowedRange = (dataRange.max - dataRange.min) * 10; // Allow 10x the actual data range
       const isValidZoom = currentScale.min !== null && currentScale.max !== null &&
@@ -594,13 +573,6 @@
   function logZoomChange(action, min, max, context = {}) {
     const minDate = new Date(min * 1000);
     const maxDate = new Date(max * 1000);
-    console.log(`${action}:`, {
-      min, max,
-      minTime: minDate.toISOString() + ' (UTC)',
-      maxTime: maxDate.toISOString() + ' (UTC)',
-      timezone: 'UTC',
-      ...context
-    });
   }
 
   // Expose methods to parent component
@@ -617,8 +589,6 @@
     resetZoom: () => {
       if (chart && chart.data && chart.data[0]) {
         focusOnDisplayedData(chart.data, { action: 'reset' });
-      } else {
-        console.log('Reset zoom failed: chart or data not available');
       }
     },
   });

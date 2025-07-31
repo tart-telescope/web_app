@@ -22,7 +22,7 @@
         "vite-plugin-wasm": "^3.5.0",
         "vue": "^3.5.18",
         "vue-axios": "^3.5.2",
-        "vuetify": "^3.9.2"
+        "vuetify": "^3.9.3"
     },
     "devDependencies": {
         "@vitejs/plugin-vue": "^5.2.4",
@@ -37,7 +37,7 @@
         "unplugin-vue-router": "^0.10.9",
         "vite": "^5.4.19",
         "vite-plugin-vue-layouts": "^0.11.0",
-        "vite-plugin-vuetify": "^2.1.1",
+        "vite-plugin-vuetify": "^2.1.2",
         "vue-router": "^4.5.1"
     }
 }

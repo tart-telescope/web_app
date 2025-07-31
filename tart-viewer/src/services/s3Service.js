@@ -117,7 +117,7 @@ class S3Service {
    */
   async fetchSingleDay(prefix) {
     return await this._handleRequest(async () => {
-      let allFiles = [];
+      const allFiles = [];
       let continuationToken = null;
       
       do {
@@ -187,7 +187,7 @@ class S3Service {
         console.log(`Fetching files for prefix: ${prefix}`);
         const files = await this.fetchSingleDay(prefix);
         console.log(`Found ${files ? files.length : 0} files for ${prefix}`);
-        if (files) allFiles.push(...files);
+        if (files) {allFiles.push(...files);}
       }
 
       // Sort, thin, and limit files

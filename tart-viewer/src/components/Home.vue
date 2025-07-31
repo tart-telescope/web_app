@@ -34,6 +34,9 @@
       <RecentData />
     </v-col>
     <v-col cols="12">
+      <FpgaStatus />
+    </v-col>
+    <v-col cols="12">
       <S3Files :base-path="s3BasePath" :data-thinning="dataThinning" />
     </v-col>
   </v-row>
@@ -43,6 +46,7 @@
   import { mapState } from "pinia";
   import ArrayLayout from "@/components/ArrayLayout.vue";
   import Baseline from "@/components/Baseline.vue";
+  import FpgaStatus from "@/components/FpgaStatus.vue";
   import GainPhase from "@/components/GainPhase.vue";
   import GeneralInfo from "@/components/GeneralInfo.vue";
   import RadioSpectrum from "@/components/RadioSpectrum.vue";
@@ -61,6 +65,7 @@
     components: {
       ArrayLayout,
       Baseline,
+      FpgaStatus,
       GainPhase,
       GeneralInfo,
       RadioSpectrum,
@@ -82,10 +87,6 @@
         // Use fallback if telescopeName is undefined
         const telescope = this.telescopeName || "zm-cbu";
         const path = `${telescope}/vis/${year}/${month}/${day}/`;
-        console.log("Home.vue computed s3BasePath:", path);
-        console.log("  - telescopeName:", this.telescopeName);
-        console.log("  - fallback telescope:", telescope);
-        console.log("  - current date:", now.toDateString());
         return path;
       },
       isSynthesisDataReady() {

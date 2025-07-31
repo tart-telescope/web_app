@@ -210,7 +210,7 @@
           if (!this.loading) {
             this.fetchLast24Hours();
           }
-        }, 300000);
+        }, 300_000);
       },
       
       stopAutoRefresh() {

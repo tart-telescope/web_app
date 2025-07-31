@@ -4,7 +4,7 @@
       <!-- Chart content area with consistent height -->
       <div class="chart-content">
         <!-- Show skeleton loader when insufficient data -->
-        <div v-if="filteredData.length < 2" class="loading-container">
+        <div v-if="filteredData.length === 0" class="loading-container">
           <v-card-title class="py-3 teal--text text--lighten-2 d-flex align-center">
             <v-icon class="mr-2">mdi-chart-line</v-icon>
             Visibility Amplitude
@@ -143,7 +143,7 @@
         const [i, j] = this.selected_baseline;
         const result = this.vis_history.map((x_h, idx) => {
           const item = x_h.data ? x_h.data.find((x) => x.i === i && x.j === j) : null;
-          
+
           // Debug: log first few raw timestamps
           if (idx < 3) {
             console.log(`Raw vis_history ${idx}:`, {
@@ -154,14 +154,14 @@
               item: item
             });
           }
-          
+
           return {
             timestamp: x_h.timestamp,
             amplitude: item ? Math.hypot(item.re, item.im) : null,
             phase: item ? (Math.atan2(item.im, item.re) * 180) / Math.PI : null,
           };
         });
-        
+
         return result;
       },
 
