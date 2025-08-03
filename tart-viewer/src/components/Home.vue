@@ -33,7 +33,7 @@
     <v-col cols="12" lg="4" md="6" sm="12">
       <RecentData />
     </v-col>
-    <v-col cols="12">
+    <v-col v-if="telescope_mode == 'diag'" cols="12">
       <FpgaStatus />
     </v-col>
     <v-col cols="12">
