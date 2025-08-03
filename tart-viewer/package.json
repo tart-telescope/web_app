@@ -18,6 +18,7 @@
         "roboto-fontface": "^0.10.0",
         "three": "^0.177.0",
         "uplot": "^1.6.32",
+        "uplot-vue": "^1.2.4",
         "vite-plugin-top-level-await": "^1.6.0",
         "vite-plugin-wasm": "^3.5.0",
         "vue": "^3.5.18",

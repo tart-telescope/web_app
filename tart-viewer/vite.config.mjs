@@ -75,8 +75,8 @@ export default defineConfig({
 				target: 'http://localhost:1234',
 				changeOrigin: true,
 				secure: false,
-				rewrite: (path) => path.replace(/^\/api\/v1/, ''),
-				// rewrite: (path) => path,
+				// rewrite: (path) => path.replace(/^\/api\/v1/, ''), // target api itself
+				rewrite: (path) => path, // target nginx
 				configure: (proxy, ) => {
 					proxy.on('error', (err,  ) => {
 						console.log('proxy error', err);
@@ -94,13 +94,11 @@ export default defineConfig({
 				target: 'http://localhost:1234',
 				changeOrigin: true,
 				secure: false,
-				rewrite: (path) => path,
 			},
 			'/raw': {
 				target: 'http://localhost:1234',
 				changeOrigin: true,
 				secure: false,
-				rewrite: (path) => path,
 			},
 		},
 	},
