@@ -180,7 +180,7 @@
         this.refreshInterval = setInterval(() => {
           this.renewVisData();
           this.renewRawData();
-        }, 10000); // Refresh every 10 seconds
+        }, 10_000); // Refresh every 10 seconds
       },
       stopAutoRefresh() {
         if (this.refreshInterval) {

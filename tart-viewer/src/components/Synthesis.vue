@@ -45,9 +45,9 @@
       </v-card-title>
 
       <div class="svg-container">
-        <SvgThreejs 
-          v-if="!is3D" 
-          ref="svgRef" 
+        <SvgThreejs
+          v-if="!is3D"
+          ref="svgRef"
           :auto-resize="true"
           :min-elevation="10"
           :satellite-data="currentSatelliteData"
@@ -136,7 +136,7 @@
   export default {
     name: "SynthesisComponent",
     components: { SvgThreejs, Threejs3D },
-    
+
     props: {
       showTitle: {
         type: Boolean,
@@ -170,19 +170,10 @@
         "showTimings",
         "nside",
         "antennasUsed",
+        "currentVisData",
       ]),
 
-      currentVisData() {
-        if (!this.hoveredTimestamp || this.vis_history.length === 0) {
-          return this.vis;
-        }
 
-        return (
-          this.vis_history.find(
-            (v) => v.timestamp.toString() === this.hoveredTimestamp.toString(),
-          ) || this.vis
-        );
-      },
 
       currentTimestamp() {
         return this.currentVisData?.timestamp;
@@ -245,8 +236,8 @@
 
         return {
           info: { info: this.info },
-          ant_pos: this.antennas,
-          gains: this.gain,
+          ant_pos: this.currentVisData.antennas || this.antennas, // fall back on ui gantennas
+          gains: this.currentVisData.gain || this.gain, // fall back on ui gains
           data: [
             [
               {
@@ -339,7 +330,7 @@
 
       // Add ESC key listener for fullscreen overlay
       document.addEventListener("keydown", this.handleKeyDown);
-      
+
       // Add resize listener
       window.addEventListener("resize", this.handleResize);
     },
@@ -500,7 +491,7 @@
           } else if (!this.is3D && this.$refs.svgRef && this.$refs.svgRef.handleResize) {
             this.$refs.svgRef.handleResize();
           }
-          
+
           // Also handle fullscreen component
           if (this.fullscreen && this.$refs.fullscreenThreejsRef && this.$refs.fullscreenThreejsRef.handleResize) {
             this.$refs.fullscreenThreejsRef.handleResize();

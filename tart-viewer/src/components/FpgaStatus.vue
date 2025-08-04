@@ -1,6 +1,6 @@
 <template>
   <v-card :loading="loading">
-      <v-card-title class="py-3 teal--text text--lighten-2 d-flex align-center">
+    <v-card-title class="py-3 teal--text text--lighten-2 d-flex align-center">
       <v-icon left>mdi-chip</v-icon>
       FPGA Status <v-chip class="ml-2" color="info" small>ALPHA</v-chip>
       <v-spacer />      <v-chip v-show="fpgaStatus" class="ml-2" color="info" small>
@@ -352,7 +352,7 @@
                 <div class="d-flex justify-space-between mb-2" :class="{ 'flash-change': isFieldChanged('VX_DEBUG.stuck') }">
                   <span>Stuck:</span>
                   <v-chip :color="vxDebug.stuck ? 'warning' : 'success'" small>
-                    {{ vxDebug.stuck}}
+                    {{ vxDebug.stuck }}
                   </v-chip>
                 </div>
               </v-card-text>

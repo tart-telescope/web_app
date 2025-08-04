@@ -55,10 +55,10 @@ class Hdf5Service {
       try {
         // Import h5wasm utils
         const { loadH5wasmFromUrl } = await import('@/utils/h5wasmUtils');
-        
+
         // Load HDF5 file from URL
         hdf5File = await loadH5wasmFromUrl(fileUrl);
-        
+
         // Parse the file data
         await this._parseAndPopulateStore(hdf5File, file.name, store, enrichBulkSatellites, dataThinning);
 
@@ -87,7 +87,7 @@ class Hdf5Service {
     try {
       // Import h5wasm utils
       const { parseH5wasmFileData } = await import('@/utils/h5wasmUtils');
-      
+
       // Parse the HDF5 file data
       const parsedData = await parseH5wasmFileData(hdf5File, filename);
 
@@ -117,9 +117,17 @@ class Hdf5Service {
         visibilityData,
         gainPhaseData,
         antennaData,
-        configData,
         baselineData,
       } = parsedData;
+
+      // Create reusable objects
+      const gainRecord = gainPhaseData ? {
+        gain: Array.from(gainPhaseData.gains || []),
+        phase_offset: Array.from(gainPhaseData.phases || []),
+        timestamp: timestamps ? timestamps[0] : null,
+      } : null;
+
+      const antennas = antennaData || null;
 
       // Populate visibility data
       if (timestamps && visibilityData) {
@@ -155,6 +163,8 @@ class Hdf5Service {
             timestamp: ts,
             data,
             satellites: [],
+            gain: gainRecord,
+            antennas,
           };
           history.push(visRecord);
         }
@@ -167,40 +177,34 @@ class Hdf5Service {
       }
 
       // Populate antenna positions
-      if (antennaData) {
-        store.antennas = Object.freeze(antennaData);
-      }
+      // if (antennaData) {
+      //   store.antennas = Object.freeze(antennaData);
+      // }
 
-      if (gainPhaseData) {
-        const gainRecord = {
-          gain: Array.from(gainPhaseData.gains || []),
-          phase_offset: Array.from(gainPhaseData.phases || []),
-          timestamp: timestamps ? timestamps[0] : null,
-        };
+      // if (gainRecord) {
+      //   store.gain = Object.freeze(gainRecord);
+      // }
 
-        store.gain = Object.freeze(gainRecord);
-      }
+      // // Populate baseline data if available
+      // if (baselineData) {
+      //   // Store baseline mapping for future use
+      //   store.baselines = Object.freeze(baselineData);
+      // }
 
-      // Populate baseline data if available
-      if (baselineData) {
-        // Store baseline mapping for future use
-        store.baselines = Object.freeze(baselineData);
-      }
+      // // Populate config/info data - only update specific fields
+      // if (configData) {
+      //   const updatedInfo = { ...store.info };
 
-      // Populate config/info data - only update specific fields
-      if (configData) {
-        const updatedInfo = { ...store.info };
-        
-        // Only update known info fields from configData
-        if (configData.name) {updatedInfo.name = configData.name;}
-        if (configData.location) {updatedInfo.location = configData.location;}
-        if (configData.operating_frequency) {updatedInfo.operating_frequency = configData.operating_frequency;}
-        if (configData.bandwidth) {updatedInfo.bandwidth = configData.bandwidth;}
-        if (configData.sample_rate) {updatedInfo.sample_rate = configData.sample_rate;}
-        if (configData.n_ant) {updatedInfo.n_ant = configData.n_ant;}
-        
-        store.info = Object.freeze(updatedInfo);
-      }
+      //   // Only update known info fields from configData
+      //   if (configData.name) {updatedInfo.name = configData.name;}
+      //   if (configData.location) {updatedInfo.location = configData.location;}
+      //   if (configData.operating_frequency) {updatedInfo.operating_frequency = configData.operating_frequency;}
+      //   if (configData.bandwidth) {updatedInfo.bandwidth = configData.bandwidth;}
+      //   if (configData.sample_rate) {updatedInfo.sample_rate = configData.sample_rate;}
+      //   if (configData.n_ant) {updatedInfo.n_ant = configData.n_ant;}
+
+      //   store.info = Object.freeze(updatedInfo);
+      // }
 
       // Enrich satellite data
       if (enrichBulkSatellites) {
@@ -249,13 +253,13 @@ class Hdf5Service {
   async parseFileData(hdf5File, filename) {
     return await this._handleRequest(async () => {
       const { parseH5wasmFileData } = await import('@/utils/h5wasmUtils');
-      
+
       const parsedData = await parseH5wasmFileData(hdf5File, filename);
-      
+
       if (!parsedData) {
         throw new Error("Failed to parse HDF5 data - no data returned");
       }
-      
+
       return parsedData;
     }, `Parse HDF5 file: ${filename}`);
   }

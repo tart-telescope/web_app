@@ -4,10 +4,10 @@
       Antenna Gains & Phases
     </v-card-title>
 
-    <v-card-text v-if="gain && gain.gain && gain.phase_offset" class="pa-2">
+    <v-card-text v-if="currentGain && currentGain.gain && currentGain.phase_offset" class="pa-2">
       <v-row dense>
         <v-col
-          v-for="(gainValue, index) in gain.gain"
+          v-for="(gainValue, index) in currentGain.gain"
           :key="`combined-${index}`"
           class="pa-1"
           cols="2"
@@ -31,11 +31,11 @@
             <div
               class="phase-section text-center pa-1"
               :style="{
-                backgroundColor: getPhaseColorHex(gain.phase_offset[index]),
+                backgroundColor: getPhaseColorHex(currentGain.phase_offset[index]),
               }"
             >
               <div class="body-2 white--text">
-                {{ roundValue(normalizePhase(gain.phase_offset[index])) }}
+                {{ roundValue(normalizePhase(currentGain.phase_offset[index])) }}
               </div>
             </div>
           </v-card>
@@ -57,7 +57,12 @@
     name: "GainPhaseComponent",
 
     computed: {
-      ...mapState(useAppStore, ["gain"]),
+      ...mapState(useAppStore, ["gain", "currentVisData"]),
+
+      currentGain() {
+        // Use gain from currentVisData if available, otherwise fall back to store gain
+        return this.currentVisData?.gain || this.gain;
+      },
     },
 
     methods: {

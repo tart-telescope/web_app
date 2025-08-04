@@ -70,6 +70,19 @@ export const useAppStore = defineStore("app", {
       const telescopeName = urlParts.at(-1);
       return telescopeName || "zm-cbu";
     },
+
+    // Get current visibility data based on hovered timestamp or latest vis data
+    currentVisData: (state) => {
+      if (!state.hoveredTimestamp || state.vis_history.length === 0) {
+        return state.vis;
+      }
+
+      return (
+        state.vis_history.find(
+          (v) => v.timestamp.toString() === state.hoveredTimestamp.toString(),
+        ) || state.vis
+      );
+    },
   },
   actions: {
     async auth(pw) {
@@ -293,9 +306,11 @@ export const useAppStore = defineStore("app", {
         const visWithSatellites = {
           ...visData,
           satellites,
+          gain: gainsData,
+          antennas: antPos,
         };
 
-        while (this.vis_history.length > 500) {
+        while (this.vis_history.length > 3600) {
           this.vis_history.shift();
         }
         this.vis_history.push(visWithSatellites);
