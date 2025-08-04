@@ -1,6 +1,6 @@
 <template>
   <v-app>
-    <v-app-bar app dark dense>
+    <v-app-bar v-if="!isSimpleView" app dark dense>
       <v-app-bar-nav-icon @click.stop="drawer = !drawer" />
       <v-toolbar-title class="text-h6 text-sm-h5 text-uppercase pa-0">
         <span class="cyan--text font-weight-bold">TART</span>
@@ -15,7 +15,13 @@
       </v-btn>
     </v-app-bar>
 
-    <v-navigation-drawer v-model="drawer" app dark temporary>
+    <v-navigation-drawer
+      v-if="!isSimpleView"
+      v-model="drawer"
+      app
+      dark
+      temporary
+    >
       <!-- Local Mode Toggle at top -->
       <v-list-item class="pt-3 pb-2">
         <v-switch
@@ -199,7 +205,7 @@
       </v-list-item>
     </v-navigation-drawer>
     <v-main>
-      <v-container fluid>
+      <v-container v-if="!isSimpleView" fluid>
         <!-- Show loading spinner while fetching telescopes on startup -->
         <div v-if="initialLoading" class="d-flex justify-center align-center" style="min-height: 60vh;">
           <div class="text-center">
@@ -240,13 +246,17 @@
         <!-- Normal router view when telescopes are available -->
         <router-view v-else ref="homeComponent" />
       </v-container>
+      
+      <!-- Simple view - full screen without container -->
+      <router-view v-if="isSimpleView" ref="homeComponent" />
     </v-main>
-    <AppFooter />
+    <AppFooter v-if="!isSimpleView" />
   </v-app>
 </template>
 
 <script>
   import { mapActions, mapState } from "pinia";
+  import { computed } from "vue";
   import { useRoute, useRouter } from "vue-router";
   import LoginField from "@/components/LoginField.vue";
   import TelescopeModeChange from "@/components/TelescopeModeChange.vue";
@@ -262,7 +272,8 @@
     setup() {
       const route = useRoute();
       const router = useRouter();
-      return { route, router };
+      const isSimpleView = computed(() => route.query.view === 'simple');
+      return { route, router, isSimpleView };
     },
     data: () => ({
       drawer: false,

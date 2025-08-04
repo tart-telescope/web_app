@@ -13,7 +13,8 @@
     </div>
   </v-alert>
 
-  <v-card class="mx-auto square-card" elevation="3">
+  <!-- Normal view with card -->
+  <v-card v-if="!simpleView" class="mx-auto square-card" elevation="3">
     <div class="card-content">
       <v-card-title v-if="showTitle" class="py-3 teal--text text--lighten-2 d-flex align-center">
         <v-icon class="mr-2">mdi-eye</v-icon>
@@ -57,10 +58,7 @@
         <Threejs3D v-else ref="threejsRef" :auto-resize="true" />
       </div>
 
-
-
       <v-card class="py-0 my-0" elevation="0">
-
         <!-- Timing Info Display -->
         <div v-if="showTimings" class="pa-3 text-lowercase">
           <v-row>
@@ -82,6 +80,22 @@
       </v-card>
     </div>
   </v-card>
+
+  <!-- Simple view without card background -->
+  <div v-if="simpleView" class="simple-view-container">
+    <div class="svg-container">
+      <SvgThreejs
+        v-if="!is3D"
+        ref="svgRef"
+        :auto-resize="true"
+        :min-elevation="10"
+        :satellite-data="currentSatelliteData"
+        :show-grid="true"
+        :show-satellites="show_sat"
+      />
+      <Threejs3D v-else ref="threejsRef" :auto-resize="true" />
+    </div>
+  </div>
 
   <!-- Fullscreen Overlay -->
   <v-overlay v-model="fullscreen" class="fullscreen-overlay" persistent>
@@ -141,6 +155,10 @@
       showTitle: {
         type: Boolean,
         default: true,
+      },
+      simpleView: {
+        type: Boolean,
+        default: false,
       },
     },
 
@@ -509,6 +527,16 @@
   max-width: 80vh;
   display: flex;
   flex-direction: column;
+}
+
+.simple-view-container {
+  width: 100vw;
+  height: 100vh;
+  max-width: none;
+  max-height: none;
+  display: flex;
+  flex-direction: column;
+  background: transparent;
 }
 
 .card-content {
