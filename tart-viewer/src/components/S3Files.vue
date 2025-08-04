@@ -8,8 +8,11 @@
         color="primary"
         size="small"
         variant="flat"
+        :disabled="bulkLoading"
+        @click="addToTimeline"
       >
-        Add to timeline
+        <v-icon v-if="bulkLoading" class="mr-1">mdi-loading mdi-spin</v-icon>
+        Add to timeline {{ bulkLoading ? `(${bulkProgress}/${bulkTotal})` : '' }}
       </v-chip>
     </v-card-title>
 
@@ -65,7 +68,7 @@
                 </div>
                 <v-chip
                   color="primary"
-                  :href="getFileUrl(file)"
+                  :href="getFileUrl(file.name)"
                   size="small"
                   target="_blank"
                   variant="flat"
@@ -114,6 +117,9 @@
         currentPrefix: this.basePath, // String: current S3 prefix being viewed
         allFiles: [], // Array: combined files from both days
         refreshInterval: null, // Timer for auto-refresh
+        bulkLoading: false, // Boolean: true during bulk timeline loading
+        bulkProgress: 0, // Number: current file being processed in bulk load
+        bulkTotal: 0, // Number: total files to process in bulk load
 
       };
     },
@@ -185,10 +191,10 @@
             this.loadingFile = file.name;
             const fileUrl = this.getFileUrl(file.name);
             await hdf5Service.loadFileToStore(
-              file, 
-              fileUrl, 
-              this.store, 
-              this.enrichBulkSatellites, 
+              file,
+              fileUrl,
+              this.store,
+              this.enrichBulkSatellites,
               1
             );
           } catch (error) {
@@ -203,7 +209,53 @@
 
       formatFileSize,
       formatTimeAgo,
-      
+
+      async addToTimeline() {
+        if (this.bulkLoading) return;
+
+        const maxFiles = 30;
+        const hdf5Files = this.allFiles
+          .filter(file => file.name.endsWith(".hdf") || file.name.endsWith(".h5"))
+          .slice(0, maxFiles);
+
+        if (hdf5Files.length === 0) {
+          console.warn("No HDF5 files found to add to timeline");
+          return;
+        }
+
+        this.bulkLoading = true;
+        this.bulkProgress = 0;
+        this.bulkTotal = hdf5Files.length;
+
+        try {
+          for (let i = 0; i < hdf5Files.length; i++) {
+            const file = hdf5Files[i];
+            this.bulkProgress = i + 1;
+
+            try {
+              const fileUrl = this.getFileUrl(file.name);
+              await hdf5Service.loadFileToStore(
+                file,
+                fileUrl,
+                this.store,
+                this.enrichBulkSatellites,
+                10
+              );
+
+              // Small delay to prevent UI blocking
+              await new Promise(resolve => setTimeout(resolve, 10));
+            } catch (error) {
+              console.error(`Failed to load file ${file.name}:`, error);
+              // Continue with next file instead of stopping
+            }
+          }
+        } finally {
+          this.bulkLoading = false;
+          this.bulkProgress = 0;
+          this.bulkTotal = 0;
+        }
+      },
+
       startAutoRefresh() {
         // Refresh every 5 minutes (300,000 ms)
         this.refreshInterval = setInterval(() => {
@@ -212,7 +264,7 @@
           }
         }, 300_000);
       },
-      
+
       stopAutoRefresh() {
         if (this.refreshInterval) {
           clearInterval(this.refreshInterval);
@@ -230,5 +282,14 @@
 
 .file-card:hover:not([disabled]) {
   border-color: rgb(var(--v-theme-primary));
+}
+
+.mdi-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 </style>
