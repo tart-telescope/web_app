@@ -38,7 +38,7 @@ export const SPHERE_DEFAULTS = {
   radius: 1,
   segments: 32,
   rings: 16,
-  satelliteOffset: 0.02,
+  satelliteOffset: 0.005,
   indicatorOffset: 0.05,
 };
 
