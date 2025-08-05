@@ -7,7 +7,7 @@
         <div v-if="filteredData.length === 0" class="loading-container">
           <v-card-title class="py-3 teal--text text--lighten-2 d-flex align-center">
             <v-icon class="mr-2">mdi-chart-line</v-icon>
-            Visibility Amplitude
+            Visibility Amplitude (uncalibrated)
           </v-card-title>
           <div class="chart-container">
             <v-skeleton-loader
@@ -190,7 +190,7 @@
       },
 
       hasNewData() {
-        if (!this.currentZoomRange || this.filteredData.length === 0) return false;
+        if (!this.currentZoomRange || !this.currentZoomRange.max || this.filteredData.length === 0) return false;
 
         const latestDataTimestamp = Math.max(...this.filteredData.map(d => d.timestamp));
         const zoomMaxTimestamp = this.currentZoomRange.max * 1000; // Convert from seconds to milliseconds
@@ -278,7 +278,12 @@
       },
 
       updateZoomRange(range) {
-        this.currentZoomRange = range;
+        // Only update if range has valid min/max values
+        if (range && range.min !== null && range.max !== null) {
+          this.currentZoomRange = range;
+        } else {
+          this.currentZoomRange = null;
+        }
       },
 
       handleZoomKeyDown(event) {

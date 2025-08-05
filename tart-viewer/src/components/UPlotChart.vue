@@ -12,7 +12,7 @@
 <script setup>
   import uPlot from "uplot";
   import UplotVue from "uplot-vue";
-  import { computed, ref } from "vue";
+  import { computed, ref, watch, nextTick, onMounted, onUnmounted } from "vue";
   import "uplot/dist/uPlot.min.css";
 
   const props = defineProps({
@@ -77,6 +77,8 @@
   const emit = defineEmits(["data-point-selection", "mouse-move", "mouse-leave", "zoom-changed"]);
 
   const chart = ref(null);
+  const currentZoomRange = ref(null);
+  const containerWidth = ref(800);
 
   const chartData = computed(() => {
     if (!props.series?.length) return [];
@@ -124,7 +126,7 @@
     const height = typeof props.height === 'number' ? props.height : Number.parseInt(props.height) || 300;
 
     const options = {
-      width: props.width || 800,
+      width: props.width || containerWidth.value,
       height,
       ms: 1, // uPlot expects timestamps in seconds
       series: [
@@ -192,6 +194,7 @@
             if (sel.width > 0) {
               const min = u.posToVal(sel.left, 'x');
               const max = u.posToVal(sel.left + sel.width, 'x');
+              currentZoomRange.value = { min, max };
               u.setScale('x', { min, max });
               emit("zoom-changed", { min, max });
             }
@@ -236,15 +239,72 @@
 
   function onChartCreate(chartInstance) {
     chart.value = chartInstance;
+    
+    // Restore zoom range if it exists
+    if (currentZoomRange.value) {
+      chartInstance.setScale('x', currentZoomRange.value);
+    }
   }
 
   function onChartDelete() {
     chart.value = null;
   }
 
+  // Watch for data changes and preserve zoom
+  watch(chartData, async () => {
+    if (chart.value && currentZoomRange.value) {
+      await nextTick();
+      chart.value.setScale('x', currentZoomRange.value);
+    }
+  });
+
+  // Resize observer to make chart responsive
+  let resizeObserver = null;
+  
+  onMounted(() => {
+    if (typeof ResizeObserver !== 'undefined') {
+      const chartElement = document.querySelector('.uplot-chart');
+      if (chartElement) {
+        resizeObserver = new ResizeObserver(entries => {
+          for (let entry of entries) {
+            containerWidth.value = entry.contentRect.width || 800;
+            if (chart.value) {
+              chart.value.setSize({ width: containerWidth.value, height: chart.value.height });
+            }
+          }
+        });
+        resizeObserver.observe(chartElement);
+        containerWidth.value = chartElement.offsetWidth || 800;
+      }
+    }
+  });
+
+  onUnmounted(() => {
+    if (resizeObserver) {
+      resizeObserver.disconnect();
+    }
+  });
+
   function resetZoom() {
     if (chart.value) {
-      chart.value.setScale('x', { min: null, max: null });
+      currentZoomRange.value = null;
+      // Use uPlot's built-in method to reset zoom to fit all data
+      const xData = chart.value.data[0];
+      const yData = chart.value.data[1];
+      
+      if (xData && xData.length > 0) {
+        const xMin = Math.min(...xData.filter(x => x != null));
+        const xMax = Math.max(...xData.filter(x => x != null));
+        chart.value.setScale('x', { min: xMin, max: xMax });
+      }
+      
+      if (yData && yData.length > 0) {
+        const yMin = Math.min(...yData.filter(y => y != null));
+        const yMax = Math.max(...yData.filter(y => y != null));
+        chart.value.setScale('y', { min: yMin, max: yMax });
+      }
+      
+      emit("zoom-changed", { min: null, max: null });
     }
   }
 
