@@ -365,8 +365,7 @@ export const useAppStore = defineStore("app", {
         let matchedVis = timestampMap.get(responseTime);
 
         if (!matchedVis) {
-          // Find closest timestamp within 5 second tolerance (increased for better matching)
-          const tolerance = 5000; // 5 seconds in milliseconds
+          const tolerance = 500; // 500 milliseconds
           let bestMatch = null;
           let bestDiff = Infinity;
 
