@@ -451,7 +451,6 @@
       },
       startAutoRefresh() {
         this.refreshIntervalId = setInterval(() => {
-          console.log("setting interval", this.refreshInterval)
           this.fetchFpgaStatus();
         }, this.refreshInterval);
       },

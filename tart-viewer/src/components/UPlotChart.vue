@@ -12,7 +12,7 @@
 <script setup>
   import uPlot from "uplot";
   import UplotVue from "uplot-vue";
-  import { computed, ref, watch, nextTick, onMounted, onUnmounted } from "vue";
+  import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
   import "uplot/dist/uPlot.min.css";
 
   const props = defineProps({
