@@ -7,7 +7,7 @@
         <div v-if="filteredData.length === 0" class="loading-container">
           <v-card-title class="py-3 teal--text text--lighten-2 d-flex align-center">
             <v-icon class="mr-2">mdi-chart-line</v-icon>
-            Visibility Amplitude (uncalibrated)
+            Visibility Amplitude (uncal.)
           </v-card-title>
           <div class="chart-container">
             <v-skeleton-loader
@@ -39,7 +39,7 @@
         <div v-else>
           <v-card-title class="py-3 teal--text text--lighten-2 d-flex align-center">
             <v-icon class="mr-2">mdi-chart-line</v-icon>
-            Visibility Amplitude
+            Visibility Amplitude (uncal.)
             <v-spacer />
             <v-chip
               v-if="hasNewData"
@@ -158,16 +158,6 @@
         const result = this.vis_history.map((x_h, idx) => {
           const item = x_h.data ? x_h.data.find((x) => x.i === i && x.j === j) : null;
 
-          // Debug: log first few raw timestamps
-          if (idx < 3) {
-            console.log(`Raw vis_history ${idx}:`, {
-              timestamp: x_h.timestamp,
-              timestampType: typeof x_h.timestamp,
-              date: new Date(x_h.timestamp).toISOString(),
-              hasData: !!x_h.data,
-              item: item
-            });
-          }
 
           return {
             timestamp: x_h.timestamp,
@@ -253,15 +243,6 @@
           const data = this.filteredData[event.idx];
 
           if (data) {
-            // Debug: log first few data points to check timestamp format
-            if (event.idx < 3) {
-              console.log(`Filtered data ${event.idx}:`, {
-                timestamp: data.timestamp,
-                date: new Date(data.timestamp).toISOString(),
-                amplitude: data.amplitude,
-                phase: data.phase
-              });
-            }
 
             // Set hovered timestamp for other components
             this.setHoveredTimestamp(data.timestamp);
