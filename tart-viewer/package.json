@@ -11,6 +11,8 @@
         "test:console": "node puppet.js"
     },
     "dependencies": {
+        "@mdi/font": "^7.4.47",
+        "@mdi/js": "^7.4.47",
         "axios": "^1.11.0",
         "axios-cache-interceptor": "^1.8.0",
         "core-js": "^3.45.0",

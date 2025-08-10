@@ -233,45 +233,166 @@ export const useAppStore = defineStore("app", {
         this.telescope_mode = response.mode;
       }
     },
+    /**
+     * Enrich visibility data with satellite positions in bulk
+     *
+     * This function processes multiple timestamps in batches to get satellite
+     * azimuth/elevation data from the satellite catalog API and enriches
+     * the vis_history with this data.
+     *
+     * @returns {Promise<Object>} Result object with success status and statistics
+     */
     async enrichBulkSatellites() {
-      const timestamps = this.vis_history
-        .filter((vis) => vis.satellites?.length === 0)
-        .map((vis) => vis.timestamp);
+      const batchSize = 100;
+      const maxRetries = 3;
 
-      if (timestamps.length === 0) {
-        return;
-      }
-      if (
-        this.info.location.lat === undefined ||
-        this.info.location.lon === undefined
-      ) {
-        return;
+      // Validate location data
+      if (!this.info?.location?.lat || !this.info?.location?.lon) {
+        console.warn('Location data not available for satellite enrichment');
+        return { success: false, error: 'Missing location data' };
       }
 
-      const response = await satelliteApi.getBulkAzEl(
-        this.info.location.lat,
-        this.info.location.lon,
-        0, // this.info.location.alt,
-        timestamps
+      // Get timestamps that need enrichment
+      const visToEnrich = this.vis_history.filter(vis =>
+        !vis.satellites || vis.satellites.length === 0
       );
 
-      if (!response) {return;}
+      if (visToEnrich.length === 0) {
+        return { success: true, processed: 0 };
+      }
 
-      const responseTimestamps = response.dates;
-      for (const [i, timestamp_] of responseTimestamps.entries()) {
-        const timestamp = new Date(timestamp_);
-        const az_el = response.az_el[i];
-        for (const vis of this.vis_history) {
-          // if time_delta is less than 0.01s
-          if (Math.abs(vis.timestamp - timestamp) < 10) {
-            vis.satellites = az_el.map((satellite) => ({
-              name: satellite.name,
-              az: satellite.az,
-              el: satellite.el,
-            }));
+      // Use Date objects directly like getCatalog does
+      const timestamps = visToEnrich.map(vis => vis.timestamp);
+
+
+      let processedCount = 0;
+      let errorCount = 0;
+
+      try {
+        // Process in batches to avoid overwhelming the API
+        for (let i = 0; i < timestamps.length; i += batchSize) {
+          const batch = timestamps.slice(i, i + batchSize);
+          let retries = 0;
+          let batchSuccess = false;
+
+
+
+          while (retries < maxRetries && !batchSuccess) {
+            try {
+              const response = await satelliteApi.getBulkAzEl(
+                this.info.location.lat,
+                this.info.location.lon,
+                this.info.location.alt || 0,
+                batch
+              );
+
+              if (response?.dates && response?.az_el) {
+                this._processSatelliteResponse(response, visToEnrich);
+                processedCount += batch.length;
+                batchSuccess = true;
+
+
+              } else {
+                throw new Error('Invalid response format from satellite API');
+              }
+            } catch (error) {
+              retries++;
+              console.warn(`Satellite enrichment batch ${Math.floor(i / batchSize) + 1} failed (attempt ${retries}):`, error.message);
+
+              if (retries >= maxRetries) {
+                errorCount += batch.length;
+                console.error(`Failed to enrich batch after ${maxRetries} attempts`);
+              } else {
+                // Exponential backoff
+                await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, retries - 1)));
+              }
+            }
+          }
+
+          // Small delay between batches to be respectful to the API
+          if (i + batchSize < timestamps.length) {
+            await new Promise(resolve => setTimeout(resolve, 100));
           }
         }
+
+        const result = {
+          success: true,
+          processed: processedCount,
+          errors: errorCount,
+          total: timestamps.length
+        };
+        return result;
+
+      } catch (error) {
+        console.error('Bulk satellite enrichment failed:', error);
+        return {
+          success: false,
+          error: error.message,
+          processed: processedCount
+        };
       }
+    },
+
+    /**
+     * Process satellite API response and update vis_history with satellite data
+     *
+     * Maps satellite data from the API response to the corresponding visibility
+     * records in vis_history based on timestamp matching. Uses exact timestamp
+     * matching first, then falls back to closest match within tolerance.
+     *
+     * @param {Object} response - API response from satelliteApi.getBulkAzEl
+     * @param {Array} response.dates - Array of timestamp strings from API
+     * @param {Array} response.az_el - Array of satellite data arrays
+     * @param {Array} visToEnrich - Array of vis_history items to enrich
+     * @private
+     */
+    _processSatelliteResponse(response, visToEnrich) {
+      const { dates: responseTimestamps, az_el } = response;
+
+      // Create a map for faster timestamp lookups
+      const timestampMap = new Map();
+      for (const vis of visToEnrich) {
+        timestampMap.set(vis.timestamp.getTime(), vis);
+      }
+
+      let enrichedCount = 0;
+
+      for (const [i, timestamp_] of responseTimestamps.entries()) {
+        const responseTime = new Date(timestamp_).getTime();
+        const satelliteData = az_el[i];
+
+        // Find exact match first, then fall back to closest within tolerance
+        let matchedVis = timestampMap.get(responseTime);
+
+        if (!matchedVis) {
+          const tolerance = 500; // 500 milliseconds
+          let bestMatch = null;
+          let bestDiff = Infinity;
+
+          for (const [visTime, vis] of timestampMap.entries()) {
+            const diff = Math.abs(visTime - responseTime);
+            if (diff < tolerance && diff < bestDiff) {
+              bestMatch = vis;
+              bestDiff = diff;
+            }
+          }
+
+          if (bestMatch) {
+            matchedVis = bestMatch;
+          }
+        }
+
+        if (matchedVis && satelliteData) {
+          matchedVis.satellites = satelliteData.map(satellite => ({
+            name: satellite.name,
+            az: satellite.az,
+            el: satellite.el,
+          }));
+          enrichedCount++;
+        }
+      }
+
+      return enrichedCount;
     },
     async synthesisData() {
       console.log('🔄 synthesisData() called');

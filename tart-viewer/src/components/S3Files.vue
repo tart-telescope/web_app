@@ -6,13 +6,21 @@
       <v-spacer />
       <v-chip
         color="primary"
-        :disabled="bulkLoading"
+        :disabled="bulkLoading || enrichLoading"
         size="small"
         variant="flat"
         @click="addToTimeline"
       >
-        <v-icon v-if="bulkLoading" class="mr-1">mdi-loading mdi-spin</v-icon>
-        Add to timeline {{ bulkLoading ? `(${bulkProgress}/${bulkTotal})` : '' }}
+        <v-icon v-if="bulkLoading || enrichLoading" class="mr-1">mdi-loading mdi-spin</v-icon>
+        <span v-if="enrichLoading">
+          Enriching satellites...
+        </span>
+        <span v-else-if="bulkLoading">
+          {{ bulkPhase === 'loading' ? 'Loading files' : 'Enriching satellites' }} ({{ bulkProgress }}/{{ bulkTotal }})
+        </span>
+        <span v-else>
+          Add to timeline
+        </span>
       </v-chip>
     </v-card-title>
 
@@ -120,6 +128,8 @@
         bulkLoading: false, // Boolean: true during bulk timeline loading
         bulkProgress: 0, // Number: current file being processed in bulk load
         bulkTotal: 0, // Number: total files to process in bulk load
+        bulkPhase: 'loading', // String: current phase of bulk operation ('loading' or 'enriching')
+        enrichLoading: false, // Boolean: true during satellite enrichment
 
       };
     },
@@ -194,7 +204,7 @@
               file,
               fileUrl,
               this.store,
-              this.enrichBulkSatellites,
+              () => this.enrichSatellitesWithProgress(),
               1
             );
           } catch (error) {
@@ -202,6 +212,24 @@
           } finally {
             this.loadingFile = null;
           }
+        }
+      },
+
+      async enrichSatellitesWithProgress() {
+        if (this.enrichLoading) return;
+
+        this.enrichLoading = true;
+
+        try {
+          const result = await this.enrichBulkSatellites();
+
+          if (result && !result.success) {
+            console.warn('Satellite enrichment completed with errors:', result);
+          }
+        } catch (error) {
+          console.error('Failed to enrich satellites:', error);
+        } finally {
+          this.enrichLoading = false;
         }
       },
 
@@ -226,10 +254,12 @@
         this.bulkLoading = true;
         this.bulkProgress = 0;
         this.bulkTotal = hdf5Files.length;
+        this.bulkPhase = 'loading';
 
         try {
-          for (const [i, file] of hdf5Files.entries()) {
-            this.bulkProgress = i + 1;
+          // Load all files first without enrichment
+          for (const [index, file] of hdf5Files.entries()) {
+            this.bulkProgress = index + 1;
 
             try {
               const fileUrl = this.getFileUrl(file.name);
@@ -237,7 +267,7 @@
                 file,
                 fileUrl,
                 this.store,
-                this.enrichBulkSatellites,
+                null, // Don't enrich after each file
                 10
               );
 
@@ -248,10 +278,19 @@
               // Continue with next file instead of stopping
             }
           }
+
+          // Now enrich all satellites in one bulk operation
+          this.bulkPhase = 'enriching';
+          this.bulkProgress = 0;
+          this.bulkTotal = 1; // Just one enrichment operation
+          await this.enrichSatellitesWithProgress();
+          this.bulkProgress = 1;
+
         } finally {
           this.bulkLoading = false;
           this.bulkProgress = 0;
           this.bulkTotal = 0;
+          this.bulkPhase = 'loading';
         }
       },
 
