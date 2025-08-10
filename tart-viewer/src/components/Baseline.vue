@@ -218,6 +218,8 @@
         "selectBaseline",
         "setHoveredTimestamp",
         "clearHoveredTimestamp",
+        "setZoomRange",
+        "clearZoomRange",
       ]),
 
       handleUPlotHover(event) {
@@ -275,14 +277,17 @@
           this.$refs.phaseChart.resetZoom();
         }
         this.currentZoomRange = null;
+        this.clearZoomRange();
       },
 
       updateZoomRange(range) {
         // Only update if range has valid min/max values
-        if (range && range.min !== null && range.max !== null) {
-          this.currentZoomRange = range;
+        this.currentZoomRange = range && range.min !== null && range.max !== null ? range : null;
+        // Update store with zoom range for video recording
+        if (this.currentZoomRange) {
+          this.setZoomRange(this.currentZoomRange);
         } else {
-          this.currentZoomRange = null;
+          this.clearZoomRange();
         }
       },
 

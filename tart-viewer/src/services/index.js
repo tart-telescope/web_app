@@ -4,3 +4,4 @@ export { default as mapApi } from './mapApi.js';
 export { default as s3Service } from './s3Service.js';
 export { default as satelliteApi } from './satelliteApi.js';
 export { default as telescopeApi } from './telescopeApi.js';
+export { createVideoRecorder, detectBestRecordingMethod, StreamRecorderService, default as videoRecorder } from './videoRecorder/index.js';

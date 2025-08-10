@@ -31,6 +31,7 @@ export const useAppStore = defineStore("app", {
       channels: [],
       authenticating: false,
       hoveredTimestamp: null,
+      currentZoomRange: null,
       lastVisDataUpdate: 0,
       lastRawDataUpdate: 0,
       dataThinning: 3,
@@ -139,6 +140,12 @@ export const useAppStore = defineStore("app", {
     },
     clearHoveredTimestamp() {
       this.hoveredTimestamp = null;
+    },
+    setZoomRange(range) {
+      this.currentZoomRange = range;
+    },
+    clearZoomRange() {
+      this.currentZoomRange = null;
     },
     logout() {
       this.token = "";
@@ -267,8 +274,22 @@ export const useAppStore = defineStore("app", {
       }
     },
     async synthesisData() {
+      console.log('🔄 synthesisData() called');
+      console.log('📡 Current telescope mode:', this.telescope_mode);
+      console.log('📍 Current TART_URL:', this.TART_URL);
+      console.log('📊 Current vis_history length:', this.vis_history.length);
       const synthesisData = await telescopeApi.getSynthesisData();
-      if (!synthesisData) {return;}
+      if (!synthesisData) {
+        console.log('❌ No synthesis data received');
+        return;
+      }
+      console.log('📊 Synthesis data received:', {
+        hasVis: !!synthesisData.vis,
+        hasGain: !!synthesisData.gain,
+        hasAntennas: !!synthesisData.antennas,
+        visTimestamp: synthesisData.vis?.timestamp,
+        visDataLength: synthesisData.vis?.data?.length
+      });
 
       const { vis, gain, antennas } = synthesisData;
 
@@ -276,6 +297,14 @@ export const useAppStore = defineStore("app", {
       const gainsData = gain;
       const antPos = antennas;
       const info = this.info;
+
+      console.log('📈 Processing vis data:', {
+        timestamp: visData?.timestamp,
+        dataLength: visData?.data?.length || 0,
+        hasGain: !!gainsData,
+        hasAntennas: !!antPos,
+        currentHistoryLength: this.vis_history.length
+      });
 
       // Safety check for info.location before accessing coordinates
       if (!info || !info.location) {
@@ -313,7 +342,15 @@ export const useAppStore = defineStore("app", {
         while (this.vis_history.length > 3600) {
           this.vis_history.shift();
         }
+        console.log('➕ Adding to vis_history:', {
+          timestamp: visWithSatellites.timestamp,
+          previousLength: this.vis_history.length,
+          satelliteCount: satellites.length
+        });
         this.vis_history.push(visWithSatellites);
+        console.log('✅ vis_history updated, new length:', this.vis_history.length);
+      } else {
+        console.log('❌ No catalog data received for satellites');
       }
 
       this.antennas = antPos;
