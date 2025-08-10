@@ -6,9 +6,9 @@
       <v-spacer />
       <v-chip
         color="primary"
+        :disabled="bulkLoading"
         size="small"
         variant="flat"
-        :disabled="bulkLoading"
         @click="addToTimeline"
       >
         <v-icon v-if="bulkLoading" class="mr-1">mdi-loading mdi-spin</v-icon>
@@ -228,8 +228,7 @@
         this.bulkTotal = hdf5Files.length;
 
         try {
-          for (let i = 0; i < hdf5Files.length; i++) {
-            const file = hdf5Files[i];
+          for (const [i, file] of hdf5Files.entries()) {
             this.bulkProgress = i + 1;
 
             try {

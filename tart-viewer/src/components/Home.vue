@@ -23,7 +23,7 @@
         <ArrayLayout />
       </v-col>
       <v-col cols="12" lg="4" md="6" sm="12">
-        <Baseline />
+        <Baseline ref="baseline" />
       </v-col>
       <v-col cols="12" lg="4" md="6" sm="12">
         <GainPhase />
@@ -73,6 +73,8 @@
       S3Files,
       Synthesis,
     },
+    
+
     computed: {
       ...mapState(useAppStore, ["telescope_mode", "dataThinning", "TART_URL", "localMode", "vis", "gain", "antennas"]),
       telescopeName() {
@@ -103,9 +105,26 @@
       triggerSynthesisUpdate() {
         this.synthesisUpdateTrigger++;
       },
+      
+      getSynthesisRefs() {
+        const synthesisComponent = this.$refs.synthesis;
+        if (!synthesisComponent) {
+          return { threejsRef: null, svgRef: null };
+        }
+        
+        return {
+          threejsRef: synthesisComponent.$refs.threejsRef || null,
+          svgRef: synthesisComponent.$refs.svgRef || null
+        };
+      },
     },
     mounted() {
-      // Component is now ready for direct method calls via ref
+      // Set up communication between components
+      this.$nextTick(() => {
+        if (this.$refs.baseline) {
+          this.$refs.baseline.setParent(this);
+        }
+      });
     },
   };
 </script>

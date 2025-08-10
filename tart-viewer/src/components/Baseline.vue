@@ -51,6 +51,13 @@
               New Data
             </v-chip>
             <v-btn size="small" @click="resetZoom">Reset Zoom</v-btn>
+            <VideoRecordingButton
+              :is3-d="true"
+              :component-refs="getSynthesisRefs()"
+              :vis-history="vis_history"
+              :nside="nside"
+              :info="info"
+            />
           </v-card-title>
           <div class="chart-container">
             <UPlotChart
@@ -116,12 +123,18 @@
 
 <script lang="js">
   import { mapActions, mapState } from "pinia";
+  import VideoRecordingButton from "./VideoRecordingButton.vue";
   import { useAppStore } from "@/stores/app";
   import UPlotChart from "./UPlotChart.vue";
 
   export default {
     name: "BaselineComponent",
-    components: { UPlotChart },
+    components: { 
+      VideoRecordingButton,
+      UPlotChart 
+    },
+
+
 
     data() {
       return {
@@ -130,6 +143,7 @@
         telescopeChanged: false,
         hoveredData: null,
         tooltipStyle: {},
+        parentComponent: null,
       };
     },
 
@@ -218,7 +232,21 @@
         "selectBaseline",
         "setHoveredTimestamp",
         "clearHoveredTimestamp",
+        "setZoomRange",
+        "clearZoomRange",
       ]),
+
+      setParent(parent) {
+        this.parentComponent = parent;
+      },
+
+      getSynthesisRefs() {
+        if (!this.parentComponent) {
+          return { threejsRef: null, svgRef: null };
+        }
+        
+        return this.parentComponent.getSynthesisRefs();
+      },
 
       handleUPlotHover(event) {
         if (event.idx !== undefined && event.idx !== null && event.idx < this.filteredData.length) {
@@ -275,14 +303,17 @@
           this.$refs.phaseChart.resetZoom();
         }
         this.currentZoomRange = null;
+        this.clearZoomRange();
       },
 
       updateZoomRange(range) {
         // Only update if range has valid min/max values
-        if (range && range.min !== null && range.max !== null) {
-          this.currentZoomRange = range;
+        this.currentZoomRange = range && range.min !== null && range.max !== null ? range : null;
+        // Update store with zoom range for video recording
+        if (this.currentZoomRange) {
+          this.setZoomRange(this.currentZoomRange);
         } else {
-          this.currentZoomRange = null;
+          this.clearZoomRange();
         }
       },
 

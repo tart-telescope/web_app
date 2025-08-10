@@ -36,6 +36,7 @@
         >
           <v-icon>mdi-rotate-3d-variant</v-icon>
         </v-btn>
+
         <v-btn
           icon
           size="small"
@@ -44,6 +45,8 @@
           <v-icon>mdi-fullscreen</v-icon>
         </v-btn>
       </v-card-title>
+
+
 
       <div class="svg-container">
         <SvgThreejs
@@ -135,6 +138,7 @@
   import { useAppStore } from "@/stores/app";
   import SvgThreejs from "./SvgThreejs.vue";
   import Threejs3D from "./Threejs3D.vue";
+
 
   // Constants
   const ANTENNA_INDICES = Array.from({ length: 24 }, (_, i) => i);
@@ -516,6 +520,44 @@
           }
         });
       },
+      
+      addTestData() {
+        console.log('🧪 Adding test data from Synthesis component')
+        // Create sample vis_history data
+        const testData = []
+        const now = Date.now()
+        
+        for (let i = 0; i < 30; i++) {
+          testData.push({
+            timestamp: new Date(now + i * 1000).toISOString(),
+            data: Array.from({length: 100}, (_, j) => ({
+              i: Math.floor(j / 10),
+              j: j % 10, 
+              re: Math.sin(i * 0.1 + j * 0.05) * Math.random(),
+              im: Math.cos(i * 0.1 + j * 0.05) * Math.random()
+            })),
+            satellites: [
+              { name: 'GPS Test', az: 45 + i, el: 30 + Math.sin(i * 0.1) * 10 },
+              { name: 'NOAA Test', az: 120 + i * 0.5, el: 60 + Math.cos(i * 0.1) * 15 }
+            ],
+            gain: Array.from({length: 24}, (_, k) => ({
+              i: k,
+              gain: Array.from({length: 10}, () => Math.random())
+            })),
+            antennas: Array.from({length: 24}, (_, k) => ({
+              i: k, 
+              x: Math.cos(k / 24 * Math.PI * 2),
+              y: Math.sin(k / 24 * Math.PI * 2),
+              z: 0
+            }))
+          })
+        }
+        
+        // Access store directly using useAppStore
+        const store = useAppStore()
+        store.vis_history.splice(0, store.vis_history.length, ...testData)
+        console.log('✅ Test data added to store vis_history:', store.vis_history.length, 'frames')
+      }
     },
   };
 </script>
