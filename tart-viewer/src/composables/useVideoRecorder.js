@@ -407,7 +407,7 @@ export function useVideoRecorder(visHistoryProp, nsideProp, infoProp) {
       
       const percentage = Math.round(recordingProgress.value * 100)
       const timeRemaining = estimatedTimeRemaining.value
-      const timeText = timeRemaining > 0 ? ` (~${timeRemaining.toFixed(1)}s remaining)` : ''
+      const timeText = timeRemaining !== null && timeRemaining > 0 ? ` (~${timeRemaining.toFixed(1)}s remaining)` : timeRemaining === null ? ' (~N/A remaining)' : ''
       
       return `Recording: ${currentFrame.value}/${totalFrames.value} frames (${percentage}%)${timeText}`
     } catch (error) {

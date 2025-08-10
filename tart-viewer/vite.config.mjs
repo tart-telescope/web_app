@@ -56,6 +56,11 @@ export default defineConfig({
 	],
 	define: { "process.env": {} },
 	build: {
+		reportCompressedSize: false,
+		sourcemap: false,
+		cssCodeSplit: false,
+		minify: 'esbuild', // Faster than terser
+		target: 'es2020', // Modern browsers only, less transpilation
 		rollupOptions: {
 			output: {
 				manualChunks: {},
@@ -64,6 +69,7 @@ export default defineConfig({
 	},
 	esbuild: {
 		drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
+		target: 'es2020', // Match build target
 	},
 	resolve: {
 		alias: {

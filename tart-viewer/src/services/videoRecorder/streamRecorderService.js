@@ -47,10 +47,14 @@ export default class MediaRecorderService {
     this.sphereMesh = null
     this.sphereGeometry = null
     this.sphereMaterial = null
+    this.sphereCache = null
     this.canvas = null
     this.satelliteGroup = null
     this.compassGroup = null
     this.gridGroup = null
+    
+    // Simple timing for progress estimation
+    this.recordingStartTime = null
   }
 
   /**
@@ -847,6 +851,9 @@ export default class MediaRecorderService {
       this.canvas = compositeCanvas
       this.webglCanvas = webglCanvas
 
+      // Start timing
+      this.recordingStartTime = performance.now()
+
       // Render each frame from history snapshot
       const totalFrames = historySnapshot.length
       const frameDuration = 1000 / this.settings.frameRate // milliseconds per frame
@@ -875,6 +882,15 @@ export default class MediaRecorderService {
         ctx.clearRect(0, 0, compositeCanvas.width, compositeCanvas.height)
         ctx.drawImage(frame, 0, 0)
 
+        // Calculate time remaining based on elapsed time vs progress
+        let estimatedTimeRemaining = null
+        if (frameIndex > 0) {
+          const elapsedTime = performance.now() - this.recordingStartTime
+          const progress = (frameIndex + 1) / totalFrames
+          const estimatedTotalTime = elapsedTime / progress
+          estimatedTimeRemaining = (estimatedTotalTime - elapsedTime) / 1000
+        }
+
         // Report progress
         if (onProgress) {
           onProgress({
@@ -882,7 +898,7 @@ export default class MediaRecorderService {
             frameIndex: frameIndex + 1,
             totalFrames: totalFrames,
             currentTimestamp: visData.timestamp,
-            estimatedTimeRemaining: ((totalFrames - frameIndex - 1) * frameDuration) / 1000
+            estimatedTimeRemaining: estimatedTimeRemaining
           })
         }
 
