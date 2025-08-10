@@ -36,13 +36,7 @@
         >
           <v-icon>mdi-rotate-3d-variant</v-icon>
         </v-btn>
-        <v-btn
-          icon
-          size="small"
-          @click="showRecordingControls = !showRecordingControls"
-        >
-          <v-icon>mdi-file-download</v-icon>
-        </v-btn>
+
         <v-btn
           icon
           size="small"
@@ -52,17 +46,7 @@
         </v-btn>
       </v-card-title>
 
-      <!-- Video Recording Controls -->
-      <VideoRecordingControls
-        v-if="showRecordingControls"
-        class="mb-3"
-        :component-refs="{ threejsRef: $refs.threejsRef, svgRef: $refs.svgRef }"
-        :is3-d="is3D"
-        :vis-history="vis_history"
-        :nside="nside"
-        :info="info"
-        @add-test-data="addTestData"
-      />
+
 
       <div class="svg-container">
         <SvgThreejs
@@ -154,7 +138,7 @@
   import { useAppStore } from "@/stores/app";
   import SvgThreejs from "./SvgThreejs.vue";
   import Threejs3D from "./Threejs3D.vue";
-  import VideoRecordingControls from "./VideoRecordingControls.vue";
+
 
   // Constants
   const ANTENNA_INDICES = Array.from({ length: 24 }, (_, i) => i);
@@ -169,7 +153,7 @@
 
   export default {
     name: "SynthesisComponent",
-    components: { SvgThreejs, Threejs3D, VideoRecordingControls },
+    components: { SvgThreejs, Threejs3D },
 
     props: {
       showTitle: {
@@ -192,7 +176,6 @@
         isInitialized: false,
         is3D: true,
         fullscreen: false,
-        showRecordingControls: false,
       };
     },
 

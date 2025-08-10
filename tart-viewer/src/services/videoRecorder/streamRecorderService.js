@@ -924,7 +924,8 @@ export default class MediaRecorderService {
    */
   calculateBitrate() {
     const pixelCount = this.settings.width * this.settings.height
-    const baseBitrate = Math.floor(pixelCount) // Base bitrate per pixel
+    // Very high bitrate for scientific quality - approximately 20-25 bits per pixel
+    const baseBitrate = Math.floor(pixelCount * 20) // 20 bits per pixel for scientific quality
     return Math.floor(baseBitrate * this.settings.quality)
   }
 
