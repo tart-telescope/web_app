@@ -7,7 +7,7 @@
         <div v-if="filteredData.length === 0" class="loading-container">
           <v-card-title class="py-3 teal--text text--lighten-2 d-flex align-center">
             <v-icon class="mr-2">mdi-chart-line</v-icon>
-            Visibility Amplitude (uncal.)
+            Visibility
           </v-card-title>
           <div class="chart-container">
             <v-skeleton-loader
@@ -39,7 +39,7 @@
         <div v-else>
           <v-card-title class="py-3 teal--text text--lighten-2 d-flex align-center">
             <v-icon class="mr-2">mdi-chart-line</v-icon>
-            Visibility Amplitude (uncal.)
+            Visibility
             <v-spacer />
             <v-chip
               v-if="hasNewData"
@@ -129,9 +129,9 @@
 
   export default {
     name: "BaselineComponent",
-    components: { 
+    components: {
       VideoRecordingButton,
-      UPlotChart 
+      UPlotChart
     },
 
 
@@ -234,7 +234,7 @@
         if (!this.parentComponent) {
           return { threejsRef: null, svgRef: null };
         }
-        
+
         return this.parentComponent.getSynthesisRefs();
       },
 

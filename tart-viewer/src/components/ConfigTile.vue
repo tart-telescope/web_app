@@ -40,19 +40,19 @@
               v-model="rawSamplesExp"
               :disabled="!authenticated || loading"
               :items="exponentOptions"
-              label="Number of Samples (2^exp)"
+              label="Number of Samples"
               :loading="loadingRawSamples"
               @update:model-value="updateRawSamples"
             >
               <template #item="{ props, item }">
                 <v-list-item v-bind="props">
                   <template #title>
-                    {{ item.title }} ({{ Math.pow(2, item.value).toLocaleString() }} samples)
+                    {{ item.title }} ({{ getIntegrationTime(item.value) }}ms)
                   </template>
                 </v-list-item>
               </template>
               <template #selection="{ item }">
-                {{ item.title }} ({{ Math.pow(2, item.value).toLocaleString() }} samples)
+                {{ item.title }} ({{ getIntegrationTime(item.value) }}ms)
               </template>
             </v-select>
           </v-card>
@@ -73,19 +73,19 @@
               v-model="visSamplesExp"
               :disabled="!authenticated || loading"
               :items="exponentOptions"
-              label="Number of Samples (2^exp)"
+              label="Number of Samples"
               :loading="loadingVisSamples"
               @update:model-value="updateVisSamples"
             >
               <template #item="{ props, item }">
                 <v-list-item v-bind="props">
                   <template #title>
-                    {{ item.title }} ({{ Math.pow(2, item.value).toLocaleString() }} samples)
+                    {{ item.title }} ({{ getIntegrationTime(item.value) }}ms)
                   </template>
                 </v-list-item>
               </template>
               <template #selection="{ item }">
-                {{ item.title }} ({{ Math.pow(2, item.value).toLocaleString() }} samples)
+                {{ item.title }} ({{ getIntegrationTime(item.value) }}ms)
               </template>
             </v-select>
           </v-card>
@@ -155,15 +155,23 @@
       };
     },
     computed: {
-      ...mapState(useAppStore, ['token', 'TART_URL', 'telescope_mode']),
+      ...mapState(useAppStore, ['token', 'TART_URL', 'telescope_mode', 'info']),
       authenticated() {
         return this.token ? true : false;
+      },
+      samplingFrequency() {
+        // Default to 16.368 MHz if not available in info
+        return this.info?.sampling_frequency || 16368000;
       },
     },
     async mounted() {
       await this.loadCurrentSettings();
     },
     methods: {
+      getIntegrationTime(exp) {
+        const samples = Math.pow(2, exp);
+        return Math.round((samples / this.samplingFrequency) * 1000);
+      },
       async loadCurrentSettings() {
         this.loading = true;
         this.errorMessage = '';
@@ -253,7 +261,8 @@
           const result = await telescopeApi.setRawNumSamplesExp(this.rawSamplesExp);
 
           if (result) {
-            this.successMessage = `Raw data samples set to 2^${this.rawSamplesExp} (${Math.pow(2, this.rawSamplesExp).toLocaleString()})`;
+            const integrationTime = this.getIntegrationTime(this.rawSamplesExp);
+            this.successMessage = `Raw data samples set to 2^${this.rawSamplesExp} (${integrationTime}ms)`;
             // Update local state to match server response
             this.rawSamplesExp = result.N_samples_exp;
           }
@@ -278,7 +287,8 @@
           const result = await telescopeApi.setVisNumSamplesExp(this.visSamplesExp);
 
           if (result) {
-            this.successMessage = `Visibility data samples set to 2^${this.visSamplesExp} (${Math.pow(2, this.visSamplesExp).toLocaleString()})`;
+            const integrationTime = this.getIntegrationTime(this.visSamplesExp);
+            this.successMessage = `Visibility data samples set to 2^${this.visSamplesExp} (${integrationTime}ms)`;
             // Update local state to match server response
             this.visSamplesExp = result.N_samples_exp;
           }
