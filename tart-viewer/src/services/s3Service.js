@@ -132,7 +132,8 @@ class S3Service {
           params.append("continuation-token", continuationToken);
         }
 
-        const url = `https://${this.S3_HOST}/${this.S3_BUCKET}?${params}`;
+        const bucketPath = this.S3_BUCKET ? `/${this.S3_BUCKET}` : '';
+        const url = `https://${this.S3_HOST}${bucketPath}?${params}`;
         
         const requestConfig = {};
         if (this.abortController) {
@@ -217,10 +218,12 @@ class S3Service {
     // Find the file in allFiles to get its full path
     const file = allFiles.find((f) => f.name === fileName);
     if (file && file.fullPath) {
-      return `https://${this.S3_HOST}/${this.S3_BUCKET}/${file.fullPath}`;
+      const bucketPath = this.S3_BUCKET ? `/${this.S3_BUCKET}` : '';
+      return `https://${this.S3_HOST}${bucketPath}/${file.fullPath}`;
     }
     // Fallback to provided prefix
-    return `https://${this.S3_HOST}/${this.S3_BUCKET}/${fallbackPrefix}${fileName}`;
+    const bucketPath = this.S3_BUCKET ? `/${this.S3_BUCKET}` : '';
+    return `https://${this.S3_HOST}${bucketPath}/${fallbackPrefix}${fileName}`;
   }
 
   /**
@@ -239,7 +242,8 @@ class S3Service {
         prefix,
       });
 
-      const url = `https://${this.S3_HOST}/${this.S3_BUCKET}?${params}`;
+      const bucketPath = this.S3_BUCKET ? `/${this.S3_BUCKET}` : '';
+      const url = `https://${this.S3_HOST}${bucketPath}?${params}`;
 
       const requestConfig = {};
       if (this.abortController) {
