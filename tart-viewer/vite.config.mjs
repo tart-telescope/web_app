@@ -61,11 +61,7 @@ export default defineConfig({
 		cssCodeSplit: false,
 		minify: 'esbuild', // Faster than terser
 		target: 'es2020', // Modern browsers only, less transpilation
-		rollupOptions: {
-			output: {
-				manualChunks: {},
-			},
-		},
+		rollupOptions: {},
 	},
 	esbuild: {
 		drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
