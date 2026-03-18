@@ -1,14 +1,14 @@
-import { defineStore } from 'pinia'
-import { mapApi } from '@/services'
+import { defineStore } from "pinia";
+import { mapApi } from "@/services";
 
-export const useTelescopeRegistryStore = defineStore('telescopeRegistry', {
+export const useTelescopeRegistryStore = defineStore("telescopeRegistry", {
   state: () => ({
     telescopes: new Map(),
-    validTelescopeIds: new Set(['custom', 'local']), // Always include custom and local
+    validTelescopeIds: new Set(["custom", "local"]), // Always include custom and local
     lastUpdated: null,
     isLoading: false,
     pollInterval: null,
-    localMode: false
+    localMode: false,
   }),
 
   getters: {
@@ -16,53 +16,58 @@ export const useTelescopeRegistryStore = defineStore('telescopeRegistry', {
      * Get list of telescopes for UI display
      */
     telescopeList: (state) => {
-      let telescopes = []
-      
+      let telescopes = [];
+
       // In local mode, only show local telescope
       if (state.localMode) {
-        telescopes = [{ title: 'Local', value: 'local', online: true }]
+        telescopes = [{ title: "Local", value: "local", online: true }];
       } else {
         // Normal mode: show all fetched telescopes
         telescopes = Array.from(state.telescopes.values())
-          .map(telescope => ({
-            title: telescope.telescopeName || telescope.hostname || telescope.nodeName,
+          .map((telescope) => ({
+            title:
+              telescope.telescopeName ||
+              telescope.hostname ||
+              telescope.nodeName,
             value: telescope.hostname,
             online: telescope.online || false,
             lastSeen: telescope.lastSeen,
             currentMode: telescope.currentMode,
-            fallback: telescope.fallback || false
+            fallback: telescope.fallback || false,
           }))
-          .sort((a, b) => {
+          .toSorted((a, b) => {
             // Sort by online status first, then alphabetically
             if (a.online !== b.online) {
-              return b.online - a.online
+              return b.online - a.online;
             }
-            return a.title.localeCompare(b.title)
-          })
+            return a.title.localeCompare(b.title);
+          });
 
         // Add custom option at the end
-        telescopes.push({ title: 'Custom', value: 'custom' })
+        telescopes.push({ title: "Custom", value: "custom" });
       }
 
-      return telescopes
+      return telescopes;
     },
 
     /**
      * Check if data is stale and needs refresh
      */
-    isDataStale: (state) => (maxAge = 5 * 60 * 1000) => {
-      if (!state.lastUpdated) {return true}
-      return Date.now() - state.lastUpdated > maxAge
-    },
-
-
+    isDataStale:
+      (state) =>
+      (maxAge = 5 * 60 * 1000) => {
+        if (!state.lastUpdated) {
+          return true;
+        }
+        return Date.now() - state.lastUpdated > maxAge;
+      },
 
     /**
      * Get telescope data by ID
      */
     getTelescope: (state) => (telescopeId) => {
-      return state.telescopes.get(telescopeId) || null
-    }
+      return state.telescopes.get(telescopeId) || null;
+    },
   },
 
   actions: {
@@ -71,8 +76,8 @@ export const useTelescopeRegistryStore = defineStore('telescopeRegistry', {
      */
     initialize() {
       // Just ensure custom and local are in validTelescopeIds
-      this.validTelescopeIds.add('custom')
-      this.validTelescopeIds.add('local')
+      this.validTelescopeIds.add("custom");
+      this.validTelescopeIds.add("local");
     },
 
     /**
@@ -80,39 +85,39 @@ export const useTelescopeRegistryStore = defineStore('telescopeRegistry', {
      */
     async fetchTelescopes() {
       if (this.isLoading) {
-        return false
+        return false;
       }
 
-      this.isLoading = true
+      this.isLoading = true;
       try {
-        const response = await mapApi.getTelescopes()
+        const response = await mapApi.getTelescopes();
 
         if (response?.telescopes) {
-          this.telescopes.clear()
-          this.validTelescopeIds.clear()
-          this.validTelescopeIds.add('custom')
-          this.validTelescopeIds.add('local')
+          this.telescopes.clear();
+          this.validTelescopeIds.clear();
+          this.validTelescopeIds.add("custom");
+          this.validTelescopeIds.add("local");
 
           for (const telescope of response.telescopes) {
             // Use hostname for routing consistency (what appears in URLs)
-            const telescopeKey = telescope.hostname || telescope.nodeName
+            const telescopeKey = telescope.hostname || telescope.nodeName;
             this.telescopes.set(telescopeKey, {
               ...telescope,
-              fallback: false
-            })
-            this.validTelescopeIds.add(telescopeKey)
+              fallback: false,
+            });
+            this.validTelescopeIds.add(telescopeKey);
           }
 
-          this.lastUpdated = Date.now()
-          return true
+          this.lastUpdated = Date.now();
+          return true;
         }
 
-        return false
+        return false;
       } catch (error) {
-        console.error('Failed to fetch telescopes:', error)
-        return false
+        console.error("Failed to fetch telescopes:", error);
+        return false;
       } finally {
-        this.isLoading = false
+        this.isLoading = false;
       }
     },
 
@@ -120,29 +125,29 @@ export const useTelescopeRegistryStore = defineStore('telescopeRegistry', {
      * Check if a telescope ID is valid
      */
     isValidTelescope(telescopeId) {
-      return this.validTelescopeIds.has(telescopeId)
+      return this.validTelescopeIds.has(telescopeId);
     },
 
     /**
      * Start automatic polling
      */
     startPolling(interval = 30_000) {
-      this.stopPolling()
+      this.stopPolling();
 
       // Don't poll in local mode
       if (this.localMode) {
-        return
+        return;
       }
 
       // Only do initial fetch if data is stale (avoid duplicate API calls)
       if (this.isDataStale()) {
-        this.fetchTelescopes()
+        this.fetchTelescopes();
       }
 
       // Set up polling
       this.pollInterval = setInterval(() => {
-        this.fetchTelescopes()
-      }, interval)
+        this.fetchTelescopes();
+      }, interval);
     },
 
     /**
@@ -150,8 +155,8 @@ export const useTelescopeRegistryStore = defineStore('telescopeRegistry', {
      */
     stopPolling() {
       if (this.pollInterval) {
-        clearInterval(this.pollInterval)
-        this.pollInterval = null
+        clearInterval(this.pollInterval);
+        this.pollInterval = null;
       }
     },
 
@@ -159,17 +164,17 @@ export const useTelescopeRegistryStore = defineStore('telescopeRegistry', {
      * Force refresh telescope data
      */
     async refresh() {
-      return await this.fetchTelescopes()
+      return await this.fetchTelescopes();
     },
 
     /**
      * Set local mode
      */
     setLocalMode(enabled) {
-      this.localMode = enabled
+      this.localMode = enabled;
       if (enabled) {
-        this.stopPolling()
+        this.stopPolling();
       }
-    }
-  }
-})
+    },
+  },
+});

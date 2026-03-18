@@ -1,5 +1,4 @@
 <template>
-
   <v-col
     v-for="(partition, index) in partitions"
     :key="index"
@@ -10,9 +9,7 @@
   >
     <v-card elevation="3" flat outlined>
       <v-card-title class="my-0 mx-0 pt-1 pb-0">
-        <h4 class="teal--text text--lighten-2 text-uppercase">
-          Baseband Spectrum
-        </h4>
+        <h4>Baseband Spectrum</h4>
       </v-card-title>
       <v-card-text>
         <UPlotChart
@@ -35,58 +32,57 @@
 </template>
 
 <script>
-  import { mapActions, mapState } from "pinia";
+import { mapActions, mapState } from "pinia";
 
-  import { useTheme } from "vuetify";
-  import { useAppStore } from "@/stores/app";
+import { useTheme } from "vuetify";
+import { useAppStore } from "@/stores/app";
 
-  import UPlotChart from "./UPlotChart.vue";
+import UPlotChart from "./UPlotChart.vue";
 
-  export default {
-    name: "BaselineComponent",
-    components: {
-      UPlotChart,
-    },
-    setup() {
-      const theme = useTheme();
-      return { theme };
-    },
-    data() {
-      return {};
-    },
-    computed: {
-      ...mapState(useAppStore, ["channels", "partition_size"]),
-      
-      partitionsCount() {
-        return this.partition_size >= 24 ? 1 : Math.ceil(this.channels.length / this.partition_size);
-      },
-      
-      partitions() {
-        return Array.from({ length: this.partitionsCount }, (_, i) => i);
-      },
-      
-      series() {
-        if (this.channels.length === 0) return [];
-        
-        return this.channels.map((ch) => ({
-          name: `Ch${ch.id}`,
-          data: ch.freq.map((fi, xi) => ({ x: fi, y: ch.power[xi] }))
-        }));
-      },
-      
-      partitionedSeries() {
-        if (this.partition_size >= 24) return [this.series];
-        
-        const partitioned = [];
-        for (let i = 0; i < this.partitionsCount; i++) {
-          const start = i * this.partition_size;
-          partitioned.push(this.series.slice(start, start + this.partition_size));
-        }
-        return partitioned;
-      },
+export default {
+  name: "BaselineComponent",
+  components: {
+    UPlotChart,
+  },
+  setup() {
+    const theme = useTheme();
+    return { theme };
+  },
+  data() {
+    return {};
+  },
+  computed: {
+    ...mapState(useAppStore, ["channels", "partition_size"]),
+
+    partitionsCount() {
+      return this.partition_size >= 24
+        ? 1
+        : Math.ceil(this.channels.length / this.partition_size);
     },
 
-  };
+    partitions() {
+      return Array.from({ length: this.partitionsCount }, (_, i) => i);
+    },
+
+    series() {
+      if (this.channels.length === 0) return [];
+
+      return this.channels.map((ch) => ({
+        name: `Ch${ch.id}`,
+        data: ch.freq.map((fi, xi) => ({ x: fi, y: ch.power[xi] })),
+      }));
+    },
+
+    partitionedSeries() {
+      if (this.partition_size >= 24) return [this.series];
+
+      const partitioned = [];
+      for (let i = 0; i < this.partitionsCount; i++) {
+        const start = i * this.partition_size;
+        partitioned.push(this.series.slice(start, start + this.partition_size));
+      }
+      return partitioned;
+    },
+  },
+};
 </script>
-
-

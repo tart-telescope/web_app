@@ -2,3 +2,7 @@ onlyBuiltDependencies:
   - '@swc/core'
   - core-js
   - vue-demi
+peerDependencyRules:
+  allowedVersions:
+    vite: '*'
+    vue-router: '*'

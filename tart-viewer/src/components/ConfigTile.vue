@@ -1,6 +1,6 @@
 <template>
   <v-card class="mx-auto" elevation="3">
-    <v-card-title class="py-3  d-flex align-center">
+    <v-card-title class="py-3 d-flex align-center">
       <v-icon class="mr-2">mdi-cog</v-icon>
       Acquisition Config
       <v-spacer />
@@ -44,10 +44,12 @@
               :loading="loadingRawSamples"
               @update:model-value="updateRawSamples"
             >
-              <template #item="{ props, item }">
+              <template #item="{ props, internalItem }">
                 <v-list-item v-bind="props">
                   <template #title>
-                    {{ item.title }} ({{ getIntegrationTime(item.value) }}ms)
+                    {{ internalItem.title }} ({{
+                      getIntegrationTime(internalItem.value)
+                    }}ms)
                   </template>
                 </v-list-item>
               </template>
@@ -77,10 +79,12 @@
               :loading="loadingVisSamples"
               @update:model-value="updateVisSamples"
             >
-              <template #item="{ props, item }">
+              <template #item="{ props, internalItem }">
                 <v-list-item v-bind="props">
                   <template #title>
-                    {{ item.title }} ({{ getIntegrationTime(item.value) }}ms)
+                    {{ internalItem.title }} ({{
+                      getIntegrationTime(internalItem.value)
+                    }}ms)
                   </template>
                 </v-list-item>
               </template>
@@ -120,201 +124,205 @@
 </template>
 
 <script>
-  import { mapState } from 'pinia';
-  import telescopeApi from '@/services/telescopeApi';
-  import { useAppStore } from '@/stores/app';
+import { mapState } from "pinia";
+import telescopeApi from "@/services/telescopeApi";
+import { useAppStore } from "@/stores/app";
 
-  export default {
-    name: 'ConfigTile',
-    data() {
-      return {
-        // Raw data settings
-        rawSave: false,
-        rawSamplesExp: 22,
+export default {
+  name: "ConfigTile",
+  data() {
+    return {
+      // Raw data settings
+      rawSave: false,
+      rawSamplesExp: 22,
 
-        // Vis data settings
-        visSave: false,
-        visSamplesExp: 22,
+      // Vis data settings
+      visSave: false,
+      visSamplesExp: 22,
 
-        // Loading states
-        loading: false,
-        loadingRawSave: false,
-        loadingRawSamples: false,
-        loadingVisSave: false,
-        loadingVisSamples: false,
+      // Loading states
+      loading: false,
+      loadingRawSave: false,
+      loadingRawSamples: false,
+      loadingVisSave: false,
+      loadingVisSamples: false,
 
-        // Messages
-        errorMessage: '',
-        successMessage: '',
+      // Messages
+      errorMessage: "",
+      successMessage: "",
 
-        // Exponent options (16-24)
-        exponentOptions: Array.from({ length: 9 }, (_, i) => ({
-          value: i + 16,
-          title: `2^${i + 16}`,
-        })),
-      };
+      // Exponent options (16-24)
+      exponentOptions: Array.from({ length: 9 }, (_, i) => ({
+        value: i + 16,
+        title: `2^${i + 16}`,
+      })),
+    };
+  },
+  computed: {
+    ...mapState(useAppStore, ["token", "TART_URL", "telescope_mode", "info"]),
+    authenticated() {
+      return this.token ? true : false;
     },
-    computed: {
-      ...mapState(useAppStore, ['token', 'TART_URL', 'telescope_mode', 'info']),
-      authenticated() {
-        return this.token ? true : false;
-      },
-      samplingFrequency() {
-        // Default to 16.368 MHz if not available in info
-        return this.info?.sampling_frequency || 16368000;
-      },
+    samplingFrequency() {
+      // Default to 16.368 MHz if not available in info
+      return this.info?.sampling_frequency || 16_368_000;
     },
-    async mounted() {
-      await this.loadCurrentSettings();
+  },
+  async mounted() {
+    await this.loadCurrentSettings();
+  },
+  methods: {
+    getIntegrationTime(exp) {
+      const samples = Math.pow(2, exp);
+      return Math.round((samples / this.samplingFrequency) * 1000);
     },
-    methods: {
-      getIntegrationTime(exp) {
-        const samples = Math.pow(2, exp);
-        return Math.round((samples / this.samplingFrequency) * 1000);
-      },
-      async loadCurrentSettings() {
-        this.loading = true;
-        this.errorMessage = '';
+    async loadCurrentSettings() {
+      this.loading = true;
+      this.errorMessage = "";
 
-        try {
-          // Load all current settings in parallel
-          const [rawSave, visSave, rawSamples, visSamples] = await Promise.all([
-            telescopeApi.getRawSaveFlag(),
-            telescopeApi.getVisSaveFlag(),
-            telescopeApi.getRawNumSamplesExp(),
-            telescopeApi.getVisNumSamplesExp(),
-          ]);
+      try {
+        // Load all current settings in parallel
+        const [rawSave, visSave, rawSamples, visSamples] = await Promise.all([
+          telescopeApi.getRawSaveFlag(),
+          telescopeApi.getVisSaveFlag(),
+          telescopeApi.getRawNumSamplesExp(),
+          telescopeApi.getVisNumSamplesExp(),
+        ]);
 
-          // Update local state with current values
-          if (rawSave) this.rawSave = Boolean(rawSave.save);
-          if (visSave) this.visSave = Boolean(visSave.save);
-          if (rawSamples) this.rawSamplesExp = rawSamples.N_samples_exp;
-          if (visSamples) this.visSamplesExp = visSamples.N_samples_exp;
-        } catch (error) {
-          this.errorMessage = 'Failed to load current configuration settings';
-          console.error('Error loading config settings:', error);
-        } finally {
-          this.loading = false;
-        }
-      },
-
-      async updateRawSave() {
-        if (!this.authenticated) return;
-
-        this.loadingRawSave = true;
-        this.errorMessage = '';
-        this.successMessage = '';
-
-        try {
-          const flag = this.rawSave ? 1 : 0;
-          const result = await telescopeApi.setRawSaveFlag(flag);
-
-          if (result) {
-            this.successMessage = `Raw data save ${this.rawSave ? 'enabled' : 'disabled'}`;
-            // Update local state to match server response
-            this.rawSave = Boolean(result.save);
-          }
-        } catch (error) {
-          this.errorMessage = 'Failed to update raw data save setting';
-          // Revert checkbox state on error
-          this.rawSave = !this.rawSave;
-          console.error('Error updating raw save flag:', error);
-        } finally {
-          this.loadingRawSave = false;
-        }
-      },
-
-      async updateVisSave() {
-        if (!this.authenticated) return;
-
-        this.loadingVisSave = true;
-        this.errorMessage = '';
-        this.successMessage = '';
-
-        try {
-          const flag = this.visSave ? 1 : 0;
-          const result = await telescopeApi.setVisSaveFlag(flag);
-
-          if (result) {
-            this.successMessage = `Visibility data save ${this.visSave ? 'enabled' : 'disabled'}`;
-            // Update local state to match server response
-            this.visSave = Boolean(result.save);
-          }
-        } catch (error) {
-          this.errorMessage = 'Failed to update visibility data save setting';
-          // Revert checkbox state on error
-          this.visSave = !this.visSave;
-          console.error('Error updating vis save flag:', error);
-        } finally {
-          this.loadingVisSave = false;
-        }
-      },
-
-      async updateRawSamples() {
-        if (!this.authenticated) return;
-
-        this.loadingRawSamples = true;
-        this.errorMessage = '';
-        this.successMessage = '';
-
-        try {
-          const result = await telescopeApi.setRawNumSamplesExp(this.rawSamplesExp);
-
-          if (result) {
-            const integrationTime = this.getIntegrationTime(this.rawSamplesExp);
-            this.successMessage = `Raw data samples set to 2^${this.rawSamplesExp} (${integrationTime}ms)`;
-            // Update local state to match server response
-            this.rawSamplesExp = result.N_samples_exp;
-          }
-        } catch (error) {
-          this.errorMessage = 'Failed to update raw data sample count';
-          console.error('Error updating raw samples exp:', error);
-          // Reload current value on error
-          await this.loadCurrentSettings();
-        } finally {
-          this.loadingRawSamples = false;
-        }
-      },
-
-      async updateVisSamples() {
-        if (!this.authenticated) return;
-
-        this.loadingVisSamples = true;
-        this.errorMessage = '';
-        this.successMessage = '';
-
-        try {
-          const result = await telescopeApi.setVisNumSamplesExp(this.visSamplesExp);
-
-          if (result) {
-            const integrationTime = this.getIntegrationTime(this.visSamplesExp);
-            this.successMessage = `Visibility data samples set to 2^${this.visSamplesExp} (${integrationTime}ms)`;
-            // Update local state to match server response
-            this.visSamplesExp = result.N_samples_exp;
-          }
-        } catch (error) {
-          this.errorMessage = 'Failed to update visibility data sample count';
-          console.error('Error updating vis samples exp:', error);
-          // Reload current value on error
-          await this.loadCurrentSettings();
-        } finally {
-          this.loadingVisSamples = false;
-        }
-      },
+        // Update local state with current values
+        if (rawSave) this.rawSave = Boolean(rawSave.save);
+        if (visSave) this.visSave = Boolean(visSave.save);
+        if (rawSamples) this.rawSamplesExp = rawSamples.N_samples_exp;
+        if (visSamples) this.visSamplesExp = visSamples.N_samples_exp;
+      } catch (error) {
+        this.errorMessage = "Failed to load current configuration settings";
+        console.error("Error loading config settings:", error);
+      } finally {
+        this.loading = false;
+      }
     },
-    watch: {
-      // Reload settings when login state changes
-      authenticated(newVal) {
-        if (newVal) {
-          this.loadCurrentSettings();
+
+    async updateRawSave() {
+      if (!this.authenticated) return;
+
+      this.loadingRawSave = true;
+      this.errorMessage = "";
+      this.successMessage = "";
+
+      try {
+        const flag = this.rawSave ? 1 : 0;
+        const result = await telescopeApi.setRawSaveFlag(flag);
+
+        if (result) {
+          this.successMessage = `Raw data save ${this.rawSave ? "enabled" : "disabled"}`;
+          // Update local state to match server response
+          this.rawSave = Boolean(result.save);
         }
-      },
-      // Reload settings when telescope changes
-      TART_URL() {
+      } catch (error) {
+        this.errorMessage = "Failed to update raw data save setting";
+        // Revert checkbox state on error
+        this.rawSave = !this.rawSave;
+        console.error("Error updating raw save flag:", error);
+      } finally {
+        this.loadingRawSave = false;
+      }
+    },
+
+    async updateVisSave() {
+      if (!this.authenticated) return;
+
+      this.loadingVisSave = true;
+      this.errorMessage = "";
+      this.successMessage = "";
+
+      try {
+        const flag = this.visSave ? 1 : 0;
+        const result = await telescopeApi.setVisSaveFlag(flag);
+
+        if (result) {
+          this.successMessage = `Visibility data save ${this.visSave ? "enabled" : "disabled"}`;
+          // Update local state to match server response
+          this.visSave = Boolean(result.save);
+        }
+      } catch (error) {
+        this.errorMessage = "Failed to update visibility data save setting";
+        // Revert checkbox state on error
+        this.visSave = !this.visSave;
+        console.error("Error updating vis save flag:", error);
+      } finally {
+        this.loadingVisSave = false;
+      }
+    },
+
+    async updateRawSamples() {
+      if (!this.authenticated) return;
+
+      this.loadingRawSamples = true;
+      this.errorMessage = "";
+      this.successMessage = "";
+
+      try {
+        const result = await telescopeApi.setRawNumSamplesExp(
+          this.rawSamplesExp,
+        );
+
+        if (result) {
+          const integrationTime = this.getIntegrationTime(this.rawSamplesExp);
+          this.successMessage = `Raw data samples set to 2^${this.rawSamplesExp} (${integrationTime}ms)`;
+          // Update local state to match server response
+          this.rawSamplesExp = result.N_samples_exp;
+        }
+      } catch (error) {
+        this.errorMessage = "Failed to update raw data sample count";
+        console.error("Error updating raw samples exp:", error);
+        // Reload current value on error
+        await this.loadCurrentSettings();
+      } finally {
+        this.loadingRawSamples = false;
+      }
+    },
+
+    async updateVisSamples() {
+      if (!this.authenticated) return;
+
+      this.loadingVisSamples = true;
+      this.errorMessage = "";
+      this.successMessage = "";
+
+      try {
+        const result = await telescopeApi.setVisNumSamplesExp(
+          this.visSamplesExp,
+        );
+
+        if (result) {
+          const integrationTime = this.getIntegrationTime(this.visSamplesExp);
+          this.successMessage = `Visibility data samples set to 2^${this.visSamplesExp} (${integrationTime}ms)`;
+          // Update local state to match server response
+          this.visSamplesExp = result.N_samples_exp;
+        }
+      } catch (error) {
+        this.errorMessage = "Failed to update visibility data sample count";
+        console.error("Error updating vis samples exp:", error);
+        // Reload current value on error
+        await this.loadCurrentSettings();
+      } finally {
+        this.loadingVisSamples = false;
+      }
+    },
+  },
+  watch: {
+    // Reload settings when login state changes
+    authenticated(newVal) {
+      if (newVal) {
         this.loadCurrentSettings();
-      },
+      }
     },
-  };
+    // Reload settings when telescope changes
+    TART_URL() {
+      this.loadCurrentSettings();
+    },
+  },
+};
 </script>
 
 <style scoped>

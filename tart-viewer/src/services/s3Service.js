@@ -1,9 +1,5 @@
 class S3Service {
-  constructor() {
-    this.S3_BUCKET = "tart-hdf";
-    this.S3_HOST = "s3.max.ac.nz";
-    this.abortController = null;
-  }
+  constructor() {}
 
   /**
    * Set S3 configuration
@@ -192,7 +188,7 @@ class S3Service {
       }
 
       // Sort, thin, and limit files
-      const sortedFiles = allFiles.sort((a, b) => {
+      const sortedFiles = allFiles.toSorted((a, b) => {
         if (!a.lastModified && !b.lastModified) {return 0;}
         if (!a.lastModified) {return 1;}
         if (!b.lastModified) {return -1;}
@@ -279,6 +275,9 @@ class S3Service {
       return {files, folders};
     }, `Fetch with prefix: ${prefix}`);
   }
+  S3_BUCKET = "tart-hdf";
+  S3_HOST = "s3.max.ac.nz";
+  abortController = null;
 }
 
 // Export a singleton instance

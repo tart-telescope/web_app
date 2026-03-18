@@ -1,11 +1,12 @@
 <template>
   <v-card class="mx-auto" elevation="3">
-    <v-card-title class="my-0 py-2 teal--text text--lighten-2 text-uppercase">
-      Antenna Gains & Phases
-    </v-card-title>
+    <v-card-title class="my-0 py-2"> Antenna Gains & Phases </v-card-title>
 
-    <v-card-text v-if="currentGain && currentGain.gain && currentGain.phase_offset" class="pa-2">
-      <v-row dense>
+    <v-card-text
+      v-if="currentGain && currentGain.gain && currentGain.phase_offset"
+      class="pa-3"
+    >
+      <v-row density="compact">
         <v-col
           v-for="(gainValue, index) in currentGain.gain"
           :key="`combined-${index}`"
@@ -25,17 +26,21 @@
               class="gain-section text-center pa-1"
               :style="{ backgroundColor: getGainColorHex(gainValue) }"
             >
-              <div class="body-2 white--text">{{ roundValue(gainValue) }}</div>
+              <div class="body-2 text-white">{{ roundValue(gainValue) }}</div>
             </div>
             <!-- Phase (bottom half) -->
             <div
               class="phase-section text-center pa-1"
               :style="{
-                backgroundColor: getPhaseColorHex(currentGain.phase_offset[index]),
+                backgroundColor: getPhaseColorHex(
+                  currentGain.phase_offset[index],
+                ),
               }"
             >
-              <div class="body-2 white--text">
-                {{ roundValue(normalizePhase(currentGain.phase_offset[index])) }}
+              <div class="body-2 text-white">
+                {{
+                  roundValue(normalizePhase(currentGain.phase_offset[index]))
+                }}
               </div>
             </div>
           </v-card>
@@ -50,86 +55,86 @@
 </template>
 
 <script>
-  import { mapState } from "pinia";
-  import { useAppStore } from "@/stores/app";
+import { mapState } from "pinia";
+import { useAppStore } from "@/stores/app";
 
-  export default {
-    name: "GainPhaseComponent",
+export default {
+  name: "GainPhaseComponent",
 
-    computed: {
-      ...mapState(useAppStore, ["gain", "currentVisData"]),
+  computed: {
+    ...mapState(useAppStore, ["gain", "currentVisData"]),
 
-      currentGain() {
-        // Use gain from currentVisData if available, otherwise fall back to store gain
-        return this.currentVisData?.gain || this.gain;
-      },
+    currentGain() {
+      // Use gain from currentVisData if available, otherwise fall back to store gain
+      return this.currentVisData?.gain || this.gain;
+    },
+  },
+
+  methods: {
+    roundValue(value) {
+      if (typeof value !== "number") return "N/A";
+      return Math.round(value * 100) / 100;
     },
 
-    methods: {
-      roundValue(value) {
-        if (typeof value !== "number") return "N/A";
-        return Math.round(value * 100) / 100;
-      },
-
-      normalizePhase(phaseValue) {
-        if (typeof phaseValue !== "number") return phaseValue;
-        // Normalize to [-π, π] range
-        let normalized = phaseValue % (2 * Math.PI);
-        if (normalized > Math.PI) {
-          normalized -= 2 * Math.PI;
-        } else if (normalized < -Math.PI) {
-          normalized += 2 * Math.PI;
-        }
-        return normalized;
-      },
-
-      getGainColor(gainValue) {
-        if (typeof gainValue !== "number") return "grey";
-
-        // Color code gains based on fractional distance from ideal value of 1.0
-        const ratio = Math.max(gainValue / 1, 1 / gainValue);
-        if (ratio > 3) return "red darken-2";
-        if (ratio > 2) return "orange darken-2";
-        return "green darken-2";
-      },
-
-      getGainColorHex(gainValue) {
-        if (typeof gainValue !== "number") return "#757575";
-
-        // Color code gains based on fractional distance from ideal value of 1.0
-        const ratio = Math.max(gainValue / 1, 1 / gainValue);
-        if (ratio > 3) return "#c62828";
-        if (ratio > 2) return "#ef6c00";
-        return "#2e7d32";
-      },
-
-      getPhaseColor(phaseValue) {
-        if (typeof phaseValue !== "number") return "grey";
-
-        // Color code phases based on value range
-        const normalizedPhase = Math.abs(phaseValue) % (2 * Math.PI);
-        if (normalizedPhase < Math.PI / 3) return "blue darken-2";
-        if (normalizedPhase < (2 * Math.PI) / 3) return "purple darken-2";
-        if (normalizedPhase < Math.PI) return "indigo darken-2";
-        if (normalizedPhase < (4 * Math.PI) / 3) return "cyan darken-2";
-        if (normalizedPhase < (5 * Math.PI) / 3) return "teal darken-2";
-        return "blue-grey darken-2";
-      },
-
-      getPhaseColorHex(phaseValue) {
-        if (typeof phaseValue !== "number") return "#757575";
-
-        // Color code phases based on value range
-        const normalizedPhase = Math.abs(this.normalizePhase(phaseValue));
-        if (normalizedPhase < Math.PI / 3) return "#1565c0";
-        if (normalizedPhase < (2 * Math.PI) / 3) return "#6a1b9a";
-        if (normalizedPhase < Math.PI) return "#283593";
-        if (normalizedPhase < (4 * Math.PI) / 3) return "#00838f";
-        if (normalizedPhase < (5 * Math.PI) / 3) return "#00695c";
-        return "#37474f";
-      },
+    normalizePhase(phaseValue) {
+      if (typeof phaseValue !== "number") return phaseValue;
+      // Normalize to [-π, π] range
+      let normalized = phaseValue % (2 * Math.PI);
+      if (normalized > Math.PI) {
+        normalized -= 2 * Math.PI;
+      } else if (normalized < -Math.PI) {
+        normalized += 2 * Math.PI;
+      }
+      return normalized;
     },
-  };
+
+    getGainColor(gainValue) {
+      if (typeof gainValue !== "number") return "grey";
+
+      // Color code gains based on fractional distance from ideal value of 1.0
+      const ratio = Math.max(gainValue / 1, 1 / gainValue);
+      if (ratio > 3) return "red darken-2";
+      if (ratio > 2) return "orange darken-2";
+      return "green darken-2";
+    },
+
+    getGainColorHex(gainValue) {
+      if (typeof gainValue !== "number") return "#757575";
+
+      // Color code gains based on fractional distance from ideal value of 1.0
+      const ratio = Math.max(gainValue / 1, 1 / gainValue);
+      if (ratio > 3) return "#c62828";
+      if (ratio > 2) return "#ef6c00";
+      return "#2e7d32";
+    },
+
+    getPhaseColor(phaseValue) {
+      if (typeof phaseValue !== "number") return "grey";
+
+      // Color code phases based on value range
+      const normalizedPhase = Math.abs(phaseValue) % (2 * Math.PI);
+      if (normalizedPhase < Math.PI / 3) return "blue darken-2";
+      if (normalizedPhase < (2 * Math.PI) / 3) return "purple darken-2";
+      if (normalizedPhase < Math.PI) return "indigo darken-2";
+      if (normalizedPhase < (4 * Math.PI) / 3) return "cyan darken-2";
+      if (normalizedPhase < (5 * Math.PI) / 3) return "teal darken-2";
+      return "blue-grey darken-2";
+    },
+
+    getPhaseColorHex(phaseValue) {
+      if (typeof phaseValue !== "number") return "#757575";
+
+      // Color code phases based on value range
+      const normalizedPhase = Math.abs(this.normalizePhase(phaseValue));
+      if (normalizedPhase < Math.PI / 3) return "#1565c0";
+      if (normalizedPhase < (2 * Math.PI) / 3) return "#6a1b9a";
+      if (normalizedPhase < Math.PI) return "#283593";
+      if (normalizedPhase < (4 * Math.PI) / 3) return "#00838f";
+      if (normalizedPhase < (5 * Math.PI) / 3) return "#00695c";
+      return "#37474f";
+    },
+  },
+};
 </script>
 
 <style scoped>

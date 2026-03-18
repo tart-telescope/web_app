@@ -1,12 +1,7 @@
 import axios from 'axios';
 
 class SatelliteApiService {
-  constructor() {
-    this.client = null;
-    this.baseURL = null;
-    this.defaultTimeout = 10_000;
-    this.abortController = null;
-  }
+  constructor() {}
 
   /**
    * Set the satellite catalog base URL
@@ -150,6 +145,10 @@ class SatelliteApiService {
       return response.data;
     }, 'Get bulk satellite data');
   }
+  client = null;
+  baseURL = null;
+  defaultTimeout = 10_000;
+  abortController = null;
 }
 
 // Export a singleton instance

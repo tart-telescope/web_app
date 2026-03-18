@@ -12,7 +12,7 @@
       <v-icon :icon="item.icon" :size="item.icon === '$vuetify' ? 24 : 16" />
     </a>
 
-    <v-btn flat @click="toggleTheme">{{
+    <v-btn variant="flat" @click="toggleTheme">{{
       theme.global.current.value.dark ? "light mode" : "dark mode"
     }}</v-btn>
     <v-btn> Build: {{ commitSHA }} </v-btn>
@@ -20,33 +20,33 @@
 </template>
 
 <script setup>
-  import { useTheme } from "vuetify";
+import { useTheme } from "vuetify";
 
-  const commitSHA = import.meta.env.VITE_COMMIT_SHA;
+const commitSHA = import.meta.env.VITE_COMMIT_SHA;
 
-  const theme = useTheme();
+const theme = useTheme();
 
-  function toggleTheme() {
-    theme.global.name.value = theme.global.current.value.dark ? "light" : "dark";
-  }
+function toggleTheme() {
+  theme.global.name.value = theme.global.current.value.dark ? "light" : "dark";
+}
 
-  const items = [
-    {
-      title: "TART Docs",
-      icon: "mdi-shield-star-outline",
-      href: "https://tart.elec.ac.nz/doc/",
-    },
-    {
-      title: "TART GitHub",
-      icon: `mdi-github`,
-      href: "https://github.com/tart-telescope",
-    },
-    {
-      title: "TART Telegram",
-      icon: `mdi-message`,
-      href: "https://reddit.com/r/vuetifyjs",
-    },
-  ];
+const items = [
+  {
+    title: "TART Docs",
+    icon: "mdi-shield-star-outline",
+    href: "https://tart.elec.ac.nz/doc/",
+  },
+  {
+    title: "TART GitHub",
+    icon: `mdi-github`,
+    href: "https://github.com/tart-telescope",
+  },
+  {
+    title: "TART Telegram",
+    icon: `mdi-message`,
+    href: "https://reddit.com/r/vuetifyjs",
+  },
+];
 </script>
 
 <style scoped lang="sass">

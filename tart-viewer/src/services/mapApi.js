@@ -2,10 +2,6 @@ import axios from 'axios';
 
 class MapApiService {
   constructor() {
-    this.client = null;
-    this.baseURL = 'https://map.elec.ac.nz/api/v1';
-    this.defaultTimeout = 10_000;
-    this.abortController = null;
     this._recreateClient();
   }
 
@@ -115,6 +111,10 @@ class MapApiService {
       return response.data;
     }, `Get telescope ${telescopeId}`);
   }
+  client = null;
+  baseURL = 'https://map.elec.ac.nz/api/v1';
+  defaultTimeout = 10_000;
+  abortController = null;
 }
 
 // Export a singleton instance

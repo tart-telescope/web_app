@@ -36,7 +36,7 @@ export const VideoRecorderInterface = {
  */
 export const RECORDING_SETTINGS = {
   frameRate: 60,
-  quality: 1.0,
+  quality: 1,
   format: 'mp4',
   width: 1080,
   height: 1080,

@@ -7,7 +7,7 @@
       <v-text-field
         v-model="pass"
         label="Password"
-        outlined
+        variant="outlined"
         type="password"
         @keydown.enter="auth(pass)"
       />
@@ -19,7 +19,7 @@
         @click="auth(pass)"
       >
         Login
-        <v-icon right>mdi-key</v-icon>
+        <v-icon end>mdi-key</v-icon>
       </v-btn>
     </template>
   </v-list-item>
@@ -28,27 +28,27 @@
 </template>
 
 <script>
-  import { mapActions, mapState } from "pinia";
-  import { useAppStore } from "@/stores/app";
+import { mapActions, mapState } from "pinia";
+import { useAppStore } from "@/stores/app";
 
-  export default {
-    name: "LoginComponent",
-    components: {},
-    props: {},
-    data() {
-      return {
-        pass: "",
-        loading: false,
-      };
+export default {
+  name: "LoginComponent",
+  components: {},
+  props: {},
+  data() {
+    return {
+      pass: "",
+      loading: false,
+    };
+  },
+  methods: {
+    ...mapActions(useAppStore, ["auth", "logout"]),
+  },
+  computed: {
+    ...mapState(useAppStore, ["token", "authenticating", "info"]),
+    authenticated() {
+      return this.token ? true : false;
     },
-    methods: {
-      ...mapActions(useAppStore, ["auth", "logout"]),
-    },
-    computed: {
-      ...mapState(useAppStore, ["token", "authenticating", "info"]),
-      authenticated() {
-        return this.token ? true : false;
-      },
-    },
-  };
+  },
+};
 </script>

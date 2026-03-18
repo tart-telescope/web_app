@@ -1,14 +1,7 @@
 import axios from 'axios';
 
 class TelescopeApiService {
-  constructor() {
-    this.client = null;
-    this.baseURL = null;
-    this.apiPrefix = '';
-    this.token = null;
-    this.defaultTimeout = 10_000;
-    this.abortController = null;
-  }
+  constructor() {}
 
   /**
    * Set the telescope base URL
@@ -461,6 +454,12 @@ class TelescopeApiService {
       return response.data;
     }, `Set vis num samples exp to ${exp}`);
   }
+  client = null;
+  baseURL = null;
+  apiPrefix = '';
+  token = null;
+  defaultTimeout = 10_000;
+  abortController = null;
 }
 
 // Export a singleton instance

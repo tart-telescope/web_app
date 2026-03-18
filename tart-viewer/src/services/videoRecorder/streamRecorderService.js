@@ -33,7 +33,7 @@ export default class MediaRecorderService {
     this.settings = {
       frameRate: settings.frameRate || 60,
       format: settings.format || 'mp4',
-      quality: settings.quality || 1.0,
+      quality: settings.quality || 1,
       width: settings.width || 1080,
       height: settings.height || 1080,
       ...settings
@@ -157,7 +157,7 @@ export default class MediaRecorderService {
     }
 
     try {
-      this.offscreenRenderer.setClearColor(0x000000, 1)
+      this.offscreenRenderer.setClearColor(0x00_00_00, 1)
       console.log('✅ Clear color set successfully')
     } catch (error) {
       console.error('❌ Failed to set clear color:', error)
@@ -355,12 +355,12 @@ export default class MediaRecorderService {
    * Create compass labels (N, S, E, W)
    */
   createCompassLabels() {
-    if (!this.compassGroup) return
+    if (!this.compassGroup) {return}
 
     // Clear existing labels
     for (const child of this.compassGroup.children) {
-      if (child.geometry) child.geometry.dispose()
-      if (child.material) child.material.dispose()
+      if (child.geometry) {child.geometry.dispose()}
+      if (child.material) {child.material.dispose()}
     }
     this.compassGroup.clear()
 
@@ -404,19 +404,19 @@ export default class MediaRecorderService {
    * Create grid lines for elevation and azimuth
    */
   createGridLines() {
-    if (!this.gridGroup || !this.recordingScene) return
+    if (!this.gridGroup || !this.recordingScene) {return}
 
     // Clear existing grid lines
     for (const child of this.gridGroup.children) {
-      if (child.geometry) child.geometry.dispose()
-      if (child.material) child.material.dispose()
+      if (child.geometry) {child.geometry.dispose()}
+      if (child.material) {child.material.dispose()}
     }
     this.gridGroup.clear()
 
-    const radius = 1.0
+    const radius = 1
     // Use same grid settings as main component
     const material = new MeshBasicMaterial({
-      color: 0xffffff, // White like main component
+      color: 0xff_ff_ff, // White like main component
       transparent: true,
       opacity: 0.6, // Match GRID_SETTINGS.opacity
       side: DoubleSide
@@ -439,7 +439,7 @@ export default class MediaRecorderService {
           64
         )
         const circleMaterial = new MeshBasicMaterial({
-          color: 0xffffff,
+          color: 0xff_ff_ff,
           transparent: true,
           opacity: 0.6,
           side: DoubleSide
@@ -476,7 +476,7 @@ export default class MediaRecorderService {
         false
       )
       const tubeMaterial = new MeshBasicMaterial({
-        color: 0xffffff,
+        color: 0xff_ff_ff,
         transparent: true,
         opacity: 0.6
       })
@@ -575,7 +575,7 @@ export default class MediaRecorderService {
     
     // Timestamp (top right)
     if (timestamp) {
-      const timestampText = new Date(timestamp).toISOString().replace('T', ' ').substring(0, 19) + ' UTC'
+      const timestampText = new Date(timestamp).toISOString().replace('T', ' ').slice(0, 19) + ' UTC'
       
       // Background for timestamp
       ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'
@@ -615,14 +615,14 @@ export default class MediaRecorderService {
     }
 
     for (const satellite of satelliteData) {
-      if (satellite.el < 0) continue // Skip satellites below horizon
+      if (satellite.el < 0) {continue} // Skip satellites below horizon
 
       // Use exact same azElToCartesian conversion as main component
       const azRad = (satellite.az * Math.PI) / 180
       const elRad = (satellite.el * Math.PI) / 180
 
       // Match main component's satellite positioning with exact offset
-      const sphereRadius = 1.0
+      const sphereRadius = 1
       const satelliteOffset = 0.005 // SPHERE_DEFAULTS.satelliteOffset
       const radius = sphereRadius + satelliteOffset
 
@@ -638,7 +638,7 @@ export default class MediaRecorderService {
         24
       )
       const material = new MeshBasicMaterial({
-        color: 0xff0000, // Red satellites like main component (COLORS.hoveredSatellite)
+        color: 0xff_00_00, // Red satellites like main component (COLORS.hoveredSatellite)
         transparent: true,
         opacity: 0.8,
         side: DoubleSide
@@ -807,7 +807,7 @@ export default class MediaRecorderService {
 
       // Choose best available format (prioritizing MP4)
       const supportedFormats = this.getSupportedFormats()
-      let mimeType = supportedFormats[0] || 'video/webm'
+      const mimeType = supportedFormats[0] || 'video/webm'
 
       console.log('📹 Available formats:', supportedFormats)
       console.log('🎬 Using format:', mimeType)
@@ -896,9 +896,9 @@ export default class MediaRecorderService {
           onProgress({
             percentage: (frameIndex + 1) / totalFrames,
             frameIndex: frameIndex + 1,
-            totalFrames: totalFrames,
+            totalFrames,
             currentTimestamp: visData.timestamp,
-            estimatedTimeRemaining: estimatedTimeRemaining
+            estimatedTimeRemaining
           })
         }
 
@@ -1024,16 +1024,16 @@ export default class MediaRecorderService {
     // Clean up overlay groups
     if (this.satelliteGroup) {
       for (const child of this.satelliteGroup.children) {
-        if (child.geometry) child.geometry.dispose()
-        if (child.material) child.material.dispose()
+        if (child.geometry) {child.geometry.dispose()}
+        if (child.material) {child.material.dispose()}
       }
       this.satelliteGroup = null
     }
 
     if (this.compassGroup) {
       for (const child of this.compassGroup.children) {
-        if (child.geometry) child.geometry.dispose()
-        if (child.material) child.material.dispose()
+        if (child.geometry) {child.geometry.dispose()}
+        if (child.material) {child.material.dispose()}
       }
       this.compassGroup = null
     }
@@ -1041,8 +1041,8 @@ export default class MediaRecorderService {
     // Clean up grid lines
     if (this.gridGroup) {
       for (const child of this.gridGroup.children) {
-        if (child.geometry) child.geometry.dispose()
-        if (child.material) child.material.dispose()
+        if (child.geometry) {child.geometry.dispose()}
+        if (child.material) {child.material.dispose()}
       }
     }
 
