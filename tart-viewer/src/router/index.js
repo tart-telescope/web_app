@@ -6,9 +6,9 @@
 
 import { setupLayouts } from "virtual:generated-layouts";
 // Composables
-// eslint-disable-next-line import/no-duplicates
+
 import { createRouter, createWebHistory } from "vue-router/auto";
-// eslint-disable-next-line import/no-duplicates
+
 import { routes } from "vue-router/auto-routes";
 import { useAppStore } from "@/stores/app";
 import { useTelescopeRegistryStore } from "@/stores/telescopeRegistry";
@@ -22,15 +22,15 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   const appStore = useAppStore();
   const telescopeRegistry = useTelescopeRegistryStore();
-  
+
   // Check both stores for local mode to avoid sync issues
   const isLocalMode = appStore.localMode || telescopeRegistry.localMode;
-  
+
   // In local mode, handle routing differently
   if (isLocalMode) {
     // If trying to access a telescope route in local mode, redirect to root
-    if (to.params.telescope && to.params.telescope !== 'local') {
-      next('/');
+    if (to.params.telescope && to.params.telescope !== "local") {
+      next("/");
       return;
     }
     // Allow local mode routes to pass through
@@ -41,8 +41,7 @@ router.beforeEach(async (to, from, next) => {
   // Normal mode: validate telescope parameter
   if (to.params.telescope) {
     // Don't validate 'local' telescope in normal mode - redirect to first available
-    if (to.params.telescope === 'local') {
-
+    if (to.params.telescope === "local") {
       // Initialize telescope registry
       telescopeRegistry.initialize();
 
@@ -52,11 +51,11 @@ router.beforeEach(async (to, from, next) => {
       }
 
       const firstTelescope = Array.from(telescopeRegistry.telescopes.keys())[0];
-      if (firstTelescope && firstTelescope !== 'custom') {
+      if (firstTelescope && firstTelescope !== "custom") {
         next({ path: "/" + firstTelescope, query: to.query });
         return;
       }
-      next({ path: '/', query: to.query });
+      next({ path: "/", query: to.query });
       return;
     }
 
@@ -69,11 +68,10 @@ router.beforeEach(async (to, from, next) => {
     }
 
     // Check if telescope is valid (after potential fetch)
-    if (!telescopeRegistry.isValidTelescope(to.params.telescope) &&
-      telescopeRegistry.telescopes.size > 0) {
+    if (!telescopeRegistry.isValidTelescope(to.params.telescope) && telescopeRegistry.telescopes.size > 0) {
       // If telescope is not valid and we have some data, redirect to first available telescope
       const firstTelescope = Array.from(telescopeRegistry.telescopes.keys())[0];
-      if (firstTelescope !== 'custom') {
+      if (firstTelescope !== "custom") {
         next({ path: "/" + firstTelescope, query: to.query });
         return;
       }
@@ -87,14 +85,14 @@ router.beforeEach(async (to, from, next) => {
 router.afterEach((to) => {
   const appStore = useAppStore();
   const telescopeRegistry = useTelescopeRegistryStore();
-  
-  let title = 'TART';
-  
+
+  let title = "TART";
+
   // Check both stores for local mode
   const isLocalMode = appStore.localMode || telescopeRegistry.localMode;
-  
+
   if (isLocalMode) {
-    title = 'TART [Local]';
+    title = "TART [Local]";
   } else if (to.params.telescope) {
     // Get telescope info from registry
     const telescope = telescopeRegistry.telescopes.get(to.params.telescope);
@@ -106,7 +104,7 @@ router.afterEach((to) => {
       title = `TART - ${appStore.telescopeName}`;
     }
   }
-  
+
   document.title = title;
 });
 

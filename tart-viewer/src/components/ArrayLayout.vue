@@ -1,29 +1,11 @@
 <template>
-  <v-card
-    v-if="ant_sel_i"
-    class="mx-auto square-card"
-    elevation="3"
-    flat
-    outlined
-    raised
-  >
+  <v-card v-if="ant_sel_i" class="mx-auto square-card" elevation="3">
     <div class="card-content">
-      <v-card-title
-        class="my-0 py-1 pr-0 teal--text text--lighten-2 text-uppercase"
-      >
-        Array Layout
-      </v-card-title>
+      <v-card-title class="my-0 py-1 pr-0"> Array Layout </v-card-title>
       <div class="svg-container">
         <svg id="overlaySVG" viewBox="0 0 512 512">
           <defs>
-            <marker
-              id="mid"
-              markerHeight="20"
-              markerWidth="10"
-              orient="auto"
-              refX="0.1"
-              refY="5"
-            >
+            <marker id="mid" markerHeight="20" markerWidth="10" orient="auto" refX="0.1" refY="5">
               <path d="M0,0 V10 L5,5 Z" fill="#4db6ac" />
             </marker>
           </defs>
@@ -38,30 +20,9 @@
               stroke="rgb(0,0,0)"
               stroke-width="1"
             />
-            <text
-              dominant-baseline="middle"
-              fill="teal"
-              text-anchor="middle"
-              :x="offset + scale * 0.5"
-              :y="490"
-            >
-              1 metre
-            </text>
-            <path
-              id="scaleLine"
-              :d="scaleLine"
-              fill="none"
-              stroke="teal"
-              stroke-width="2.5"
-            />
-            <path
-              id="arrow-line"
-              :d="line"
-              fill="none"
-              marker-mid="url(#mid)"
-              stroke="teal"
-              stroke-width="3"
-            />
+            <text dominant-baseline="middle" fill="teal" text-anchor="middle" :x="offset + scale * 0.5" :y="490">1 metre</text>
+            <path id="scaleLine" :d="scaleLine" fill="none" stroke="teal" stroke-width="2.5" />
+            <path id="arrow-line" :d="line" fill="none" marker-mid="url(#mid)" stroke="teal" stroke-width="3" />
 
             <circle
               :cx="offset + scale * ant_sel_i[0]"
@@ -97,54 +58,54 @@
 </template>
 
 <script>
-  import { mapActions, mapState } from "pinia";
-  import { useAppStore } from "@/stores/app";
+import { mapActions, mapState } from "pinia";
+import { useAppStore } from "@/stores/app";
 
-  export default {
-    name: "ArrayLayout",
-    props: {},
-    data: function () {
-      return {
-        offset: 256,
-      };
+export default {
+  name: "ArrayLayout",
+  props: {},
+  data: function () {
+    return {
+      offset: 256,
+    };
+  },
+  methods: {},
+  computed: {
+    line() {
+      let x1 = Number.parseInt(this.offset + this.scale * this.ant_sel_i[0]);
+      let y1 = Number.parseInt(this.offset - this.scale * this.ant_sel_i[1]);
+      let x2 = Number.parseInt(this.offset + this.scale * this.ant_sel_j[0]);
+      let y2 = Number.parseInt(this.offset - this.scale * this.ant_sel_j[1]);
+      let xm = x1 + 0.5 * (x2 - x1).toString();
+      let ym = y1 + 0.5 * (y2 - y1).toString();
+
+      return ["M", x1, y1, "L", xm, ym, "L", x2, y2].join(" ");
     },
-    methods: {},
-    computed: {
-      line() {
-        let x1 = Number.parseInt(this.offset + this.scale * this.ant_sel_i[0]);
-        let y1 = Number.parseInt(this.offset - this.scale * this.ant_sel_i[1]);
-        let x2 = Number.parseInt(this.offset + this.scale * this.ant_sel_j[0]);
-        let y2 = Number.parseInt(this.offset - this.scale * this.ant_sel_j[1]);
-        let xm = x1 + 0.5 * (x2 - x1).toString();
-        let ym = y1 + 0.5 * (y2 - y1).toString();
+    scaleLine() {
+      let x1 = Number.parseInt(this.offset + this.scale * 0);
+      let y1 = Number.parseInt(500);
+      let x2 = Number.parseInt(this.offset + this.scale * 1);
+      let y2 = Number.parseInt(500);
 
-        return ["M", x1, y1, "L", xm, ym, "L", x2, y2].join(" ");
-      },
-      scaleLine() {
-        let x1 = Number.parseInt(this.offset + this.scale * 0);
-        let y1 = Number.parseInt(500);
-        let x2 = Number.parseInt(this.offset + this.scale * 1);
-        let y2 = Number.parseInt(500);
-
-        return ["M", x1, y1, "L", x2, y2].join(" ");
-      },
-      ...mapState(useAppStore, ["selectedBaseline", "antennas"]),
-
-      ant_sel_i() {
-        return this.antennas[this.selectedBaseline[0]];
-      },
-      ant_sel_j() {
-        return this.antennas[this.selectedBaseline[1]];
-      },
-      scale() {
-        const ant = this.antennas;
-        let min = Math.min(...ant.map((a) => a[0]), ...ant.map((a) => a[1]));
-        let max = Math.max(...ant.map((a) => a[0]), ...ant.map((a) => a[1]));
-        let absMax = Math.max(-min, max);
-        return Math.floor(220 / absMax);
-      },
+      return ["M", x1, y1, "L", x2, y2].join(" ");
     },
-  };
+    ...mapState(useAppStore, ["selectedBaseline", "antennas"]),
+
+    ant_sel_i() {
+      return this.antennas[this.selectedBaseline[0]];
+    },
+    ant_sel_j() {
+      return this.antennas[this.selectedBaseline[1]];
+    },
+    scale() {
+      const ant = this.antennas;
+      let min = Math.min(...ant.map((a) => a[0]), ...ant.map((a) => a[1]));
+      let max = Math.max(...ant.map((a) => a[0]), ...ant.map((a) => a[1]));
+      let absMax = Math.max(-min, max);
+      return Math.floor(220 / absMax);
+    },
+  },
+};
 </script>
 
 <style scoped>

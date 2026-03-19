@@ -1,9 +1,5 @@
 class S3Service {
-  constructor() {
-    this.S3_BUCKET = "tart-hdf";
-    this.S3_HOST = "s3.max.ac.nz";
-    this.abortController = null;
-  }
+  constructor() {}
 
   /**
    * Set S3 configuration
@@ -37,11 +33,11 @@ class S3Service {
    * Handle async operations with centralized error handling
    * @private
    */
-  async _handleRequest(operation, context = 'S3 request') {
+  async _handleRequest(operation, context = "S3 request") {
     try {
       return await operation();
     } catch (error) {
-      if (error.name === 'AbortError') {
+      if (error.name === "AbortError") {
         console.log(`${context} was cancelled`);
         return null;
       }
@@ -56,15 +52,13 @@ class S3Service {
    * @param {string} basePath - Base path to extract telescope from
    * @returns {string} Generated S3 prefix
    */
-  generateDatePrefix(date, basePath = '') {
+  generateDatePrefix(date, basePath = "") {
     const year = date.getUTCFullYear();
     const month = date.getUTCMonth() + 1;
     const day = date.getUTCDate();
 
     // Extract telescope from basePath or use default
-    const basePathPart = basePath
-      .split("/")
-      .find((part) => part.length > 0);
+    const basePathPart = basePath.split("/").find((part) => part.length > 0);
     const telescope = basePathPart || "zm-cbu";
 
     return `${telescope}/vis/${year}/${month}/${day}/`;
@@ -88,8 +82,7 @@ class S3Service {
       for (const content of contents) {
         const key = content.querySelectorAll("Key")[0]?.textContent;
         const size = content.querySelectorAll("Size")[0]?.textContent;
-        const lastModified =
-          content.querySelectorAll("LastModified")[0]?.textContent;
+        const lastModified = content.querySelectorAll("LastModified")[0]?.textContent;
 
         if (key) {
           const fileName = key.replace(prefix, "");
@@ -119,7 +112,7 @@ class S3Service {
     return await this._handleRequest(async () => {
       const allFiles = [];
       let continuationToken = null;
-      
+
       do {
         const params = new URLSearchParams({
           "list-type": "2",
@@ -132,9 +125,9 @@ class S3Service {
           params.append("continuation-token", continuationToken);
         }
 
-        const bucketPath = this.S3_BUCKET ? `/${this.S3_BUCKET}` : '';
+        const bucketPath = this.S3_BUCKET ? `/${this.S3_BUCKET}` : "";
         const url = `https://${this.S3_HOST}${bucketPath}?${params}`;
-        
+
         const requestConfig = {};
         if (this.abortController) {
           requestConfig.signal = this.abortController.signal;
@@ -155,7 +148,6 @@ class S3Service {
         const xmlDoc = parser.parseFromString(xmlText, "text/xml");
         const nextContinuationToken = xmlDoc.querySelector("NextContinuationToken");
         continuationToken = nextContinuationToken ? nextContinuationToken.textContent : null;
-        
       } while (continuationToken);
 
       return allFiles;
@@ -168,13 +160,13 @@ class S3Service {
    * @param {number} minDesiredFiles - Minimum number of files to fetch (default: 50)
    * @returns {Promise<Object>} Promise that resolves to object with files and metadata
    */
-  async fetchLast24Hours(basePath = '', minDesiredFiles = 50) {
+  async fetchLast24Hours(basePath = "", minDesiredFiles = 50) {
     return await this._handleRequest(async () => {
       this._createAbortController();
 
       // Generate prefixes for tomorrow, today, yesterday (in UTC)
       const dateOffsets = [1, 0, -1];
-      const prefixes = dateOffsets.map(offset => {
+      const prefixes = dateOffsets.map((offset) => {
         const date = new Date();
         date.setUTCDate(date.getUTCDate() + offset);
         const prefix = this.generateDatePrefix(date, basePath);
@@ -188,23 +180,31 @@ class S3Service {
         console.log(`Fetching files for prefix: ${prefix}`);
         const files = await this.fetchSingleDay(prefix);
         console.log(`Found ${files ? files.length : 0} files for ${prefix}`);
-        if (files) {allFiles.push(...files);}
+        if (files) {
+          allFiles.push(...files);
+        }
       }
 
       // Sort, thin, and limit files
-      const sortedFiles = allFiles.sort((a, b) => {
-        if (!a.lastModified && !b.lastModified) {return 0;}
-        if (!a.lastModified) {return 1;}
-        if (!b.lastModified) {return -1;}
+      const sortedFiles = allFiles.toSorted((a, b) => {
+        if (!a.lastModified && !b.lastModified) {
+          return 0;
+        }
+        if (!a.lastModified) {
+          return 1;
+        }
+        if (!b.lastModified) {
+          return -1;
+        }
         return new Date(b.lastModified) - new Date(a.lastModified);
       });
 
       return {
         files: sortedFiles.slice(0, minDesiredFiles),
         allFiles: sortedFiles,
-        totalFiles: sortedFiles.length
+        totalFiles: sortedFiles.length,
       };
-    }, 'Fetch last 24 hours');
+    }, "Fetch last 24 hours");
   }
 
   /**
@@ -214,15 +214,15 @@ class S3Service {
    * @param {string} fallbackPrefix - Fallback prefix if file not found in allFiles
    * @returns {string} Complete URL to the file
    */
-  getFileUrl(fileName, allFiles = [], fallbackPrefix = '') {
+  getFileUrl(fileName, allFiles = [], fallbackPrefix = "") {
     // Find the file in allFiles to get its full path
     const file = allFiles.find((f) => f.name === fileName);
     if (file && file.fullPath) {
-      const bucketPath = this.S3_BUCKET ? `/${this.S3_BUCKET}` : '';
+      const bucketPath = this.S3_BUCKET ? `/${this.S3_BUCKET}` : "";
       return `https://${this.S3_HOST}${bucketPath}/${file.fullPath}`;
     }
     // Fallback to provided prefix
-    const bucketPath = this.S3_BUCKET ? `/${this.S3_BUCKET}` : '';
+    const bucketPath = this.S3_BUCKET ? `/${this.S3_BUCKET}` : "";
     return `https://${this.S3_HOST}${bucketPath}/${fallbackPrefix}${fileName}`;
   }
 
@@ -242,7 +242,7 @@ class S3Service {
         prefix,
       });
 
-      const bucketPath = this.S3_BUCKET ? `/${this.S3_BUCKET}` : '';
+      const bucketPath = this.S3_BUCKET ? `/${this.S3_BUCKET}` : "";
       const url = `https://${this.S3_HOST}${bucketPath}?${params}`;
 
       const requestConfig = {};
@@ -276,9 +276,12 @@ class S3Service {
         }
       }
 
-      return {files, folders};
+      return { files, folders };
     }, `Fetch with prefix: ${prefix}`);
   }
+  S3_BUCKET = "tart-hdf";
+  S3_HOST = "s3.max.ac.nz";
+  abortController = null;
 }
 
 // Export a singleton instance

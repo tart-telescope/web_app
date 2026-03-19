@@ -8,12 +8,7 @@
       <v-col cols="12" lg="4" md="6" sm="12">
         <v-card v-if="!isSynthesisDataReady" class="d-flex align-center justify-center" min-height="400">
           <div class="text-center">
-            <v-progress-circular
-              class="mb-4"
-              color="primary"
-              indeterminate
-              size="48"
-            />
+            <v-progress-circular class="mb-4" color="primary" indeterminate size="48" />
             <div class="text-h6 text-grey">Loading synthesis data...</div>
           </div>
         </v-card>
@@ -43,88 +38,82 @@
 </template>
 
 <script>
-  import { mapState } from "pinia";
-  import ArrayLayout from "@/components/ArrayLayout.vue";
-  import Baseline from "@/components/Baseline.vue";
-  import FpgaStatus from "@/components/FpgaStatus.vue";
-  import GainPhase from "@/components/GainPhase.vue";
-  import GeneralInfo from "@/components/GeneralInfo.vue";
-  import RadioSpectrum from "@/components/RadioSpectrum.vue";
-  import RecentData from "@/components/RecentData.vue";
-  import S3Files from "@/components/S3Files.vue";
-  import Synthesis from "@/components/Synthesis.vue";
-  import { useAppStore } from "@/stores/app";
+import { mapState } from "pinia";
+import ArrayLayout from "@/components/ArrayLayout.vue";
+import Baseline from "@/components/Baseline.vue";
+import FpgaStatus from "@/components/FpgaStatus.vue";
+import GainPhase from "@/components/GainPhase.vue";
+import GeneralInfo from "@/components/GeneralInfo.vue";
+import RadioSpectrum from "@/components/RadioSpectrum.vue";
+import RecentData from "@/components/RecentData.vue";
+import S3Files from "@/components/S3Files.vue";
+import Synthesis from "@/components/Synthesis.vue";
+import { useAppStore } from "@/stores/app";
 
-  export default {
-    name: "Home",
-    data() {
+export default {
+  name: "Home",
+  data() {
+    return {
+      synthesisUpdateTrigger: 0,
+    };
+  },
+  components: {
+    ArrayLayout,
+    Baseline,
+    FpgaStatus,
+    GainPhase,
+    GeneralInfo,
+    RadioSpectrum,
+    RecentData,
+    S3Files,
+    Synthesis,
+  },
+
+  computed: {
+    ...mapState(useAppStore, ["telescope_mode", "dataThinning", "TART_URL", "localMode", "vis", "gain", "antennas"]),
+    telescopeName() {
+      return useAppStore().telescopeName;
+    },
+    s3BasePath() {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth() + 1; // JS months are 0-based
+      const day = now.getDate();
+
+      // Use fallback if telescopeName is undefined
+      const telescope = this.telescopeName || "zm-cbu";
+      const path = `${telescope}/vis/${year}/${month}/${day}/`;
+      return path;
+    },
+    isSynthesisDataReady() {
+      // Check if all required synthesis data is available
+      return !!(this.antennas && this.antennas.length > 0 && this.gain && this.vis);
+    },
+  },
+  methods: {
+    triggerSynthesisUpdate() {
+      this.synthesisUpdateTrigger++;
+    },
+
+    getSynthesisRefs() {
+      const synthesisComponent = this.$refs.synthesis;
+      if (!synthesisComponent) {
+        return { threejsRef: null, svgRef: null };
+      }
+
       return {
-        synthesisUpdateTrigger: 0,
+        threejsRef: synthesisComponent.$refs.threejsRef || null,
+        svgRef: synthesisComponent.$refs.svgRef || null,
       };
     },
-    components: {
-      ArrayLayout,
-      Baseline,
-      FpgaStatus,
-      GainPhase,
-      GeneralInfo,
-      RadioSpectrum,
-      RecentData,
-      S3Files,
-      Synthesis,
-    },
-    
-
-    computed: {
-      ...mapState(useAppStore, ["telescope_mode", "dataThinning", "TART_URL", "localMode", "vis", "gain", "antennas"]),
-      telescopeName() {
-        return useAppStore().telescopeName;
-      },
-      s3BasePath() {
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = now.getMonth() + 1; // JS months are 0-based
-        const day = now.getDate();
-
-        // Use fallback if telescopeName is undefined
-        const telescope = this.telescopeName || "zm-cbu";
-        const path = `${telescope}/vis/${year}/${month}/${day}/`;
-        return path;
-      },
-      isSynthesisDataReady() {
-        // Check if all required synthesis data is available
-        return !!(
-          this.antennas &&
-          this.antennas.length > 0 &&
-          this.gain &&
-          this.vis
-        );
-      },
-    },
-    methods: {
-      triggerSynthesisUpdate() {
-        this.synthesisUpdateTrigger++;
-      },
-      
-      getSynthesisRefs() {
-        const synthesisComponent = this.$refs.synthesis;
-        if (!synthesisComponent) {
-          return { threejsRef: null, svgRef: null };
-        }
-        
-        return {
-          threejsRef: synthesisComponent.$refs.threejsRef || null,
-          svgRef: synthesisComponent.$refs.svgRef || null
-        };
-      },
-    },
-    mounted() {
-      // Set up communication between components
-      this.$nextTick(() => {
-        if (this.$refs.baseline) {
-          this.$refs.baseline.setParent(this);
-        }
-      });
-    },
-  };
+  },
+  mounted() {
+    // Set up communication between components
+    this.$nextTick(() => {
+      if (this.$refs.baseline) {
+        this.$refs.baseline.setParent(this);
+      }
+    });
+  },
+};
 </script>

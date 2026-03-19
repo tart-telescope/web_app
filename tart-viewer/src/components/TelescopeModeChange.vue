@@ -1,5 +1,5 @@
 <template>
-  <v-list-item>
+  <v-list-item class="mt-2">
     <v-select
       v-model="telescope_mode"
       class="mt-2"
@@ -15,50 +15,47 @@
 </template>
 
 <script>
-  import { mapActions, mapState } from "pinia";
-  import { useAppStore } from "@/stores/app";
+import { mapActions, mapState } from "pinia";
+import { useAppStore } from "@/stores/app";
 
-  export default {
-    name: "TelescopeModeChange",
-    data() {
-      return {
-        modes: [
-          {
-            text: "Off",
-            value: "off",
-          },
-          {
-            text: "Raw",
-            value: "raw",
-          },
-          {
-            text: "Diagnose",
-            value: "diag",
-          },
-          {
-            text: "Visibility",
-            value: "vis",
-          },
-        ],
-      };
+export default {
+  name: "TelescopeModeChange",
+  data() {
+    return {
+      modes: [
+        {
+          text: "Off",
+          value: "off",
+        },
+        {
+          text: "Raw",
+          value: "raw",
+        },
+        {
+          text: "Diagnose",
+          value: "diag",
+        },
+        {
+          text: "Visibility",
+          value: "vis",
+        },
+      ],
+    };
+  },
+  methods: {
+    ...mapActions(useAppStore, ["setTelescopeMode", "logout"]),
+    setMode(mode) {
+      this.setTelescopeMode(mode);
     },
-    methods: {
-      ...mapActions(useAppStore, ["setTelescopeMode", "logout"]),
-      setMode(mode) {
-        this.setTelescopeMode(mode);
-      },
+  },
+  computed: {
+    label() {
+      return "Operating mode" + (this.authenticated ? "" : " (Login Required)");
     },
-    computed: {
-      label() {
-        return (
-          "Operating mode" +
-          (this.authenticated ? "" : " (Login Required)")
-        );
-      },
-      ...mapState(useAppStore, ["token", "telescope_mode"]),
-      authenticated() {
-        return this.token ? true : false;
-      },
+    ...mapState(useAppStore, ["token", "telescope_mode"]),
+    authenticated() {
+      return this.token ? true : false;
     },
-  };
+  },
+};
 </script>

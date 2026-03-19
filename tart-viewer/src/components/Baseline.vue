@@ -5,28 +5,20 @@
       <div class="chart-content">
         <!-- Show skeleton loader when insufficient data -->
         <div v-if="filteredData.length === 0" class="loading-container">
-          <v-card-title class="py-3 teal--text text--lighten-2 d-flex align-center">
+          <v-card-title class="py-3 d-flex align-center">
             <v-icon class="mr-2">mdi-chart-line</v-icon>
-            Visibility
+            <span>Visibility</span>
           </v-card-title>
           <div class="chart-container">
-            <v-skeleton-loader
-              class="chart-skeleton"
-              height="150"
-              type="image"
-            />
+            <v-skeleton-loader class="chart-skeleton" height="150" type="image" />
           </div>
 
-          <v-card-title class="py-3 teal--text text--lighten-2 d-flex align-center">
+          <v-card-title class="py-3 d-flex align-center">
             <v-icon class="mr-2">mdi-chart-timeline-variant</v-icon>
-            Visibility Phase
+            <span>Visibility Phase</span>
           </v-card-title>
           <div class="chart-container">
-            <v-skeleton-loader
-              class="chart-skeleton"
-              height="150"
-              type="image"
-            />
+            <v-skeleton-loader class="chart-skeleton" height="150" type="image" />
           </div>
 
           <div class="zoom-controls">
@@ -37,26 +29,18 @@
 
         <!-- Show charts when sufficient data -->
         <div v-else>
-          <v-card-title class="py-3 teal--text text--lighten-2 d-flex align-center">
+          <v-card-title class="py-3 d-flex align-center">
             <v-icon class="mr-2">mdi-chart-line</v-icon>
-            Visibility
+            <span>Visibility</span>
             <v-spacer />
-            <v-chip
-              v-if="hasNewData"
-              class="mr-2"
-              color="primary"
-              size="small"
-              variant="outlined"
-            >
-              New Data
-            </v-chip>
+            <v-chip v-if="hasNewData" class="mr-2" color="primary" size="small" variant="outlined"> New Data </v-chip>
             <v-btn size="small" @click="resetZoom">Reset Zoom</v-btn>
             <VideoRecordingButton
-              :is3-d="true"
               :component-refs="getSynthesisRefs()"
-              :vis-history="vis_history"
-              :nside="nside"
               :info="info"
+              :is3-d="true"
+              :nside="nside"
+              :vis-history="vis_history"
             />
           </v-card-title>
           <div class="chart-container">
@@ -99,7 +83,6 @@
             <div class="tooltip-data">Amplitude: {{ hoveredData.amplitude }}</div>
             <div class="tooltip-data">Phase: {{ hoveredData.phase }}</div>
           </div>
-
         </div>
       </div>
 
@@ -122,193 +105,183 @@
 </template>
 
 <script lang="js">
-  import { mapActions, mapState } from "pinia";
-  import VideoRecordingButton from "./VideoRecordingButton.vue";
-  import { useAppStore } from "@/stores/app";
-  import UPlotChart from "./UPlotChart.vue";
+import { mapActions, mapState } from "pinia";
+import { useAppStore } from "@/stores/app";
+import UPlotChart from "./UPlotChart.vue";
+import VideoRecordingButton from "./VideoRecordingButton.vue";
 
-  export default {
-    name: "BaselineComponent",
-    components: {
-      VideoRecordingButton,
-      UPlotChart
+export default {
+  name: "BaselineComponent",
+  components: {
+    VideoRecordingButton,
+    UPlotChart,
+  },
+
+  data() {
+    return {
+      selected_baseline: [0, 23],
+      currentZoomRange: null,
+      telescopeChanged: false,
+      hoveredData: null,
+      tooltipStyle: {},
+      parentComponent: null,
+    };
+  },
+
+  computed: {
+    ...mapState(useAppStore, ["vis_history", "info"]),
+
+    // Get filtered data once and reuse
+    filteredData() {
+      if (this.vis_history.length === 0) return [];
+
+      const [i, j] = this.selected_baseline;
+      const result = this.vis_history.map((x_h, idx) => {
+        const item = x_h.data ? x_h.data.find((x) => x.i === i && x.j === j) : null;
+
+        return {
+          timestamp: x_h.timestamp,
+          amplitude: item ? Math.hypot(item.re, item.im) : null,
+          phase: item ? (Math.atan2(item.im, item.re) * 180) / Math.PI : null,
+        };
+      });
+
+      return result;
     },
 
-
-
-    data() {
-      return {
-        selected_baseline: [0, 23],
-        currentZoomRange: null,
-        telescopeChanged: false,
-        hoveredData: null,
-        tooltipStyle: {},
-        parentComponent: null,
-      };
-    },
-
-    computed: {
-      ...mapState(useAppStore, ["vis_history", "info"]),
-
-      // Get filtered data once and reuse
-      filteredData() {
-        if (this.vis_history.length === 0) return [];
-
-        const [i, j] = this.selected_baseline;
-        const result = this.vis_history.map((x_h, idx) => {
-          const item = x_h.data ? x_h.data.find((x) => x.i === i && x.j === j) : null;
-
-
-          return {
-            timestamp: x_h.timestamp,
-            amplitude: item ? Math.hypot(item.re, item.im) : null,
-            phase: item ? (Math.atan2(item.im, item.re) * 180) / Math.PI : null,
-          };
-        });
-
-        return result;
-      },
-
-      amplitudeSeries() {
-        return [
-          {
-            name: "Amplitude",
-            data: this.filteredData.map((d) => ({
-              x: d.timestamp,
-              y: d.amplitude?.toFixed(3) || null,
-            })),
-          },
-        ];
-      },
-
-      phaseSeries() {
-        return [
-          {
-            name: "Phase",
-            data: this.filteredData.map((d) => ({
-              x: d.timestamp,
-              y: d.phase?.toFixed(0) || null,
-            })),
-          },
-        ];
-      },
-
-      hasNewData() {
-        if (!this.currentZoomRange || !this.currentZoomRange.max || this.filteredData.length === 0) return false;
-
-        const latestDataTimestamp = Math.max(...this.filteredData.map(d => d.timestamp));
-        const zoomMaxTimestamp = this.currentZoomRange.max * 1000; // Convert from seconds to milliseconds
-
-        return latestDataTimestamp > zoomMaxTimestamp;
-      },
-    },
-
-    watch: {
-      'info.name': {
-        handler(newName, oldName) {
-          if (oldName && newName && newName !== oldName) {
-            this.telescopeChanged = true;
-            this.$nextTick(() => {
-              this.telescopeChanged = false;
-            });
-          }
+    amplitudeSeries() {
+      return [
+        {
+          name: "Amplitude",
+          data: this.filteredData.map((d) => ({
+            x: d.timestamp,
+            y: d.amplitude?.toFixed(3) || null,
+          })),
         },
-        immediate: false,
-      },
+      ];
     },
 
-    methods: {
-      ...mapActions(useAppStore, [
-        "selectBaseline",
-        "setHoveredTimestamp",
-        "clearHoveredTimestamp",
-        "setZoomRange",
-        "clearZoomRange",
-      ]),
+    phaseSeries() {
+      return [
+        {
+          name: "Phase",
+          data: this.filteredData.map((d) => ({
+            x: d.timestamp,
+            y: d.phase?.toFixed(0) || null,
+          })),
+        },
+      ];
+    },
 
-      setParent(parent) {
-        this.parentComponent = parent;
-      },
+    hasNewData() {
+      if (!this.currentZoomRange || !this.currentZoomRange.max || this.filteredData.length === 0) return false;
 
-      getSynthesisRefs() {
-        if (!this.parentComponent) {
-          return { threejsRef: null, svgRef: null };
-        }
+      const latestDataTimestamp = Math.max(...this.filteredData.map((d) => d.timestamp));
+      const zoomMaxTimestamp = this.currentZoomRange.max * 1000; // Convert from seconds to milliseconds
 
-        return this.parentComponent.getSynthesisRefs();
-      },
+      return latestDataTimestamp > zoomMaxTimestamp;
+    },
+  },
 
-      handleUPlotHover(event) {
-        if (event.idx !== undefined && event.idx !== null && event.idx < this.filteredData.length) {
-          const data = this.filteredData[event.idx];
-
-          if (data) {
-
-            // Set hovered timestamp for other components
-            this.setHoveredTimestamp(data.timestamp);
-
-            // Create tooltip with both local and UTC times
-            const date = new Date(data.timestamp);
-            const localTime = date.toLocaleString(undefined, { hour12: false });
-            const utcTime = date.toISOString().replace('T', ' ').replace('Z', ' UTC');
-
-            this.hoveredData = {
-              localTime: localTime,
-              utcTime: utcTime,
-              amplitude: data.amplitude?.toFixed(3) || 'N/A',
-              phase: data.phase?.toFixed(1) + '°' || 'N/A'
-            };
-
-            // Position tooltip near cursor
-            this.tooltipStyle = {
-              position: 'absolute',
-              left: (event.left + 5) + 'px',
-              top: (event.top - 10) + 'px',
-              zIndex: 1000,
-              pointerEvents: 'none'
-            };
-          }
+  watch: {
+    "info.name": {
+      handler(newName, oldName) {
+        if (oldName && newName && newName !== oldName) {
+          this.telescopeChanged = true;
+          this.$nextTick(() => {
+            this.telescopeChanged = false;
+          });
         }
       },
+      immediate: false,
+    },
+  },
 
-      clearHoveredTimestamp() {
-        this.setHoveredTimestamp(null);
-        this.hoveredData = null;
-      },
+  methods: {
+    ...mapActions(useAppStore, ["selectBaseline", "setHoveredTimestamp", "clearHoveredTimestamp", "setZoomRange", "clearZoomRange"]),
 
-      resetZoom() {
-        if (this.$refs.amplitudeChart) {
-          this.$refs.amplitudeChart.resetZoom();
+    setParent(parent) {
+      this.parentComponent = parent;
+    },
+
+    getSynthesisRefs() {
+      if (!this.parentComponent) {
+        return { threejsRef: null, svgRef: null };
+      }
+
+      return this.parentComponent.getSynthesisRefs();
+    },
+
+    handleUPlotHover(event) {
+      if (event.idx !== undefined && event.idx !== null && event.idx < this.filteredData.length) {
+        const data = this.filteredData[event.idx];
+
+        if (data) {
+          // Set hovered timestamp for other components
+          this.setHoveredTimestamp(data.timestamp);
+
+          // Create tooltip with both local and UTC times
+          const date = new Date(data.timestamp);
+          const localTime = date.toLocaleString(undefined, { hour12: false });
+          const utcTime = date.toISOString().replace("T", " ").replace("Z", " UTC");
+
+          this.hoveredData = {
+            localTime: localTime,
+            utcTime: utcTime,
+            amplitude: data.amplitude?.toFixed(3) || "N/A",
+            phase: data.phase?.toFixed(1) + "°" || "N/A",
+          };
+
+          // Position tooltip near cursor
+          this.tooltipStyle = {
+            position: "absolute",
+            left: event.left + 5 + "px",
+            top: event.top - 10 + "px",
+            zIndex: 1000,
+            pointerEvents: "none",
+          };
         }
-        if (this.$refs.phaseChart) {
-          this.$refs.phaseChart.resetZoom();
-        }
-        this.currentZoomRange = null;
+      }
+    },
+
+    clearHoveredTimestamp() {
+      this.setHoveredTimestamp(null);
+      this.hoveredData = null;
+    },
+
+    resetZoom() {
+      if (this.$refs.amplitudeChart) {
+        this.$refs.amplitudeChart.resetZoom();
+      }
+      if (this.$refs.phaseChart) {
+        this.$refs.phaseChart.resetZoom();
+      }
+      this.currentZoomRange = null;
+      this.clearZoomRange();
+    },
+
+    updateZoomRange(range) {
+      // Only update if range has valid min/max values
+      this.currentZoomRange = range && range.min !== null && range.max !== null ? range : null;
+      // Update store with zoom range for video recording
+      if (this.currentZoomRange) {
+        this.setZoomRange(this.currentZoomRange);
+      } else {
         this.clearZoomRange();
-      },
-
-      updateZoomRange(range) {
-        // Only update if range has valid min/max values
-        this.currentZoomRange = range && range.min !== null && range.max !== null ? range : null;
-        // Update store with zoom range for video recording
-        if (this.currentZoomRange) {
-          this.setZoomRange(this.currentZoomRange);
-        } else {
-          this.clearZoomRange();
-        }
-      },
-
-      handleZoomKeyDown(event) {
-        // Only handle if this component is active/visible
-        if (!this.$el || !this.$el.offsetParent) return;
-
-        if (event.key === 'r' && (event.ctrlKey || event.metaKey)) {
-          event.preventDefault();
-          this.resetZoom();
-        }
-      },
+      }
     },
-  };
+
+    handleZoomKeyDown(event) {
+      // Only handle if this component is active/visible
+      if (!this.$el || !this.$el.offsetParent) return;
+
+      if (event.key === "r" && (event.ctrlKey || event.metaKey)) {
+        event.preventDefault();
+        this.resetZoom();
+      }
+    },
+  },
+};
 </script>
 
 <style scoped>

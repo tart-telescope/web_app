@@ -1,7 +1,5 @@
 class Hdf5Service {
-  constructor() {
-    this.abortController = null;
-  }
+  constructor() {}
 
   /**
    * Create a new AbortController for request cancellation
@@ -25,11 +23,11 @@ class Hdf5Service {
    * Handle async operations with centralized error handling
    * @private
    */
-  async _handleRequest(operation, context = 'HDF5 request') {
+  async _handleRequest(operation, context = "HDF5 request") {
     try {
       return await operation();
     } catch (error) {
-      if (error.name === 'AbortError') {
+      if (error.name === "AbortError") {
         console.log(`${context} was cancelled`);
         return null;
       }
@@ -54,14 +52,13 @@ class Hdf5Service {
       let hdf5File = null;
       try {
         // Import h5wasm utils
-        const { loadH5wasmFromUrl } = await import('@/utils/h5wasmUtils');
+        const { loadH5wasmFromUrl } = await import("@/utils/h5wasmUtils");
 
         // Load HDF5 file from URL
         hdf5File = await loadH5wasmFromUrl(fileUrl);
 
         // Parse the file data
         await this._parseAndPopulateStore(hdf5File, file.name, store, enrichBulkSatellites, dataThinning);
-
       } catch (error) {
         console.error("Error loading HDF5 file:", error);
         throw new Error(`Failed to load HDF5 file: ${error.message}`);
@@ -86,7 +83,7 @@ class Hdf5Service {
   async _parseAndPopulateStore(hdf5File, filename, store, enrichBulkSatellites, dataThinning = 1) {
     try {
       // Import h5wasm utils
-      const { parseH5wasmFileData } = await import('@/utils/h5wasmUtils');
+      const { parseH5wasmFileData } = await import("@/utils/h5wasmUtils");
 
       // Parse the HDF5 file data
       const parsedData = await parseH5wasmFileData(hdf5File, filename);
@@ -112,20 +109,16 @@ class Hdf5Service {
    */
   _populateStoreWithParsedData(parsedData, store, enrichBulkSatellites, k = 1) {
     try {
-      const {
-        timestamps,
-        visibilityData,
-        gainPhaseData,
-        antennaData,
-        baselineData,
-      } = parsedData;
+      const { timestamps, visibilityData, gainPhaseData, antennaData, baselineData } = parsedData;
 
       // Create reusable objects
-      const gainRecord = gainPhaseData ? {
-        gain: Array.from(gainPhaseData.gains || []),
-        phase_offset: Array.from(gainPhaseData.phases || []),
-        timestamp: timestamps ? timestamps[0] : null,
-      } : null;
+      const gainRecord = gainPhaseData
+        ? {
+            gain: Array.from(gainPhaseData.gains || []),
+            phase_offset: Array.from(gainPhaseData.phases || []),
+            timestamp: timestamps ? timestamps[0] : null,
+          }
+        : null;
 
       const antennas = antennaData || null;
 
@@ -140,9 +133,7 @@ class Hdf5Service {
 
           const ts = new Date(timestamp);
           // skip if timestamp already exists
-          if (
-            history.some((record) => Math.abs(record.timestamp - ts) < 0.01)
-          ) {
+          if (history.some((record) => Math.abs(record.timestamp - ts) < 0.01)) {
             continue;
           }
 
@@ -169,9 +160,7 @@ class Hdf5Service {
           history.push(visRecord);
         }
 
-        history = history.sort(
-          (a, b) => new Date(a.timestamp) - new Date(b.timestamp),
-        );
+        history = history.toSorted((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
         store.vis_history = history;
       }
@@ -210,7 +199,6 @@ class Hdf5Service {
       if (enrichBulkSatellites) {
         enrichBulkSatellites();
       }
-
     } catch (error) {
       console.error("Error populating store:", error);
       throw new Error(`Failed to populate store with data: ${error.message}`);
@@ -252,7 +240,7 @@ class Hdf5Service {
    */
   async parseFileData(hdf5File, filename) {
     return await this._handleRequest(async () => {
-      const { parseH5wasmFileData } = await import('@/utils/h5wasmUtils');
+      const { parseH5wasmFileData } = await import("@/utils/h5wasmUtils");
 
       const parsedData = await parseH5wasmFileData(hdf5File, filename);
 
@@ -271,10 +259,11 @@ class Hdf5Service {
    */
   async loadFileFromUrl(fileUrl) {
     return await this._handleRequest(async () => {
-      const { loadH5wasmFromUrl } = await import('@/utils/h5wasmUtils');
+      const { loadH5wasmFromUrl } = await import("@/utils/h5wasmUtils");
       return await loadH5wasmFromUrl(fileUrl);
     }, `Load HDF5 from URL: ${fileUrl}`);
   }
+  abortController = null;
 }
 
 // Export a singleton instance

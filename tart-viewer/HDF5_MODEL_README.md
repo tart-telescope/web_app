@@ -40,21 +40,21 @@ graph LR
     subgraph "Time Domain"
         T[60 Timestamps]
     end
-    
+
     subgraph "Spatial Domain"
         A[24 Antennas] --> B[276 Baselines]
         A --> AP[Antenna Positions]
         A --> G[24 Gains]
         A --> P[24 Phases]
     end
-    
+
     subgraph "Visibility Domain"
         V["Visibility Matrix<br/>[60 × 276]"]
     end
-    
+
     T --> V
     B --> V
-    
+
     style V fill:#e1f5fe
     style B fill:#f3e5f5
     style A fill:#e8f5e8
@@ -75,10 +75,10 @@ sequenceDiagram
     Note over B,V: Mapping Example
     B->>V: baseline[0] = [0,1] → visibility[t][0]
     Note right of V: All timestamps for<br/>antenna pair 0↔1
-    
+
     B->>V: baseline[1] = [0,2] → visibility[t][1]
     Note right of V: All timestamps for<br/>antenna pair 0↔2
-    
+
     B->>V: baseline[275] = [22,23] → visibility[t][275]
     Note right of V: All timestamps for<br/>antenna pair 22↔23
 
@@ -89,6 +89,7 @@ sequenceDiagram
 ## Data Types and Formats
 
 ### Visibility Data (Compound Type)
+
 ```
 Shape: [60, 276]
 Each element: {real: float64, imag: float64}
@@ -96,6 +97,7 @@ Total elements: 16,560 complex numbers
 ```
 
 ### Timestamps
+
 ```
 Format: ISO 8601 strings
 Example: "2025-06-29T04:43:14.559175"
@@ -104,6 +106,7 @@ Duration: 60 seconds total
 ```
 
 ### Baselines
+
 ```
 Format: BigInt64Array pairs
 Shape: [276, 2]
@@ -112,6 +115,7 @@ Example: [0n, 1n] = antenna 0 ↔ antenna 1
 ```
 
 ### Calibration Data
+
 ```
 Gains: [24] Float64 values (amplitude correction per antenna)
 Phases: [24] Float64 values (phase correction per antenna)
@@ -119,8 +123,9 @@ Applied per antenna before correlation
 ```
 
 ### Antenna Positions
+
 ```
-Shape: [24, 3] 
+Shape: [24, 3]
 Format: [X, Y, Z] coordinates in meters
 Reference: East, North, Up coordinate system
 ```
@@ -135,23 +140,23 @@ flowchart TD
     B --> E[Extract Visibility Data]
     B --> F[Extract Calibration]
     B --> G[Extract Positions]
-    
+
     C --> H[Time Series Array]
     D --> I[Antenna Pair Mapping]
     E --> J[Complex Visibility Matrix]
     F --> K[Gain/Phase Corrections]
     G --> L[Array Geometry]
-    
+
     H --> M[Radio Interferometry Dataset]
     I --> M
     J --> M
     K --> M
     L --> M
-    
+
     M --> N[Synthesis Imaging]
     M --> O[Calibration Pipeline]
     M --> P[Visibility Analysis]
-    
+
     style B fill:#ff9800
     style M fill:#4caf50
 ```
@@ -159,6 +164,7 @@ flowchart TD
 ## Library Solution
 
 ### ✅ h5wasm Library (CHOSEN SOLUTION)
+
 - **Capability**: Full compound type support (including complex visibility data)
 - **Method**: WebAssembly-based HDF5 library
 - **Success**: All datasets extracted successfully
@@ -169,15 +175,17 @@ flowchart TD
 ## Example Data Values
 
 ### Sample Baseline Mappings
+
 ```
 Baseline 0: Antenna 0 ↔ Antenna 1 → Visibility = -0.1471 + -0.1118i
-Baseline 1: Antenna 0 ↔ Antenna 2 → Visibility = 0.1017 + -0.0548i  
+Baseline 1: Antenna 0 ↔ Antenna 2 → Visibility = 0.1017 + -0.0548i
 Baseline 2: Antenna 0 ↔ Antenna 3 → Visibility = 0.1755 + 0.1283i
 ...
 Baseline 275: Antenna 22 ↔ Antenna 23 → Visibility = 0.0871 + -0.0218i
 ```
 
 ### Time Evolution
+
 ```
 Antenna 0 ↔ Antenna 1 correlation over time:
 2025-06-29T04:43:14.559175: -0.1471 + -0.1118i
@@ -190,6 +198,7 @@ Antenna 0 ↔ Antenna 1 correlation over time:
 ## Telescope Configuration
 
 From the config dataset:
+
 ```json
 {
   "name": "Copperbelt University - Zambia",
@@ -210,6 +219,7 @@ From the config dataset:
 ## Mathematical Relationships
 
 ### Baseline Count Verification
+
 ```
 For N antennas: Total baselines = N × (N-1) / 2
 For 24 antennas: 24 × 23 / 2 = 276 ✅
@@ -217,29 +227,30 @@ Each antenna participates in: N-1 = 23 baselines ✅
 ```
 
 ### Visibility Matrix Dimensions
+
 ```
 Time steps: 60
-Baselines: 276  
+Baselines: 276
 Total measurements: 60 × 276 = 16,560 complex numbers ✅
 ```
 
 ## Usage Examples
 
 ### Accessing Specific Antenna Pair Data
+
 ```javascript
 // Find baseline index for antennas 5 and 12
-const baselineIndex = baselines.findIndex(([ant1, ant2]) => 
-  (ant1 === 5 && ant2 === 12) || (ant1 === 12 && ant2 === 5)
-);
+const baselineIndex = baselines.findIndex(([ant1, ant2]) => (ant1 === 5 && ant2 === 12) || (ant1 === 12 && ant2 === 5));
 
 // Get visibility time series for this antenna pair
 const timeSeries = timestamps.map((time, t) => ({
   time: time,
-  visibility: visibilityData[t][baselineIndex]
+  visibility: visibilityData[t][baselineIndex],
 }));
 ```
 
 ### Tracking Correlation Over Time
+
 ```javascript
 // Monitor antenna pair correlation evolution
 const antenna1 = 0;
@@ -261,7 +272,7 @@ const correlationHistory = getAntennaCorrelation(antenna1, antenna2, visibilityD
 The TART viewer now uses h5wasm exclusively for HDF5 parsing through the following utilities:
 
 1. **h5wasmUtils.js** - Main parsing utilities
-2. **S3Files.vue** - File browser with h5wasm integration  
+2. **S3Files.vue** - File browser with h5wasm integration
 3. **HdfViewer.vue** - Updated to use h5wasm
 
 ### Key Integration Points
@@ -277,10 +288,10 @@ The TART viewer now uses h5wasm exclusively for HDF5 parsing through the followi
 ```
 TART HDF5 File
 ├── vis [60×276] - Complex visibility measurements
-├── timestamp [60] - ISO format time strings  
+├── timestamp [60] - ISO format time strings
 ├── baselines [276×2] - Antenna pair indices (CRITICAL for mapping)
 ├── gains [24] - Amplitude calibration per antenna
-├── phases [24] - Phase calibration per antenna  
+├── phases [24] - Phase calibration per antenna
 ├── antenna_positions [24×3] - Physical array layout
 ├── config [1] - JSON telescope configuration
 └── phase_elaz [2] - Reference phase information
@@ -288,4 +299,4 @@ TART HDF5 File
 
 ---
 
-*This documentation reflects the current implementation using h5wasm library in the TART viewer. The baseline-to-visibility mapping is essential for correct interpretation of the interferometry data.*
+_This documentation reflects the current implementation using h5wasm library in the TART viewer. The baseline-to-visibility mapping is essential for correct interpretation of the interferometry data._

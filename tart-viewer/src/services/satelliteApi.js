@@ -1,12 +1,7 @@
-import axios from 'axios';
+import axios from "axios";
 
 class SatelliteApiService {
-  constructor() {
-    this.client = null;
-    this.baseURL = null;
-    this.defaultTimeout = 10_000;
-    this.abortController = null;
-  }
+  constructor() {}
 
   /**
    * Set the satellite catalog base URL
@@ -38,7 +33,7 @@ class SatelliteApiService {
       this._recreateClient();
     }
     if (!this.client) {
-      throw new Error('Satellite API service not configured. Call setUrl() first.');
+      throw new Error("Satellite API service not configured. Call setUrl() first.");
     }
     return this.client;
   }
@@ -57,7 +52,7 @@ class SatelliteApiService {
       baseURL: this.baseURL,
       timeout: this.defaultTimeout,
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
     });
 
@@ -90,7 +85,7 @@ class SatelliteApiService {
    */
   _getRequestConfig() {
     return {
-      signal: this.abortController?.signal
+      signal: this.abortController?.signal,
     };
   }
 
@@ -98,11 +93,11 @@ class SatelliteApiService {
    * Handle async operations with centralized error handling
    * @private
    */
-  async _handleRequest(operation, context = 'Satellite API request') {
+  async _handleRequest(operation, context = "Satellite API request") {
     try {
       return await operation();
     } catch (error) {
-      if (error.name === 'AbortError') {
+      if (error.name === "AbortError") {
         console.log(`${context} was cancelled`);
         return null;
       }
@@ -122,12 +117,12 @@ class SatelliteApiService {
   async getCatalog(date, lat, lon, alt = 0) {
     return await this._handleRequest(async () => {
       const client = this._getClient();
-      const response = await client.get('/catalog', {
+      const response = await client.get("/catalog", {
         params: { date, lat, lon, alt },
-        ...this._getRequestConfig()
+        ...this._getRequestConfig(),
       });
       return response.data;
-    }, 'Get satellite catalog');
+    }, "Get satellite catalog");
   }
 
   /**
@@ -141,15 +136,23 @@ class SatelliteApiService {
   async getBulkAzEl(lat, lon, alt = 0, dates) {
     return await this._handleRequest(async () => {
       const client = this._getClient();
-      const response = await client.post('/bulk_az_el', {
-        lat,
-        lon,
-        alt,
-        dates
-      }, this._getRequestConfig());
+      const response = await client.post(
+        "/bulk_az_el",
+        {
+          lat,
+          lon,
+          alt,
+          dates,
+        },
+        this._getRequestConfig(),
+      );
       return response.data;
-    }, 'Get bulk satellite data');
+    }, "Get bulk satellite data");
   }
+  client = null;
+  baseURL = null;
+  defaultTimeout = 10_000;
+  abortController = null;
 }
 
 // Export a singleton instance
