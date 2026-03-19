@@ -1,6 +1,16 @@
 <template>
-  <v-card class="mx-auto" elevation="3">
-    <v-card-title class="py-3 d-flex align-center">
+  <v-card
+    class="mx-auto"
+    :style="{
+      opacity: authenticated ? 1 : 0.5,
+      transition: 'opacity 0.3s ease',
+    }"
+    :variant="authenticated ? undefined : 'tonal'"
+  >
+    <v-card-title
+      class="py-3 d-flex align-center text-subtitle-1 cursor-pointer"
+      @click="showConfig = !showConfig"
+    >
       <v-icon class="mr-2">mdi-cog</v-icon>
       Acquisition Config
       <v-spacer />
@@ -12,114 +22,213 @@
       >
         Login Required
       </v-chip>
+      <v-btn icon size="small" variant="text">
+        <v-icon>{{
+          showConfig ? "mdi-chevron-up" : "mdi-chevron-down"
+        }}</v-icon>
+      </v-btn>
     </v-card-title>
 
-    <v-card-text class="pa-4">
-      <v-overlay
-        class="align-center justify-center"
-        contained
-        :model-value="!authenticated"
-        opacity="0.1"
-      >
-        <v-icon color="grey" size="48">mdi-lock</v-icon>
-      </v-overlay>
-
-      <!-- Raw Data Section -->
-      <v-row>
-        <v-col cols="12" md="6">
-          <v-card elevation="1">
-            <v-checkbox
-              v-model="rawSave"
-              :disabled="!authenticated || loading"
-              label="Save Raw Data"
-              :loading="loadingRawSave"
-              @change="updateRawSave"
-            />
-
-            <v-select
-              v-model="rawSamplesExp"
-              :disabled="!authenticated || loading"
-              :items="exponentOptions"
-              label="Number of Samples"
-              :loading="loadingRawSamples"
-              @update:model-value="updateRawSamples"
-            >
-              <template #item="{ props, internalItem }">
-                <v-list-item v-bind="props">
-                  <template #title>
-                    {{ internalItem.title }} ({{
-                      getIntegrationTime(internalItem.value)
-                    }}ms)
-                  </template>
-                </v-list-item>
-              </template>
-              <template #selection="{ item }">
-                {{ item.title }} ({{ getIntegrationTime(item.value) }}ms)
-              </template>
-            </v-select>
-          </v-card>
-        </v-col>
-
+    <v-expand-transition>
+      <v-card-text v-show="showConfig" class="pa-4">
         <!-- Visibility Data Section -->
-        <v-col cols="12" md="6">
-          <v-card elevation="1">
-            <v-checkbox
-              v-model="visSave"
-              :disabled="!authenticated || loading"
-              label="Save Visibility Data"
-              :loading="loadingVisSave"
-              @change="updateVisSave"
-            />
-
-            <v-select
-              v-model="visSamplesExp"
-              :disabled="!authenticated || loading"
-              :items="exponentOptions"
-              label="Number of Samples"
-              :loading="loadingVisSamples"
-              @update:model-value="updateVisSamples"
-            >
-              <template #item="{ props, internalItem }">
-                <v-list-item v-bind="props">
-                  <template #title>
-                    {{ internalItem.title }} ({{
-                      getIntegrationTime(internalItem.value)
-                    }}ms)
+        <v-row>
+          <v-col cols="12">
+            <v-card elevation="1" class="pa-3">
+              <div class="d-flex align-center ga-3">
+                <v-switch
+                  v-model="visSave"
+                  color="primary"
+                  density="compact"
+                  :disabled="!authenticated || loading"
+                  hide-details
+                  :loading="loadingVisSave"
+                  @update:model-value="updateVisSave"
+                />
+                <v-select
+                  v-model="visSamplesExp"
+                  class="flex-grow-1"
+                  density="compact"
+                  :disabled="!authenticated || loading"
+                  hide-details
+                  :items="exponentOptions"
+                  label="Visibility Samples"
+                  :loading="loadingVisSamples"
+                  @update:model-value="updateVisSamples"
+                >
+                  <template #item="{ props, internalItem }">
+                    <v-list-item v-bind="props">
+                      <template #title>
+                        {{ internalItem.title }} ({{
+                          getIntegrationTime(internalItem.value)
+                        }}ms)
+                      </template>
+                    </v-list-item>
                   </template>
-                </v-list-item>
-              </template>
-              <template #selection="{ item }">
-                {{ item.title }} ({{ getIntegrationTime(item.value) }}ms)
-              </template>
-            </v-select>
-          </v-card>
-        </v-col>
-      </v-row>
+                  <template #selection="{ item }">
+                    {{ item.title }} ({{ getIntegrationTime(item.value) }}ms)
+                  </template>
+                </v-select>
+              </div>
+            </v-card>
+          </v-col>
+        </v-row>
 
-      <!-- Status Messages -->
-      <v-row v-if="errorMessage || successMessage">
-        <v-col cols="12">
-          <v-alert
-            v-if="errorMessage"
-            closable
-            type="error"
-            variant="tonal"
-            @click:close="errorMessage = ''"
-          >
-            {{ errorMessage }}
-          </v-alert>
-          <v-alert
-            v-if="successMessage"
-            closable
-            type="success"
-            variant="tonal"
-            @click:close="successMessage = ''"
-          >
-            {{ successMessage }}
-          </v-alert>
-        </v-col>
-      </v-row>
-    </v-card-text>
+        <!-- Raw Data Section -->
+        <v-row class="mt-2">
+          <v-col cols="12">
+            <v-card elevation="1" class="pa-3">
+              <div class="d-flex align-center ga-3">
+                <v-switch
+                  v-model="rawSave"
+                  color="primary"
+                  density="compact"
+                  :disabled="!authenticated || loading"
+                  hide-details
+                  :loading="loadingRawSave"
+                  @update:model-value="updateRawSave"
+                />
+                <v-select
+                  v-model="rawSamplesExp"
+                  class="flex-grow-1"
+                  density="compact"
+                  :disabled="!authenticated || loading"
+                  hide-details
+                  :items="exponentOptions"
+                  label="Raw Samples"
+                  :loading="loadingRawSamples"
+                  @update:model-value="updateRawSamples"
+                >
+                  <template #item="{ props, internalItem }">
+                    <v-list-item v-bind="props">
+                      <template #title>
+                        {{ internalItem.title }} ({{
+                          getIntegrationTime(internalItem.value)
+                        }}ms)
+                      </template>
+                    </v-list-item>
+                  </template>
+                  <template #selection="{ item }">
+                    {{ item.title }} ({{ getIntegrationTime(item.value) }}ms)
+                  </template>
+                </v-select>
+              </div>
+
+              <!-- Time-Latched Acquisition (only shown if API supports it) -->
+              <div v-if="syncSupported" class="pa-3 pt-0">
+                <v-divider class="mb-3" />
+
+                <div class="d-flex align-center mb-2">
+                  <v-icon class="mr-2" size="20">mdi-clock-sync-outline</v-icon>
+                  <span class="text-subtitle-2">Time-Latched Acquisition</span>
+                </div>
+
+                <v-switch
+                  v-model="rawSync"
+                  color="primary"
+                  density="compact"
+                  :disabled="!authenticated || loading"
+                  hide-details
+                  label="Latch raw acquisition to clock"
+                  :loading="loadingRawSync"
+                  @update:model-value="updateRawSync"
+                />
+
+                <v-expand-transition>
+                  <div v-if="rawSync" class="mt-3">
+                    <div class="text-caption text-medium-emphasis mb-2">
+                      Latch acquisition to these seconds of the minute:
+                    </div>
+                    <div class="text-caption text-warning mb-2">
+                      <v-icon class="mr-1" color="warning" size="14"
+                        >mdi-alert</v-icon
+                      >
+                      Trigger edges are skipped during data transfer
+                    </div>
+                    <div class="d-flex flex-wrap ga-1">
+                      <v-chip
+                        v-for="sec in availableSeconds"
+                        :key="sec"
+                        :color="
+                          syncAcquireAtSeconds.includes(sec)
+                            ? 'primary'
+                            : 'default'
+                        "
+                        :disabled="
+                          !authenticated || loading || loadingSyncSeconds
+                        "
+                        size="small"
+                        variant="flat"
+                        @click="toggleSecond(sec)"
+                      >
+                        {{ String(sec).padStart(2, "0") }}
+                      </v-chip>
+                    </div>
+                    <div class="d-flex align-center mt-2 ga-2">
+                      <v-btn
+                        :disabled="
+                          !authenticated || loading || loadingSyncSeconds
+                        "
+                        size="x-small"
+                        variant="text"
+                        @click="selectPreset('every10')"
+                      >
+                        Every 10s
+                      </v-btn>
+
+                      <v-btn
+                        :disabled="
+                          !authenticated || loading || loadingSyncSeconds
+                        "
+                        size="x-small"
+                        variant="text"
+                        @click="selectPreset('every30')"
+                      >
+                        Every 30s
+                      </v-btn>
+                      <v-btn
+                        :disabled="
+                          !authenticated || loading || loadingSyncSeconds
+                        "
+                        size="x-small"
+                        variant="text"
+                        @click="selectPreset('onTheMinute')"
+                      >
+                        On the minute
+                      </v-btn>
+                    </div>
+                  </div>
+                </v-expand-transition>
+              </div>
+            </v-card>
+          </v-col>
+        </v-row>
+
+        <!-- Status Messages -->
+        <v-row v-if="errorMessage || successMessage">
+          <v-col cols="12">
+            <v-alert
+              v-if="errorMessage"
+              closable
+              type="error"
+              variant="tonal"
+              @click:close="errorMessage = ''"
+            >
+              {{ errorMessage }}
+            </v-alert>
+            <v-alert
+              v-if="successMessage"
+              closable
+              type="success"
+              variant="tonal"
+              @click:close="successMessage = ''"
+            >
+              {{ successMessage }}
+            </v-alert>
+          </v-col>
+        </v-row>
+      </v-card-text>
+    </v-expand-transition>
   </v-card>
 </template>
 
@@ -132,6 +241,9 @@ export default {
   name: "ConfigTile",
   data() {
     return {
+      // UI state
+      showConfig: false,
+
       // Raw data settings
       rawSave: false,
       rawSamplesExp: 22,
@@ -140,12 +252,19 @@ export default {
       visSave: false,
       visSamplesExp: 22,
 
+      // Sync settings
+      rawSync: false,
+      syncAcquireAtSeconds: [],
+      syncSupported: false,
+
       // Loading states
       loading: false,
       loadingRawSave: false,
       loadingRawSamples: false,
       loadingVisSave: false,
       loadingVisSamples: false,
+      loadingRawSync: false,
+      loadingSyncSeconds: false,
 
       // Messages
       errorMessage: "",
@@ -156,6 +275,9 @@ export default {
         value: i + 16,
         title: `2^${i + 16}`,
       })),
+
+      // Available seconds (0-59 in steps of 5 for a cleaner UI)
+      availableSeconds: Array.from({ length: 12 }, (_, i) => i * 5),
     };
   },
   computed: {
@@ -170,6 +292,8 @@ export default {
   },
   async mounted() {
     await this.loadCurrentSettings();
+    // Auto-expand when authenticated
+    this.showConfig = this.authenticated;
   },
   methods: {
     getIntegrationTime(exp) {
@@ -194,6 +318,23 @@ export default {
         if (visSave) this.visSave = Boolean(visSave.save);
         if (rawSamples) this.rawSamplesExp = rawSamples.N_samples_exp;
         if (visSamples) this.visSamplesExp = visSamples.N_samples_exp;
+
+        // Try loading sync settings — only available on newer APIs
+        try {
+          const [rawSync, syncSeconds] = await Promise.all([
+            telescopeApi.getRawSync(),
+            telescopeApi.getRawSyncAcquireAtSeconds(),
+          ]);
+
+          if (rawSync && syncSeconds) {
+            this.syncSupported = true;
+            this.rawSync = Boolean(rawSync.sync);
+            this.syncAcquireAtSeconds =
+              syncSeconds.sync_acquire_at_seconds || [];
+          }
+        } catch {
+          // API doesn't support sync endpoints — leave syncSupported false
+        }
       } catch (error) {
         this.errorMessage = "Failed to load current configuration settings";
         console.error("Error loading config settings:", error);
@@ -309,12 +450,98 @@ export default {
         this.loadingVisSamples = false;
       }
     },
+
+    async updateRawSync(value) {
+      if (!this.authenticated) return;
+
+      this.loadingRawSync = true;
+      this.errorMessage = "";
+      this.successMessage = "";
+
+      try {
+        const flag = value ? 1 : 0;
+        const result = await telescopeApi.setRawSync(flag);
+
+        if (result) {
+          this.rawSync = Boolean(result.sync);
+          this.successMessage = `Synchronized acquisition ${this.rawSync ? "enabled" : "disabled"}`;
+        }
+      } catch (error) {
+        this.errorMessage = "Failed to update sync acquisition setting";
+        this.rawSync = !value;
+        console.error("Error updating raw sync flag:", error);
+      } finally {
+        this.loadingRawSync = false;
+      }
+    },
+
+    async toggleSecond(sec) {
+      if (!this.authenticated) return;
+
+      const newSeconds = this.syncAcquireAtSeconds.includes(sec)
+        ? this.syncAcquireAtSeconds.filter((s) => s !== sec)
+        : [...this.syncAcquireAtSeconds, sec].toSorted((a, b) => a - b);
+
+      await this.saveSyncSeconds(newSeconds);
+    },
+
+    async selectPreset(preset) {
+      if (!this.authenticated) return;
+
+      let newSeconds;
+      switch (preset) {
+        case "every10": {
+          newSeconds = [0, 10, 20, 30, 40, 50];
+          break;
+        }
+        case "every15": {
+          newSeconds = [0, 15, 30, 45];
+          break;
+        }
+        case "every30": {
+          newSeconds = [0, 30];
+          break;
+        }
+        case "onTheMinute": {
+          newSeconds = [0];
+          break;
+        }
+        default: {
+          return;
+        }
+      }
+
+      await this.saveSyncSeconds(newSeconds);
+    },
+
+    async saveSyncSeconds(seconds) {
+      this.loadingSyncSeconds = true;
+      this.errorMessage = "";
+      this.successMessage = "";
+
+      try {
+        const result = await telescopeApi.setRawSyncAcquireAtSeconds(seconds);
+
+        if (result) {
+          this.syncAcquireAtSeconds = result.sync_acquire_at_seconds || seconds;
+          this.successMessage = `Sync seconds updated: ${this.syncAcquireAtSeconds.map((s) => String(s).padStart(2, "0")).join(", ")}`;
+        }
+      } catch (error) {
+        this.errorMessage = "Failed to update sync acquire-at-seconds";
+        console.error("Error updating sync seconds:", error);
+        // Reload to get actual server state
+        await this.loadCurrentSettings();
+      } finally {
+        this.loadingSyncSeconds = false;
+      }
+    },
   },
   watch: {
-    // Reload settings when login state changes
+    // Reload settings and expand when login state changes
     authenticated(newVal) {
       if (newVal) {
         this.loadCurrentSettings();
+        this.showConfig = true;
       }
     },
     // Reload settings when telescope changes

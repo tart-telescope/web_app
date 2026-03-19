@@ -1,63 +1,52 @@
 <template>
   <v-card class="mx-auto" elevation="3">
-    <v-card-title class="py-3 cursor-pointer" @click="show = !show">
-      <div class="d-flex justify-space-between align-center w-100">
-        <div class="d-flex align-center">
-          <v-icon class="mr-2" color="teal lighten-2"
-            >mdi-radio-telescope</v-icon
+    <v-card-title class="py-3">
+      <div class="d-flex align-center">
+        <v-icon class="mr-2" color="teal lighten-2">mdi-radio-telescope</v-icon>
+        <div>
+          <span class="text-h6">{{
+            info.name || "Telescope Information"
+          }}</span>
+          <div
+            v-if="info.location"
+            class="text-body-small text-medium-emphasis d-flex align-center"
           >
-          <div>
-            <span class="text-h6">{{
-              info.name || "Telescope Information"
-            }}</span>
-            <div
-              v-if="info.location"
-              class="text-caption text-medium-emphasis d-flex align-center"
-            >
-              <v-icon class="mr-1" color="grey" size="12"
-                >mdi-map-marker</v-icon
-              >
-              {{ formatLocation(info.location) }}
-            </div>
+            <v-icon class="mr-1" color="grey" size="12">mdi-map-marker</v-icon>
+            {{ formatLocation(info.location) }}
           </div>
         </div>
-        <v-btn icon size="small">
-          <v-icon>{{ show ? "mdi-chevron-up" : "mdi-chevron-down" }}</v-icon>
-        </v-btn>
       </div>
     </v-card-title>
 
-    <v-expand-transition>
-      <v-card-text v-show="show" class="pa-4">
-        <!-- Info Grid -->
-        <v-row density="compact">
-          <v-col
-            v-for="(value, key) in prioritizedInfo"
-            :key="key"
-            cols="12"
-            lg="4"
-            md="6"
-            sm="12"
-          >
-            <div class="d-flex align-center pa-2">
-              <v-icon class="mr-3" :color="getIconColor(key)" size="20">
-                {{ getIcon(key) }}
-              </v-icon>
-              <div class="flex-grow-1">
-                <div class="text-caption text-medium-emphasis">
-                  {{ formatKey(key) }}
-                </div>
-                <div class="text-body-2 font-weight-medium">
-                  {{ formatValue(value, key) }}
-                </div>
+    <v-card-text class="pa-4">
+      <!-- Info Grid -->
+      <v-row density="compact">
+        <v-col
+          v-for="(value, key) in prioritizedInfo"
+          :key="key"
+          cols="12"
+          lg="4"
+          md="6"
+          sm="12"
+        >
+          <div class="d-flex align-center pa-2">
+            <v-icon class="mr-3" :color="getIconColor(key)" size="20">
+              {{ getIcon(key) }}
+            </v-icon>
+            <div class="flex-grow-1">
+              <div class="text-caption text-medium-emphasis">
+                {{ formatKey(key) }}
+              </div>
+              <div class="text-body-2 font-weight-medium">
+                {{ formatValue(value, key) }}
               </div>
             </div>
-          </v-col>
-        </v-row>
+          </div>
+        </v-col>
+      </v-row>
 
-        <ConfigTile />
-      </v-card-text>
-    </v-expand-transition>
+      <ConfigTile />
+    </v-card-text>
   </v-card>
 </template>
 
@@ -71,11 +60,7 @@ export default {
   components: {
     ConfigTile,
   },
-  data() {
-    return {
-      show: true,
-    };
-  },
+
   computed: {
     ...mapState(useAppStore, ["info"]),
 

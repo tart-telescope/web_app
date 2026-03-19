@@ -23,7 +23,7 @@
       temporary
     >
       <!-- Local Mode Toggle at top -->
-      <v-list-item class="pt-3 pb-2">
+      <v-list-item class="pt-3">
         <v-switch
           v-model="localModeToggle"
           color="cyan"
@@ -32,20 +32,23 @@
         />
       </v-list-item>
 
-      <v-divider />
-
-      <v-list-item class="pt-3">
+      <v-list-item class="pb-3" style="overflow: visible">
         <v-select
           v-model="refreshInterval"
+          density="compact"
+          class="mt-2"
+          variant="outlined"
+          hide-details
           :items="refreshIntervals"
           label="Refresh Interval (s)"
-          variant="outlined"
         />
       </v-list-item>
 
-      <TelescopeModeChange />
       <v-divider />
+
       <LoginField />
+      <TelescopeModeChange />
+
       <v-divider />
 
       <v-progress-circular
@@ -153,9 +156,11 @@
 
       <!-- Data Thinning Control at bottom -->
       <v-divider />
+      <v-list-item class="pt-3"> Misc Options </v-list-item>
       <v-list-item class="pt-3">
         <v-select
           v-model="dataThinning"
+          class="mt-2"
           density="compact"
           hide-details
           :items="dataThinningOptions"

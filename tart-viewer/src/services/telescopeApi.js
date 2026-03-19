@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios from "axios";
 
 class TelescopeApiService {
   constructor() {}
@@ -23,7 +23,7 @@ class TelescopeApiService {
    * Set the API prefix
    * @param {string} prefix - API prefix (usually empty string or "/api/v1")
    */
-  setApiPrefix(prefix = '') {
+  setApiPrefix(prefix = "") {
     if (this.apiPrefix !== prefix) {
       this.apiPrefix = prefix;
       this._recreateClient();
@@ -61,7 +61,7 @@ class TelescopeApiService {
     this._cancelPendingRequests();
     this.client = null;
     this.baseURL = null;
-    this.apiPrefix = '';
+    this.apiPrefix = "";
     this.token = null;
   }
 
@@ -74,7 +74,7 @@ class TelescopeApiService {
       this._recreateClient();
     }
     if (!this.client) {
-      throw new Error('Telescope service not configured. Call setUrl() first.');
+      throw new Error("Telescope service not configured. Call setUrl() first.");
     }
     return this.client;
   }
@@ -90,7 +90,7 @@ class TelescopeApiService {
     }
 
     const headers = {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     };
 
     if (this.token) {
@@ -105,7 +105,7 @@ class TelescopeApiService {
 
     // Create new abort controller for this client
     this._createAbortController();
-    
+
     // Track when we created this client
     this.clientCreatedAt = Date.now();
   }
@@ -124,7 +124,9 @@ class TelescopeApiService {
    * @private
    */
   _shouldCancelRequests() {
-    if (!this.clientCreatedAt) {return false;}
+    if (!this.clientCreatedAt) {
+      return false;
+    }
     const timeSinceCreation = Date.now() - this.clientCreatedAt;
     return timeSinceCreation > 2000; // 2 second grace period
   }
@@ -146,7 +148,7 @@ class TelescopeApiService {
    */
   _getRequestConfig() {
     return {
-      signal: this.abortController?.signal
+      signal: this.abortController?.signal,
     };
   }
 
@@ -154,11 +156,11 @@ class TelescopeApiService {
    * Handle async operations with centralized error handling
    * @private
    */
-  async _handleRequest(operation, context = 'API request') {
+  async _handleRequest(operation, context = "API request") {
     try {
       return await operation();
     } catch (error) {
-      if (error.name === 'AbortError') {
+      if (error.name === "AbortError") {
         console.log(`${context} was cancelled`);
         return null;
       }
@@ -176,16 +178,20 @@ class TelescopeApiService {
     return await this._handleRequest(async () => {
       const client = this._getClient();
       const requestConfig = this._getRequestConfig();
-      const response = await client.post('/auth', {
-        username: 'admin',
-        password
-      }, requestConfig);
-      
+      const response = await client.post(
+        "/auth",
+        {
+          username: "admin",
+          password,
+        },
+        requestConfig,
+      );
+
       // Automatically set the token
       this.setToken(response.data.access_token);
-      
+
       return response.data;
-    }, 'Authentication');
+    }, "Authentication");
   }
 
   /**
@@ -195,9 +201,9 @@ class TelescopeApiService {
   async getInfo() {
     return await this._handleRequest(async () => {
       const client = this._getClient();
-      const response = await client.get('/info', this._getRequestConfig());
+      const response = await client.get("/info", this._getRequestConfig());
       return response.data;
-    }, 'Get telescope info');
+    }, "Get telescope info");
   }
 
   /**
@@ -207,9 +213,12 @@ class TelescopeApiService {
   async getCurrentMode() {
     return await this._handleRequest(async () => {
       const client = this._getClient();
-      const response = await client.get('/mode/current', this._getRequestConfig());
+      const response = await client.get(
+        "/mode/current",
+        this._getRequestConfig(),
+      );
       return response.data;
-    }, 'Get current mode');
+    }, "Get current mode");
   }
 
   /**
@@ -220,7 +229,11 @@ class TelescopeApiService {
   async setMode(mode) {
     return await this._handleRequest(async () => {
       const client = this._getClient();
-      const response = await client.post(`/mode/${mode}`, {}, this._getRequestConfig());
+      const response = await client.post(
+        `/mode/${mode}`,
+        {},
+        this._getRequestConfig(),
+      );
       return response.data;
     }, `Set mode to ${mode}`);
   }
@@ -232,9 +245,9 @@ class TelescopeApiService {
   async getVisDataList() {
     return await this._handleRequest(async () => {
       const client = this._getClient();
-      const response = await client.get('/vis/data', this._getRequestConfig());
+      const response = await client.get("/vis/data", this._getRequestConfig());
       return response.data;
-    }, 'Get vis data list');
+    }, "Get vis data list");
   }
 
   /**
@@ -244,9 +257,13 @@ class TelescopeApiService {
   async createVisData() {
     return await this._handleRequest(async () => {
       const client = this._getClient();
-      const response = await client.post('/vis/data', {}, this._getRequestConfig());
+      const response = await client.post(
+        "/vis/data",
+        {},
+        this._getRequestConfig(),
+      );
       return response.data;
-    }, 'Create vis data');
+    }, "Create vis data");
   }
 
   /**
@@ -256,9 +273,9 @@ class TelescopeApiService {
   async getRawDataList() {
     return await this._handleRequest(async () => {
       const client = this._getClient();
-      const response = await client.get('/raw/data', this._getRequestConfig());
+      const response = await client.get("/raw/data", this._getRequestConfig());
       return response.data;
-    }, 'Get raw data list');
+    }, "Get raw data list");
   }
 
   /**
@@ -268,9 +285,13 @@ class TelescopeApiService {
   async createRawData() {
     return await this._handleRequest(async () => {
       const client = this._getClient();
-      const response = await client.post('/raw/data', {}, this._getRequestConfig());
+      const response = await client.post(
+        "/raw/data",
+        {},
+        this._getRequestConfig(),
+      );
       return response.data;
-    }, 'Create raw data');
+    }, "Create raw data");
   }
 
   /**
@@ -280,9 +301,12 @@ class TelescopeApiService {
   async getChannelStatus() {
     return await this._handleRequest(async () => {
       const client = this._getClient();
-      const response = await client.get('/status/channel', this._getRequestConfig());
+      const response = await client.get(
+        "/status/channel",
+        this._getRequestConfig(),
+      );
       return response.data;
-    }, 'Get channel status');
+    }, "Get channel status");
   }
 
   /**
@@ -292,9 +316,12 @@ class TelescopeApiService {
   async getFpgaStatus() {
     return await this._handleRequest(async () => {
       const client = this._getClient();
-      const response = await client.get('/status/fpga', this._getRequestConfig());
+      const response = await client.get(
+        "/status/fpga",
+        this._getRequestConfig(),
+      );
       return response.data;
-    }, 'Get FPGA status');
+    }, "Get FPGA status");
   }
 
   /**
@@ -304,9 +331,12 @@ class TelescopeApiService {
   async getAntennaPositions() {
     return await this._handleRequest(async () => {
       const client = this._getClient();
-      const response = await client.get('/imaging/antenna_positions', this._getRequestConfig());
+      const response = await client.get(
+        "/imaging/antenna_positions",
+        this._getRequestConfig(),
+      );
       return response.data;
-    }, 'Get antenna positions');
+    }, "Get antenna positions");
   }
 
   /**
@@ -316,9 +346,12 @@ class TelescopeApiService {
   async getImagingVis() {
     return await this._handleRequest(async () => {
       const client = this._getClient();
-      const response = await client.get('/imaging/vis', this._getRequestConfig());
+      const response = await client.get(
+        "/imaging/vis",
+        this._getRequestConfig(),
+      );
       return response.data;
-    }, 'Get imaging vis data');
+    }, "Get imaging vis data");
   }
 
   /**
@@ -328,9 +361,12 @@ class TelescopeApiService {
   async getGain() {
     return await this._handleRequest(async () => {
       const client = this._getClient();
-      const response = await client.get('/calibration/gain', this._getRequestConfig());
+      const response = await client.get(
+        "/calibration/gain",
+        this._getRequestConfig(),
+      );
       return response.data;
-    }, 'Get gain data');
+    }, "Get gain data");
   }
 
   /**
@@ -342,9 +378,9 @@ class TelescopeApiService {
       const client = this._getClient();
       const requestConfig = this._getRequestConfig();
       const [visResponse, gainResponse, antennaResponse] = await Promise.all([
-        client.get('/imaging/vis', requestConfig),
-        client.get('/calibration/gain', requestConfig),
-        client.get('/imaging/antenna_positions', requestConfig),
+        client.get("/imaging/vis", requestConfig),
+        client.get("/calibration/gain", requestConfig),
+        client.get("/imaging/antenna_positions", requestConfig),
       ]);
 
       return {
@@ -352,7 +388,7 @@ class TelescopeApiService {
         gain: gainResponse.data,
         antennas: antennaResponse.data,
       };
-    }, 'Get synthesis data');
+    }, "Get synthesis data");
   }
 
   /**
@@ -362,9 +398,12 @@ class TelescopeApiService {
   async getRawSaveFlag() {
     return await this._handleRequest(async () => {
       const client = this._getClient();
-      const response = await client.get('/acquire/raw/save', this._getRequestConfig());
+      const response = await client.get(
+        "/acquire/raw/save",
+        this._getRequestConfig(),
+      );
       return response.data;
-    }, 'Get raw save flag');
+    }, "Get raw save flag");
   }
 
   /**
@@ -375,7 +414,11 @@ class TelescopeApiService {
   async setRawSaveFlag(flag) {
     return await this._handleRequest(async () => {
       const client = this._getClient();
-      const response = await client.put(`/acquire/raw/save/${flag}`, {}, this._getRequestConfig());
+      const response = await client.put(
+        `/acquire/raw/save/${flag}`,
+        {},
+        this._getRequestConfig(),
+      );
       return response.data;
     }, `Set raw save flag to ${flag}`);
   }
@@ -387,9 +430,12 @@ class TelescopeApiService {
   async getVisSaveFlag() {
     return await this._handleRequest(async () => {
       const client = this._getClient();
-      const response = await client.get('/acquire/vis/save', this._getRequestConfig());
+      const response = await client.get(
+        "/acquire/vis/save",
+        this._getRequestConfig(),
+      );
       return response.data;
-    }, 'Get vis save flag');
+    }, "Get vis save flag");
   }
 
   /**
@@ -400,7 +446,11 @@ class TelescopeApiService {
   async setVisSaveFlag(flag) {
     return await this._handleRequest(async () => {
       const client = this._getClient();
-      const response = await client.put(`/acquire/vis/save/${flag}`, {}, this._getRequestConfig());
+      const response = await client.put(
+        `/acquire/vis/save/${flag}`,
+        {},
+        this._getRequestConfig(),
+      );
       return response.data;
     }, `Set vis save flag to ${flag}`);
   }
@@ -412,9 +462,12 @@ class TelescopeApiService {
   async getRawNumSamplesExp() {
     return await this._handleRequest(async () => {
       const client = this._getClient();
-      const response = await client.get('/acquire/raw/num_samples_exp', this._getRequestConfig());
+      const response = await client.get(
+        "/acquire/raw/num_samples_exp",
+        this._getRequestConfig(),
+      );
       return response.data;
-    }, 'Get raw num samples exp');
+    }, "Get raw num samples exp");
   }
 
   /**
@@ -425,7 +478,11 @@ class TelescopeApiService {
   async setRawNumSamplesExp(exp) {
     return await this._handleRequest(async () => {
       const client = this._getClient();
-      const response = await client.put(`/acquire/raw/num_samples_exp/${exp}`, {}, this._getRequestConfig());
+      const response = await client.put(
+        `/acquire/raw/num_samples_exp/${exp}`,
+        {},
+        this._getRequestConfig(),
+      );
       return response.data;
     }, `Set raw num samples exp to ${exp}`);
   }
@@ -437,9 +494,12 @@ class TelescopeApiService {
   async getVisNumSamplesExp() {
     return await this._handleRequest(async () => {
       const client = this._getClient();
-      const response = await client.get('/acquire/vis/num_samples_exp', this._getRequestConfig());
+      const response = await client.get(
+        "/acquire/vis/num_samples_exp",
+        this._getRequestConfig(),
+      );
       return response.data;
-    }, 'Get vis num samples exp');
+    }, "Get vis num samples exp");
   }
 
   /**
@@ -450,13 +510,85 @@ class TelescopeApiService {
   async setVisNumSamplesExp(exp) {
     return await this._handleRequest(async () => {
       const client = this._getClient();
-      const response = await client.put(`/acquire/vis/num_samples_exp/${exp}`, {}, this._getRequestConfig());
+      const response = await client.put(
+        `/acquire/vis/num_samples_exp/${exp}`,
+        {},
+        this._getRequestConfig(),
+      );
       return response.data;
     }, `Set vis num samples exp to ${exp}`);
   }
+
+  /**
+   * Get raw data sync flag
+   * @returns {Promise} Promise that resolves to sync flag status { sync: 0|1 }
+   */
+  async getRawSync() {
+    return await this._handleRequest(async () => {
+      const client = this._getClient();
+      const response = await client.get(
+        "/acquire/raw/sync",
+        this._getRequestConfig(),
+      );
+      return response.data;
+    }, "Get raw sync flag");
+  }
+
+  /**
+   * Set raw data sync flag
+   * @param {number} flag - Sync flag (0 or 1)
+   * @returns {Promise} Promise that resolves to sync flag response { sync: 0|1 }
+   */
+  async setRawSync(flag) {
+    return await this._handleRequest(async () => {
+      const client = this._getClient();
+      const response = await client.put(
+        `/acquire/raw/sync/${flag}`,
+        {},
+        this._getRequestConfig(),
+      );
+      return response.data;
+    }, `Set raw sync flag to ${flag}`);
+  }
+
+  /**
+   * Get raw sync acquire-at-seconds list
+   * @returns {Promise} Promise that resolves to { sync_acquire_at_seconds: number[] }
+   */
+  async getRawSyncAcquireAtSeconds() {
+    return await this._handleRequest(async () => {
+      const client = this._getClient();
+      const response = await client.get(
+        "/acquire/raw/sync_acquire_at_seconds",
+        this._getRequestConfig(),
+      );
+      return response.data;
+    }, "Get raw sync acquire at seconds");
+  }
+
+  /**
+   * Set raw sync acquire-at-seconds list
+   * @param {number[]} seconds - Array of seconds (0-59) at which acquisition may start
+   * @returns {Promise} Promise that resolves to { sync_acquire_at_seconds: number[] }
+   */
+  async setRawSyncAcquireAtSeconds(seconds) {
+    return await this._handleRequest(
+      async () => {
+        const client = this._getClient();
+        const response = await client.put(
+          "/acquire/raw/sync_acquire_at_seconds",
+          seconds,
+          this._getRequestConfig(),
+        );
+        return response.data;
+      },
+      `Set raw sync acquire at seconds to ${JSON.stringify(seconds)}`,
+    );
+  }
+
   client = null;
   baseURL = null;
-  apiPrefix = '';
+  apiPrefix = "";
   token = null;
   defaultTimeout = 10_000;
   abortController = null;
