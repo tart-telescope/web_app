@@ -40,12 +40,7 @@
 
       <v-divider />
 
-      <v-progress-circular
-        v-if="loadingTelescopes && !appLocalMode"
-        class="ma-4"
-        color="primary"
-        indeterminate
-      />
+      <v-progress-circular v-if="loadingTelescopes && !appLocalMode" class="ma-4" color="primary" indeterminate />
 
       <v-list v-else v-model:selected="selectedArray" density="compact" :lines="false" nav>
         <v-list-item
@@ -60,11 +55,7 @@
           :value="item.value"
         >
           <template #prepend>
-            <v-icon
-              v-if="item.value !== 'custom'"
-              :color="item.online ? 'green' : 'grey'"
-              size="small"
-            >
+            <v-icon v-if="item.value !== 'custom'" :color="item.online ? 'green' : 'grey'" size="small">
               {{ item.online ? "mdi-circle" : "mdi-circle-outline" }}
             </v-icon>
             <v-icon v-else color="primary" size="small"> mdi-cog </v-icon>
@@ -87,17 +78,8 @@
             >
               {{ item.currentMode.replace("TELESCOPE_MODE_", "") }}
             </v-chip>
-            <v-chip
-              v-else-if="item.value !== 'custom' && !item.online"
-              color="grey"
-              size="x-small"
-              variant="outlined"
-            >
-              OFFLINE
-            </v-chip>
-            <v-icon v-else-if="item.value === 'custom'" color="primary" size="small">
-              mdi-chevron-right
-            </v-icon>
+            <v-chip v-else-if="item.value !== 'custom' && !item.online" color="grey" size="x-small" variant="outlined"> OFFLINE </v-chip>
+            <v-icon v-else-if="item.value === 'custom'" color="primary" size="small"> mdi-chevron-right </v-icon>
           </template>
         </v-list-item>
 
@@ -113,13 +95,7 @@
               @blur="validateAndApplyCustomUrl"
               @keyup.enter="validateAndApplyCustomUrl"
             />
-            <v-btn
-              block
-              color="primary"
-              :disabled="!isValidUrl(CUSTOM_TART_URL)"
-              :loading="applyingCustomUrl"
-              @click="applyCustomUrl"
-            >
+            <v-btn block color="primary" :disabled="!isValidUrl(CUSTOM_TART_URL)" :loading="applyingCustomUrl" @click="applyCustomUrl">
               Connect
             </v-btn>
           </div>
@@ -157,39 +133,21 @@
 
       <!-- Timing Toggle -->
       <v-list-item>
-        <v-checkbox
-          v-model="showTimings"
-          density="compact"
-          hide-details
-          label="Show Timing Info"
-          @update:model-value="setShowTimings"
-        />
+        <v-checkbox v-model="showTimings" density="compact" hide-details label="Show Timing Info" @update:model-value="setShowTimings" />
       </v-list-item>
 
       <!-- NSide Slider -->
       <v-list-item class="px-3 pb-5">
         <div class="w-100">
           <v-label class="text-caption mb-2">NSide</v-label>
-          <v-slider
-            v-model="nsideModel"
-            density="compact"
-            hide-details
-            :max="128"
-            :min="2"
-            step="2"
-            thumb-label="always"
-          />
+          <v-slider v-model="nsideModel" density="compact" hide-details :max="128" :min="2" step="2" thumb-label="always" />
         </div>
       </v-list-item>
     </v-navigation-drawer>
     <v-main>
       <v-container v-if="!isSimpleView" fluid>
         <!-- Show loading spinner while fetching telescopes on startup -->
-        <div
-          v-if="initialLoading"
-          class="d-flex justify-center align-center"
-          style="min-height: 60vh"
-        >
+        <div v-if="initialLoading" class="d-flex justify-center align-center" style="min-height: 60vh">
           <div class="text-center">
             <v-progress-circular class="mb-6" color="primary" indeterminate size="64" />
             <h2 class="text-h4 text-grey-lighten-1 mb-4">Fetching telescopes...</h2>
@@ -198,16 +156,10 @@
         </div>
 
         <!-- Show error page when no telescopes are available -->
-        <div
-          v-else-if="showNoTelescopesError"
-          class="d-flex justify-center align-center"
-          style="min-height: 60vh"
-        >
+        <div v-else-if="showNoTelescopesError" class="d-flex justify-center align-center" style="min-height: 60vh">
           <div class="text-center">
             <v-icon class="mb-6" color="grey-lighten-1" size="120"> mdi-alert-triangle </v-icon>
-            <h2 class="text-h4 text-grey-lighten-1 mb-4">
-              No telescopes available at the moment :(
-            </h2>
+            <h2 class="text-h4 text-grey-lighten-1 mb-4">No telescopes available at the moment :(</h2>
             <p class="text-body-1 text-grey">Please try again later or check back soon.</p>
           </div>
         </div>
@@ -277,13 +229,7 @@ export default {
       "setNside",
       "setPartitionSize",
     ]),
-    ...mapActions(useTelescopeRegistryStore, [
-      "initialize",
-      "startPolling",
-      "stopPolling",
-      "refresh",
-      "setLocalMode",
-    ]),
+    ...mapActions(useTelescopeRegistryStore, ["initialize", "startPolling", "stopPolling", "refresh", "setLocalMode"]),
     forceSynthesisUpdate() {
       // Force synthesis component to update by calling method directly via ref
       const homeComponent = this.$refs.homeComponent;
@@ -310,9 +256,7 @@ export default {
         // Wait for telescope list to load, then redirect to first available telescope
         const navigateToFirstTelescope = () => {
           if (this.telescopes.length > 0) {
-            const firstTelescope = this.telescopes.find(
-              (t) => t.value !== "custom" && t.value !== "local",
-            );
+            const firstTelescope = this.telescopes.find((t) => t.value !== "custom" && t.value !== "local");
             if (firstTelescope) {
               this.selectedArray = [firstTelescope.value];
               this.$router.replace({

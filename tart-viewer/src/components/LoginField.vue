@@ -4,13 +4,7 @@
       <v-btn block color="error" @click="logout">Logout</v-btn>
     </template>
     <template v-else>
-      <v-text-field
-        v-model="pass"
-        label="Password"
-        variant="outlined"
-        type="password"
-        @keydown.enter="auth(pass)"
-      />
+      <v-text-field v-model="pass" label="Password" variant="outlined" type="password" @keydown.enter="auth(pass)" />
       <v-spacer />
       <v-btn block color="secondary" :loading="authenticating" @click="auth(pass)">
         Login

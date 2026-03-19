@@ -6,21 +6,13 @@
 
     <template v-if="telescope_mode == 'vis'">
       <v-col cols="12" lg="4" md="6" sm="12">
-        <v-card
-          v-if="!isSynthesisDataReady"
-          class="d-flex align-center justify-center"
-          min-height="400"
-        >
+        <v-card v-if="!isSynthesisDataReady" class="d-flex align-center justify-center" min-height="400">
           <div class="text-center">
             <v-progress-circular class="mb-4" color="primary" indeterminate size="48" />
             <div class="text-h6 text-grey">Loading synthesis data...</div>
           </div>
         </v-card>
-        <Synthesis
-          v-else
-          :key="`synthesis-${TART_URL}-${localMode}-${synthesisUpdateTrigger}`"
-          ref="synthesis"
-        />
+        <Synthesis v-else :key="`synthesis-${TART_URL}-${localMode}-${synthesisUpdateTrigger}`" ref="synthesis" />
       </v-col>
       <v-col cols="12" lg="4" md="6" sm="12">
         <ArrayLayout />
@@ -78,15 +70,7 @@ export default {
   },
 
   computed: {
-    ...mapState(useAppStore, [
-      "telescope_mode",
-      "dataThinning",
-      "TART_URL",
-      "localMode",
-      "vis",
-      "gain",
-      "antennas",
-    ]),
+    ...mapState(useAppStore, ["telescope_mode", "dataThinning", "TART_URL", "localMode", "vis", "gain", "antennas"]),
     telescopeName() {
       return useAppStore().telescopeName;
     },

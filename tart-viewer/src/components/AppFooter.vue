@@ -12,9 +12,7 @@
       <v-icon :icon="item.icon" :size="item.icon === '$vuetify' ? 24 : 16" />
     </a>
 
-    <v-btn variant="flat" @click="toggleTheme">{{
-      theme.global.current.value.dark ? "light mode" : "dark mode"
-    }}</v-btn>
+    <v-btn variant="flat" @click="toggleTheme">{{ theme.global.current.value.dark ? "light mode" : "dark mode" }}</v-btn>
     <v-btn> Build: {{ commitSHA }} </v-btn>
   </v-footer>
 </template>

@@ -5,10 +5,7 @@
         <v-icon class="mr-2" color="teal lighten-2">mdi-radio-telescope</v-icon>
         <div>
           <span class="text-h6">{{ info.name || "Telescope Information" }}</span>
-          <div
-            v-if="info.location"
-            class="text-body-small text-medium-emphasis d-flex align-center"
-          >
+          <div v-if="info.location" class="text-body-small text-medium-emphasis d-flex align-center">
             <v-icon class="mr-1" color="grey" size="12">mdi-map-marker</v-icon>
             {{ formatLocation(info.location) }}
           </div>

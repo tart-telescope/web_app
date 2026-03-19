@@ -1,12 +1,5 @@
 <template>
-  <v-btn
-    v-if="!isRecording"
-    color="primary"
-    :disabled="!canRecord"
-    size="small"
-    variant="outlined"
-    @click="startRecordingWithMethod"
-  >
+  <v-btn v-if="!isRecording" color="primary" :disabled="!canRecord" size="small" variant="outlined" @click="startRecordingWithMethod">
     <v-icon size="small" start>mdi-video</v-icon>
     Export MP4
   </v-btn>
@@ -19,14 +12,7 @@
     </v-btn>
     <v-tooltip bottom>
       <template #activator="{ props }">
-        <v-progress-circular
-          v-bind="props"
-          class="ml-2"
-          color="primary"
-          :model-value="recordingProgress * 100"
-          :size="24"
-          :width="3"
-        />
+        <v-progress-circular v-bind="props" class="ml-2" color="primary" :model-value="recordingProgress * 100" :size="24" :width="3" />
       </template>
       <span>{{ progressText }}</span>
     </v-tooltip>
@@ -69,16 +55,8 @@ const props = defineProps({
 });
 
 // Use video recorder composable
-const {
-  isRecording,
-  recordingProgress,
-  recordingError,
-  hasHistoryData,
-  canRecord,
-  progressText,
-  startRecording,
-  stopRecording,
-} = useVideoRecorder(props.visHistory, props.nside, props.info);
+const { isRecording, recordingProgress, recordingError, hasHistoryData, canRecord, progressText, startRecording, stopRecording } =
+  useVideoRecorder(props.visHistory, props.nside, props.info);
 
 // Local state for error display
 const showError = ref(false);

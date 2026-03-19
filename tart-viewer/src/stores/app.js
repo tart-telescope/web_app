@@ -76,11 +76,7 @@ export const useAppStore = defineStore("app", {
         return state.vis;
       }
 
-      return (
-        state.vis_history.find(
-          (v) => v.timestamp.toString() === state.hoveredTimestamp.toString(),
-        ) || state.vis
-      );
+      return state.vis_history.find((v) => v.timestamp.toString() === state.hoveredTimestamp.toString()) || state.vis;
     },
   },
   actions: {
@@ -251,9 +247,7 @@ export const useAppStore = defineStore("app", {
       }
 
       // Get timestamps that need enrichment
-      const visToEnrich = this.vis_history.filter(
-        (vis) => !vis.satellites || vis.satellites.length === 0,
-      );
+      const visToEnrich = this.vis_history.filter((vis) => !vis.satellites || vis.satellites.length === 0);
 
       if (visToEnrich.length === 0) {
         return { success: true, processed: 0 };
@@ -290,19 +284,14 @@ export const useAppStore = defineStore("app", {
               }
             } catch (error) {
               retries++;
-              console.warn(
-                `Satellite enrichment batch ${Math.floor(i / batchSize) + 1} failed (attempt ${retries}):`,
-                error.message,
-              );
+              console.warn(`Satellite enrichment batch ${Math.floor(i / batchSize) + 1} failed (attempt ${retries}):`, error.message);
 
               if (retries >= maxRetries) {
                 errorCount += batch.length;
                 console.error(`Failed to enrich batch after ${maxRetries} attempts`);
               } else {
                 // Exponential backoff
-                await new Promise((resolve) =>
-                  setTimeout(resolve, 1000 * Math.pow(2, retries - 1)),
-                );
+                await new Promise((resolve) => setTimeout(resolve, 1000 * Math.pow(2, retries - 1)));
               }
             }
           }
@@ -430,12 +419,7 @@ export const useAppStore = defineStore("app", {
         return;
       }
 
-      const catalogData = await satelliteApi.getCatalog(
-        visData.timestamp,
-        info.location.lat,
-        info.location.lon,
-        0,
-      );
+      const catalogData = await satelliteApi.getCatalog(visData.timestamp, info.location.lat, info.location.lon, 0);
 
       if (catalogData) {
         const satellites = catalogData
@@ -495,12 +479,7 @@ export const useAppStore = defineStore("app", {
     },
     async renewSatellite() {
       if (this.info && this.info.location && this.vis && this.vis.timestamp) {
-        const catalogData = await satelliteApi.getCatalog(
-          this.vis.timestamp,
-          this.info.location.lat,
-          this.info.location.lon,
-          0,
-        );
+        const catalogData = await satelliteApi.getCatalog(this.vis.timestamp, this.info.location.lat, this.info.location.lon, 0);
 
         if (catalogData) {
           this.sat_list = catalogData;

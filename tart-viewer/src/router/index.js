@@ -68,10 +68,7 @@ router.beforeEach(async (to, from, next) => {
     }
 
     // Check if telescope is valid (after potential fetch)
-    if (
-      !telescopeRegistry.isValidTelescope(to.params.telescope) &&
-      telescopeRegistry.telescopes.size > 0
-    ) {
+    if (!telescopeRegistry.isValidTelescope(to.params.telescope) && telescopeRegistry.telescopes.size > 0) {
       // If telescope is not valid and we have some data, redirect to first available telescope
       const firstTelescope = Array.from(telescopeRegistry.telescopes.keys())[0];
       if (firstTelescope !== "custom") {

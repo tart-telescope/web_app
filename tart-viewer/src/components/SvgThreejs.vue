@@ -118,9 +118,7 @@ function initThreeJS() {
   scene.background = null;
 
   // Camera setup - same as 3D view (looking down from above)
-  const { width, height } = props.autoResize
-    ? getContainerSize()
-    : { width: props.width, height: props.height };
+  const { width, height } = props.autoResize ? getContainerSize() : { width: props.width, height: props.height };
   const aspect = width / height;
   const frustumSize = 3;
   camera = new OrthographicCamera(
@@ -327,11 +325,7 @@ function createGridLines() {
 
     if (circleRadius > 0.01) {
       // Use ring geometry for clean circular lines
-      const geometry = new RingGeometry(
-        circleRadius - GRID_SETTINGS.lineWidth * 0.003,
-        circleRadius + GRID_SETTINGS.lineWidth * 0.003,
-        64,
-      );
+      const geometry = new RingGeometry(circleRadius - GRID_SETTINGS.lineWidth * 0.003, circleRadius + GRID_SETTINGS.lineWidth * 0.003, 64);
       const circleMaterial = new MeshBasicMaterial({
         color: COLORS.grid,
         transparent: true,
@@ -482,11 +476,7 @@ function updateSatelliteOverlays() {
     ringMesh.raycast = () => {};
 
     // Position satellite using 3D coordinates
-    const [x, y, z] = azElToCartesian(
-      sat.az,
-      sat.el,
-      sphereRadius.value + SPHERE_DEFAULTS.satelliteOffset,
-    );
+    const [x, y, z] = azElToCartesian(sat.az, sat.el, sphereRadius.value + SPHERE_DEFAULTS.satelliteOffset);
 
     // Use exact 3D positioning
     ringMesh.position.set(x, y, z);
@@ -541,9 +531,7 @@ function getContainerSize() {
 function handleResize() {
   if (!camera || !renderer) return;
 
-  const { width, height } = props.autoResize
-    ? getContainerSize()
-    : { width: props.width, height: props.height };
+  const { width, height } = props.autoResize ? getContainerSize() : { width: props.width, height: props.height };
 
   // Update camera bounds to match 3D view
   const aspect = width / height;

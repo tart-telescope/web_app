@@ -1,16 +1,7 @@
 <template>
-  <v-alert
-    v-if="telescope_mode != 'vis'"
-    density="compact"
-    variant="outlined"
-    prominent
-    type="warning"
-  >
+  <v-alert v-if="telescope_mode != 'vis'" density="compact" variant="outlined" prominent type="warning">
     <div class="title">Operating Mode: {{ telescope_mode }}</div>
-    <div>
-      Visibilities most likely outdated because the telescope is currently not operating in
-      visibility mode.
-    </div>
+    <div>Visibilities most likely outdated because the telescope is currently not operating in visibility mode.</div>
   </v-alert>
 
   <!-- Normal view with card -->
@@ -20,12 +11,7 @@
         <v-icon class="mr-2">mdi-eye</v-icon>
         <span>Realtime View</span>
         <v-spacer />
-        <v-btn
-          :color="show_sat ? 'primary' : 'default'"
-          icon
-          size="small"
-          @click="show_sat = !show_sat"
-        >
+        <v-btn :color="show_sat ? 'primary' : 'default'" icon size="small" @click="show_sat = !show_sat">
           <v-icon>mdi-satellite-variant</v-icon>
         </v-btn>
         <v-btn :color="is3D ? 'primary' : 'default'" icon size="small" @click="is3D = !is3D">
@@ -58,14 +44,7 @@
             <v-col class="text-right">wasm {{ timings.render }} ms</v-col>
             <v-col class="text-right">gl {{ timings.setting }} ms</v-col>
             <v-col class="text-right">
-              <v-switch
-                v-model="use_simd"
-                class="ma-0 pa-0"
-                density="compact"
-                hide-details
-                inset
-                label="SIMD"
-              />
+              <v-switch v-model="use_simd" class="ma-0 pa-0" density="compact" hide-details inset label="SIMD" />
             </v-col>
           </v-row>
         </div>
@@ -107,12 +86,7 @@
 </template>
 
 <script>
-import {
-  get_color_bytes_only,
-  get_color_bytes_only_simd,
-  get_hemisphere_pixel_corners,
-  get_pixel_coords_only_simd,
-} from "gridless";
+import { get_color_bytes_only, get_color_bytes_only_simd, get_hemisphere_pixel_corners, get_pixel_coords_only_simd } from "gridless";
 import { mapState } from "pinia";
 import { useAppStore } from "@/stores/app";
 import SvgThreejs from "./SvgThreejs.vue";
@@ -182,9 +156,7 @@ export default {
         return this.sat_list;
       }
 
-      const historicalVis = this.vis_history.find(
-        (v) => v.timestamp.toString() === this.hoveredTimestamp.toString(),
-      );
+      const historicalVis = this.vis_history.find((v) => v.timestamp.toString() === this.hoveredTimestamp.toString());
 
       return historicalVis && historicalVis.satellites ? historicalVis.satellites : this.sat_list;
     },
@@ -205,10 +177,7 @@ export default {
     // Optimized antenna set using Set for O(1) lookup
     antennaSet() {
       const newSet = new Set(this.antennasUsed);
-      if (
-        newSet.size !== antennaSetCache.size ||
-        ![...newSet].every((x) => antennaSetCache.has(x))
-      ) {
+      if (newSet.size !== antennaSetCache.size || ![...newSet].every((x) => antennaSetCache.has(x))) {
         antennaSetCache = newSet;
       }
       return antennaSetCache;
@@ -219,9 +188,7 @@ export default {
 
       if (this.antennasUsed.length == 24) return this.currentVisData.data;
 
-      const filtered = this.currentVisData.data.filter(
-        (v) => this.antennaSet.has(v.i) && this.antennaSet.has(v.j),
-      );
+      const filtered = this.currentVisData.data.filter((v) => this.antennaSet.has(v.i) && this.antennaSet.has(v.j));
 
       return filtered;
     },
@@ -369,9 +336,7 @@ export default {
       const currentRef = this.is3D ? this.$refs.threejsRef : this.$refs.svgRef;
       if (!currentRef || this.nside < 2) return;
 
-      const bytes = this.use_simd
-        ? get_color_bytes_only_simd(payload, this.nside)
-        : get_color_bytes_only(payload, this.nside);
+      const bytes = this.use_simd ? get_color_bytes_only_simd(payload, this.nside) : get_color_bytes_only(payload, this.nside);
       this.timings.render = (performance.now() - start).toFixed(1);
       start = performance.now();
 
@@ -381,11 +346,7 @@ export default {
           this.$refs.threejsRef.updateSphereColors(bytes);
 
           // Also update fullscreen component if active
-          if (
-            this.fullscreen &&
-            this.$refs.fullscreenThreejsRef &&
-            this.$refs.fullscreenThreejsRef.updateSphereColors
-          ) {
+          if (this.fullscreen && this.$refs.fullscreenThreejsRef && this.$refs.fullscreenThreejsRef.updateSphereColors) {
             this.$refs.fullscreenThreejsRef.updateSphereColors(bytes);
           }
         } else if (!this.is3D && this.$refs.svgRef && this.$refs.svgRef.updatePolygonColors) {
@@ -440,10 +401,7 @@ export default {
 
       // Also update fullscreen component if it exists
       if (this.fullscreen && this.$refs.fullscreenThreejsRef) {
-        this.$refs.fullscreenThreejsRef.updateSatelliteOverlays(
-          this.currentSatelliteData,
-          this.show_sat,
-        );
+        this.$refs.fullscreenThreejsRef.updateSatelliteOverlays(this.currentSatelliteData, this.show_sat);
       }
     },
 
@@ -456,16 +414,11 @@ export default {
 
         // Update colors
         const payload = JSON.stringify(this.renderPayload);
-        const bytes = this.use_simd
-          ? get_color_bytes_only_simd(payload, this.nside)
-          : get_color_bytes_only(payload, this.nside);
+        const bytes = this.use_simd ? get_color_bytes_only_simd(payload, this.nside) : get_color_bytes_only(payload, this.nside);
         this.$refs.fullscreenThreejsRef.updateSphereColors(bytes);
 
         // Update satellites
-        this.$refs.fullscreenThreejsRef.updateSatelliteOverlays(
-          this.currentSatelliteData,
-          this.show_sat,
-        );
+        this.$refs.fullscreenThreejsRef.updateSatelliteOverlays(this.currentSatelliteData, this.show_sat);
       }
     },
 
@@ -486,11 +439,7 @@ export default {
         }
 
         // Also handle fullscreen component
-        if (
-          this.fullscreen &&
-          this.$refs.fullscreenThreejsRef &&
-          this.$refs.fullscreenThreejsRef.handleResize
-        ) {
+        if (this.fullscreen && this.$refs.fullscreenThreejsRef && this.$refs.fullscreenThreejsRef.handleResize) {
           this.$refs.fullscreenThreejsRef.handleResize();
         }
       });

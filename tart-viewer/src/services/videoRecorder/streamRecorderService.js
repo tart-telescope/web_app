@@ -538,12 +538,7 @@ export default class MediaRecorderService {
 
     if (actualInfo && typeof actualInfo === "object") {
       // Extract telescope name
-      telescopeName =
-        actualInfo.name ||
-        actualInfo.telescope ||
-        actualInfo.telescope_name ||
-        actualInfo.site_name ||
-        "TART";
+      telescopeName = actualInfo.name || actualInfo.telescope || actualInfo.telescope_name || actualInfo.site_name || "TART";
 
       // Extract location - handle various possible formats
       if (actualInfo.location && typeof actualInfo.location === "string") {
@@ -593,8 +588,7 @@ export default class MediaRecorderService {
 
     // Timestamp (top right)
     if (timestamp) {
-      const timestampText =
-        new Date(timestamp).toISOString().replace("T", " ").slice(0, 19) + " UTC";
+      const timestampText = new Date(timestamp).toISOString().replace("T", " ").slice(0, 19) + " UTC";
 
       // Background for timestamp
       ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
@@ -669,9 +663,7 @@ export default class MediaRecorderService {
       satelliteMesh.lookAt(0, 0, 0);
 
       this.satelliteGroup.add(satelliteMesh);
-      console.log(
-        `✅ Added satellite ${satellite.name} at (${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)})`,
-      );
+      console.log(`✅ Added satellite ${satellite.name} at (${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)})`);
     }
 
     console.log(`🛰️ Total satellites added: ${this.satelliteGroup.children.length}`);
@@ -746,10 +738,7 @@ export default class MediaRecorderService {
 
     // Create buffer geometry
     this.sphereGeometry = new BufferGeometry();
-    this.sphereGeometry.setAttribute(
-      "position",
-      new BufferAttribute(new Float32Array(vertices), 3),
-    );
+    this.sphereGeometry.setAttribute("position", new BufferAttribute(new Float32Array(vertices), 3));
     this.sphereGeometry.setAttribute("color", new BufferAttribute(new Float32Array(colors), 3));
     this.sphereGeometry.setAttribute("normal", new BufferAttribute(new Float32Array(normals), 3));
     this.sphereGeometry.setIndex(indices);
@@ -776,19 +765,11 @@ export default class MediaRecorderService {
     this.createCompassLabels();
     console.log("📊 Creating grid lines...");
     this.createGridLines();
-    console.log(
-      "✅ Overlays created - compass:",
-      this.compassGroup.children.length,
-      "grid:",
-      this.gridGroup.children.length,
-    );
+    console.log("✅ Overlays created - compass:", this.compassGroup.children.length, "grid:", this.gridGroup.children.length);
 
     // Debug: Check if grid is actually attached to sphere
     console.log("🔍 Sphere mesh children:", this.sphereMesh.children.length);
-    console.log(
-      "🔍 GridGroup attached to sphere:",
-      this.sphereMesh.children.includes(this.gridGroup),
-    );
+    console.log("🔍 GridGroup attached to sphere:", this.sphereMesh.children.includes(this.gridGroup));
   }
 
   /**
@@ -862,10 +843,7 @@ export default class MediaRecorderService {
       const recordingPromise = new Promise((resolve, reject) => {
         this.recorder.onstop = () => {
           const blob = new Blob(chunks, { type: mimeType });
-          this.downloadVideo(
-            blob,
-            `tart-timelapse-${Date.now()}.${this.getFileExtension(mimeType)}`,
-          );
+          this.downloadVideo(blob, `tart-timelapse-${Date.now()}.${this.getFileExtension(mimeType)}`);
           resolve(blob);
         };
 
@@ -896,30 +874,16 @@ export default class MediaRecorderService {
 
         // Update satellite overlays if data exists
         if (visData.satellites) {
-          console.log(
-            "🛰️ Updating satellites for frame",
-            frameIndex,
-            ":",
-            visData.satellites.length,
-            "satellites",
-          );
+          console.log("🛰️ Updating satellites for frame", frameIndex, ":", visData.satellites.length, "satellites");
           this.updateSatelliteOverlays(visData.satellites, true);
-          console.log(
-            "✅ Satellites updated, group has",
-            this.satelliteGroup.children.length,
-            "children",
-          );
+          console.log("✅ Satellites updated, group has", this.satelliteGroup.children.length, "children");
         }
 
         // Render 3D scene to WebGL canvas
         this.offscreenRenderer.render(this.recordingScene, this.recordingCamera);
 
         // Create composite frame with text overlays
-        const frame = this.createCompositeFrame(
-          webglCanvas,
-          sceneConfig.info || {},
-          visData.timestamp,
-        );
+        const frame = this.createCompositeFrame(webglCanvas, sceneConfig.info || {}, visData.timestamp);
 
         // Draw composite frame to recording canvas
         const ctx = compositeCanvas.getContext("2d");

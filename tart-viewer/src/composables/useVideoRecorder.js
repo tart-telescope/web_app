@@ -7,12 +7,7 @@
 
 import { storeToRefs } from "pinia";
 import { computed, onUnmounted, ref, watch } from "vue";
-import {
-  createVideoRecorder,
-  detectBestRecordingMethod,
-  RecorderUtils,
-  RECORDING_SETTINGS,
-} from "@/services/videoRecorder";
+import { createVideoRecorder, detectBestRecordingMethod, RecorderUtils, RECORDING_SETTINGS } from "@/services/videoRecorder";
 import { useAppStore } from "@/stores/app";
 
 export function useVideoRecorder(visHistoryProp, nsideProp, infoProp) {
@@ -146,13 +141,7 @@ export function useVideoRecorder(visHistoryProp, nsideProp, infoProp) {
   const canRecord = computed(() => {
     try {
       const history = filteredVisHistory.value;
-      return (
-        hasHistoryData.value &&
-        !isRecording.value &&
-        history &&
-        Array.isArray(history) &&
-        history.length >= 10
-      );
+      return hasHistoryData.value && !isRecording.value && history && Array.isArray(history) && history.length >= 10;
     } catch (error) {
       console.warn("Error checking canRecord:", error);
       return false;
@@ -344,12 +333,7 @@ export function useVideoRecorder(visHistoryProp, nsideProp, infoProp) {
 
       // Start recording
       console.log("▶️ Starting actual recording...");
-      await activeRecorder.recordHistory(
-        sceneConfig,
-        historySnapshot,
-        recordingSettings,
-        onRecordingProgress,
-      );
+      await activeRecorder.recordHistory(sceneConfig, historySnapshot, recordingSettings, onRecordingProgress);
 
       console.log("✅ Recording completed successfully");
     } catch (error) {
@@ -437,9 +421,9 @@ export function useVideoRecorder(visHistoryProp, nsideProp, infoProp) {
       const timeText =
         timeRemaining !== null && timeRemaining > 0
           ? ` (~${timeRemaining.toFixed(1)}s remaining)`
-          : (timeRemaining === null
+          : timeRemaining === null
             ? " (~N/A remaining)"
-            : "");
+            : "";
 
       return `Recording: ${currentFrame.value}/${totalFrames.value} frames (${percentage}%)${timeText}`;
     } catch (error) {

@@ -20,24 +20,9 @@
               stroke="rgb(0,0,0)"
               stroke-width="1"
             />
-            <text
-              dominant-baseline="middle"
-              fill="teal"
-              text-anchor="middle"
-              :x="offset + scale * 0.5"
-              :y="490"
-            >
-              1 metre
-            </text>
+            <text dominant-baseline="middle" fill="teal" text-anchor="middle" :x="offset + scale * 0.5" :y="490">1 metre</text>
             <path id="scaleLine" :d="scaleLine" fill="none" stroke="teal" stroke-width="2.5" />
-            <path
-              id="arrow-line"
-              :d="line"
-              fill="none"
-              marker-mid="url(#mid)"
-              stroke="teal"
-              stroke-width="3"
-            />
+            <path id="arrow-line" :d="line" fill="none" marker-mid="url(#mid)" stroke="teal" stroke-width="3" />
 
             <circle
               :cx="offset + scale * ant_sel_i[0]"

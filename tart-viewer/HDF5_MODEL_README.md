@@ -240,9 +240,7 @@ Total measurements: 60 × 276 = 16,560 complex numbers ✅
 
 ```javascript
 // Find baseline index for antennas 5 and 12
-const baselineIndex = baselines.findIndex(
-  ([ant1, ant2]) => (ant1 === 5 && ant2 === 12) || (ant1 === 12 && ant2 === 5),
-);
+const baselineIndex = baselines.findIndex(([ant1, ant2]) => (ant1 === 5 && ant2 === 12) || (ant1 === 12 && ant2 === 5));
 
 // Get visibility time series for this antenna pair
 const timeSeries = timestamps.map((time, t) => ({

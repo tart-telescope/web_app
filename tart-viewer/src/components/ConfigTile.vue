@@ -7,16 +7,11 @@
     }"
     :variant="authenticated ? undefined : 'tonal'"
   >
-    <v-card-title
-      class="py-3 d-flex align-center text-subtitle-1 cursor-pointer"
-      @click="showConfig = !showConfig"
-    >
-      <v-icon class="mr-2">mdi-cog</v-icon>
-      Acquisition Config
+    <v-card-title class="py-3 d-flex align-center cursor-pointer" @click="showConfig = !showConfig">
+      <v-icon class="mr-2" size="small">mdi-cog</v-icon>
+      <span class="text-subtitle-1">Acquisition Config</span>
       <v-spacer />
-      <v-chip v-if="!authenticated" color="warning" size="small" variant="outlined">
-        Login Required
-      </v-chip>
+      <v-chip v-if="!authenticated" color="warning" size="small" variant="outlined"> Login Required </v-chip>
       <v-btn icon size="small" variant="text">
         <v-icon>{{ showConfig ? "mdi-chevron-up" : "mdi-chevron-down" }}</v-icon>
       </v-btn>
@@ -51,14 +46,10 @@
                 >
                   <template #item="{ props, internalItem }">
                     <v-list-item v-bind="props">
-                      <template #title>
-                        {{ internalItem.title }} ({{ getIntegrationTime(internalItem.value) }}ms)
-                      </template>
+                      <template #title> {{ internalItem.title }} ({{ getIntegrationTime(internalItem.value) }}ms) </template>
                     </v-list-item>
                   </template>
-                  <template #selection="{ item }">
-                    {{ item.title }} ({{ getIntegrationTime(item.value) }}ms)
-                  </template>
+                  <template #selection="{ item }"> {{ item.title }} ({{ getIntegrationTime(item.value) }}ms) </template>
                 </v-select>
               </div>
             </v-card>
@@ -92,14 +83,10 @@
                 >
                   <template #item="{ props, internalItem }">
                     <v-list-item v-bind="props">
-                      <template #title>
-                        {{ internalItem.title }} ({{ getIntegrationTime(internalItem.value) }}ms)
-                      </template>
+                      <template #title> {{ internalItem.title }} ({{ getIntegrationTime(internalItem.value) }}ms) </template>
                     </v-list-item>
                   </template>
-                  <template #selection="{ item }">
-                    {{ item.title }} ({{ getIntegrationTime(item.value) }}ms)
-                  </template>
+                  <template #selection="{ item }"> {{ item.title }} ({{ getIntegrationTime(item.value) }}ms) </template>
                 </v-select>
               </div>
 
@@ -125,9 +112,7 @@
 
                 <v-expand-transition>
                   <div v-if="rawSync" class="mt-3">
-                    <div class="text-caption text-medium-emphasis mb-2">
-                      Latch acquisition to these seconds of the minute:
-                    </div>
+                    <div class="text-caption text-medium-emphasis mb-2">Latch acquisition to these seconds of the minute:</div>
                     <div class="text-caption text-warning mb-2">
                       <v-icon class="mr-1" color="warning" size="14">mdi-alert</v-icon>
                       Trigger edges are skipped during data transfer
@@ -182,22 +167,10 @@
         <!-- Status Messages -->
         <v-row v-if="errorMessage || successMessage">
           <v-col cols="12">
-            <v-alert
-              v-if="errorMessage"
-              closable
-              type="error"
-              variant="tonal"
-              @click:close="errorMessage = ''"
-            >
+            <v-alert v-if="errorMessage" closable type="error" variant="tonal" @click:close="errorMessage = ''">
               {{ errorMessage }}
             </v-alert>
-            <v-alert
-              v-if="successMessage"
-              closable
-              type="success"
-              variant="tonal"
-              @click:close="successMessage = ''"
-            >
+            <v-alert v-if="successMessage" closable type="success" variant="tonal" @click:close="successMessage = ''">
               {{ successMessage }}
             </v-alert>
           </v-col>
@@ -296,10 +269,7 @@ export default {
 
         // Try loading sync settings — only available on newer APIs
         try {
-          const [rawSync, syncSeconds] = await Promise.all([
-            telescopeApi.getRawSync(),
-            telescopeApi.getRawSyncAcquireAtSeconds(),
-          ]);
+          const [rawSync, syncSeconds] = await Promise.all([telescopeApi.getRawSync(), telescopeApi.getRawSyncAcquireAtSeconds()]);
 
           if (rawSync && syncSeconds) {
             this.syncSupported = true;

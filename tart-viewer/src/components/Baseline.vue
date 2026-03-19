@@ -33,9 +33,7 @@
             <v-icon class="mr-2">mdi-chart-line</v-icon>
             <span>Visibility</span>
             <v-spacer />
-            <v-chip v-if="hasNewData" class="mr-2" color="primary" size="small" variant="outlined">
-              New Data
-            </v-chip>
+            <v-chip v-if="hasNewData" class="mr-2" color="primary" size="small" variant="outlined"> New Data </v-chip>
             <v-btn size="small" @click="resetZoom">Reset Zoom</v-btn>
             <VideoRecordingButton
               :component-refs="getSynthesisRefs()"
@@ -176,8 +174,7 @@ export default {
     },
 
     hasNewData() {
-      if (!this.currentZoomRange || !this.currentZoomRange.max || this.filteredData.length === 0)
-        return false;
+      if (!this.currentZoomRange || !this.currentZoomRange.max || this.filteredData.length === 0) return false;
 
       const latestDataTimestamp = Math.max(...this.filteredData.map((d) => d.timestamp));
       const zoomMaxTimestamp = this.currentZoomRange.max * 1000; // Convert from seconds to milliseconds
@@ -201,13 +198,7 @@ export default {
   },
 
   methods: {
-    ...mapActions(useAppStore, [
-      "selectBaseline",
-      "setHoveredTimestamp",
-      "clearHoveredTimestamp",
-      "setZoomRange",
-      "clearZoomRange",
-    ]),
+    ...mapActions(useAppStore, ["selectBaseline", "setHoveredTimestamp", "clearHoveredTimestamp", "setZoomRange", "clearZoomRange"]),
 
     setParent(parent) {
       this.parentComponent = parent;

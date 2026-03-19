@@ -58,13 +58,7 @@ class Hdf5Service {
         hdf5File = await loadH5wasmFromUrl(fileUrl);
 
         // Parse the file data
-        await this._parseAndPopulateStore(
-          hdf5File,
-          file.name,
-          store,
-          enrichBulkSatellites,
-          dataThinning,
-        );
+        await this._parseAndPopulateStore(hdf5File, file.name, store, enrichBulkSatellites, dataThinning);
       } catch (error) {
         console.error("Error loading HDF5 file:", error);
         throw new Error(`Failed to load HDF5 file: ${error.message}`);

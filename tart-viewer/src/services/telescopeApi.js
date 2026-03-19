@@ -431,11 +431,7 @@ class TelescopeApiService {
   async setRawNumSamplesExp(exp) {
     return await this._handleRequest(async () => {
       const client = this._getClient();
-      const response = await client.put(
-        `/acquire/raw/num_samples_exp/${exp}`,
-        {},
-        this._getRequestConfig(),
-      );
+      const response = await client.put(`/acquire/raw/num_samples_exp/${exp}`, {}, this._getRequestConfig());
       return response.data;
     }, `Set raw num samples exp to ${exp}`);
   }
@@ -460,11 +456,7 @@ class TelescopeApiService {
   async setVisNumSamplesExp(exp) {
     return await this._handleRequest(async () => {
       const client = this._getClient();
-      const response = await client.put(
-        `/acquire/vis/num_samples_exp/${exp}`,
-        {},
-        this._getRequestConfig(),
-      );
+      const response = await client.put(`/acquire/vis/num_samples_exp/${exp}`, {}, this._getRequestConfig());
       return response.data;
     }, `Set vis num samples exp to ${exp}`);
   }
@@ -501,10 +493,7 @@ class TelescopeApiService {
   async getRawSyncAcquireAtSeconds() {
     return await this._handleRequest(async () => {
       const client = this._getClient();
-      const response = await client.get(
-        "/acquire/raw/sync_acquire_at_seconds",
-        this._getRequestConfig(),
-      );
+      const response = await client.get("/acquire/raw/sync_acquire_at_seconds", this._getRequestConfig());
       return response.data;
     }, "Get raw sync acquire at seconds");
   }
@@ -518,11 +507,7 @@ class TelescopeApiService {
     return await this._handleRequest(
       async () => {
         const client = this._getClient();
-        const response = await client.put(
-          "/acquire/raw/sync_acquire_at_seconds",
-          seconds,
-          this._getRequestConfig(),
-        );
+        const response = await client.put("/acquire/raw/sync_acquire_at_seconds", seconds, this._getRequestConfig());
         return response.data;
       },
       `Set raw sync acquire at seconds to ${JSON.stringify(seconds)}`,

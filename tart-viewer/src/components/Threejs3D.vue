@@ -159,9 +159,7 @@ function initThreeJS() {
   // No background - use transparent
 
   // Camera setup - orthographic for uniform view
-  const { width, height } = props.autoResize
-    ? getContainerSize()
-    : { width: props.width, height: props.height };
+  const { width, height } = props.autoResize ? getContainerSize() : { width: props.width, height: props.height };
   const aspect = width / height;
   const frustumSize = CAMERA_DEFAULTS.sphereView.frustumSize;
   camera = new OrthographicCamera(
@@ -172,16 +170,8 @@ function initThreeJS() {
     CAMERA_DEFAULTS.orthographic.near,
     CAMERA_DEFAULTS.orthographic.far,
   );
-  camera.position.set(
-    CAMERA_DEFAULTS.sphereView.position.x,
-    CAMERA_DEFAULTS.sphereView.position.y,
-    CAMERA_DEFAULTS.sphereView.position.z,
-  ); // Position further above sphere looking down
-  camera.lookAt(
-    CAMERA_DEFAULTS.sphereView.lookAt.x,
-    CAMERA_DEFAULTS.sphereView.lookAt.y,
-    CAMERA_DEFAULTS.sphereView.lookAt.z,
-  ); // Look at center of sphere
+  camera.position.set(CAMERA_DEFAULTS.sphereView.position.x, CAMERA_DEFAULTS.sphereView.position.y, CAMERA_DEFAULTS.sphereView.position.z); // Position further above sphere looking down
+  camera.lookAt(CAMERA_DEFAULTS.sphereView.lookAt.x, CAMERA_DEFAULTS.sphereView.lookAt.y, CAMERA_DEFAULTS.sphereView.lookAt.z); // Look at center of sphere
   if (CAMERA_DEFAULTS.sphereView.rotateForNorthUp) {
     camera.rotation.z = Math.PI; // Rotate 180 degrees for North up, East left
   }
@@ -338,10 +328,7 @@ function onMouseLeave() {
 function onMouseWheel(event) {
   event.preventDefault();
 
-  const delta =
-    event.deltaY > 0
-      ? INTERACTION_DEFAULTS.zoomSensitivity
-      : 1 / INTERACTION_DEFAULTS.zoomSensitivity;
+  const delta = event.deltaY > 0 ? INTERACTION_DEFAULTS.zoomSensitivity : 1 / INTERACTION_DEFAULTS.zoomSensitivity;
 
   // For orthographic camera, adjust the frustum size instead of position
   const aspect = camera.right / camera.top;
@@ -691,11 +678,7 @@ function updateSatelliteOverlays(satelliteData, showSatellites = true) {
     ringMesh.raycast = () => {};
 
     // Position satellite slightly outside sphere surface
-    const [x, y, z] = azElToCartesian(
-      sat.az,
-      sat.el,
-      sphereRadius.value + SPHERE_DEFAULTS.satelliteOffset,
-    );
+    const [x, y, z] = azElToCartesian(sat.az, sat.el, sphereRadius.value + SPHERE_DEFAULTS.satelliteOffset);
 
     ringMesh.position.set(x, y, z);
     hoverMesh.position.set(x, y, z);
@@ -746,11 +729,7 @@ function createGridLines() {
 
     if (circleRadius > 0.01) {
       // Use ring geometry for clean circular lines
-      const geometry = new RingGeometry(
-        circleRadius - GRID_SETTINGS.lineWidth * 0.003,
-        circleRadius + GRID_SETTINGS.lineWidth * 0.003,
-        64,
-      );
+      const geometry = new RingGeometry(circleRadius - GRID_SETTINGS.lineWidth * 0.003, circleRadius + GRID_SETTINGS.lineWidth * 0.003, 64);
       const circleMaterial = new MeshBasicMaterial({
         color: COLORS.grid,
         transparent: true,
@@ -1019,11 +998,7 @@ function updateSphereRadius() {
   // Update satellite positions to match new sphere radius
   for (const sat of satellites) {
     const userData = sat.userData;
-    const [x, y, z] = azElToCartesian(
-      userData.az,
-      userData.el,
-      sphereRadius.value + SPHERE_DEFAULTS.indicatorOffset,
-    );
+    const [x, y, z] = azElToCartesian(userData.az, userData.el, sphereRadius.value + SPHERE_DEFAULTS.indicatorOffset);
     sat.position.set(x, y, z);
   }
 
@@ -1033,24 +1008,14 @@ function updateSphereRadius() {
 
 // Reset camera to default position
 function resetCamera() {
-  camera.position.set(
-    CAMERA_DEFAULTS.sphereView.position.x,
-    CAMERA_DEFAULTS.sphereView.position.y,
-    CAMERA_DEFAULTS.sphereView.position.z,
-  ); // Position further above sphere looking down
-  camera.lookAt(
-    CAMERA_DEFAULTS.sphereView.lookAt.x,
-    CAMERA_DEFAULTS.sphereView.lookAt.y,
-    CAMERA_DEFAULTS.sphereView.lookAt.z,
-  ); // Look at center of sphere
+  camera.position.set(CAMERA_DEFAULTS.sphereView.position.x, CAMERA_DEFAULTS.sphereView.position.y, CAMERA_DEFAULTS.sphereView.position.z); // Position further above sphere looking down
+  camera.lookAt(CAMERA_DEFAULTS.sphereView.lookAt.x, CAMERA_DEFAULTS.sphereView.lookAt.y, CAMERA_DEFAULTS.sphereView.lookAt.z); // Look at center of sphere
   if (CAMERA_DEFAULTS.sphereView.rotateForNorthUp) {
     camera.rotation.z = Math.PI; // Rotate 180 degrees for North up, East left
   }
 
   // Reset orthographic camera frustum to default size
-  const { width, height } = props.autoResize
-    ? getContainerSize()
-    : { width: props.width, height: props.height };
+  const { width, height } = props.autoResize ? getContainerSize() : { width: props.width, height: props.height };
   const aspect = width / height;
   const frustumSize = CAMERA_DEFAULTS.sphereView.frustumSize;
   camera.left = (-frustumSize * aspect) / 2;
@@ -1112,9 +1077,7 @@ function getContainerSize() {
 function handleResize() {
   if (!camera || !renderer) return;
 
-  const { width, height } = props.autoResize
-    ? getContainerSize()
-    : { width: props.width, height: props.height };
+  const { width, height } = props.autoResize ? getContainerSize() : { width: props.width, height: props.height };
 
   const aspect = width / height;
   const frustumSize = 4;

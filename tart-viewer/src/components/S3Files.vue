@@ -4,13 +4,7 @@
       <v-icon class="mr-2">mdi-folder</v-icon>
       <span>Cloud Files</span>
       <v-spacer />
-      <v-chip
-        color="primary"
-        :disabled="bulkLoading || enrichLoading"
-        size="small"
-        variant="flat"
-        @click="addToTimeline"
-      >
+      <v-chip color="primary" :disabled="bulkLoading || enrichLoading" size="small" variant="flat" @click="addToTimeline">
         <v-icon v-if="bulkLoading || enrichLoading" class="mr-1">mdi-loading mdi-spin</v-icon>
         <span v-if="enrichLoading"> Enriching satellites... </span>
         <span v-else-if="bulkLoading">
@@ -32,11 +26,7 @@
           >
             <v-card-text class="pa-2">
               <div class="d-flex align-center mb-2">
-                <v-icon
-                  class="me-2"
-                  :class="{ 'text-primary': loadingFile === file.name }"
-                  size="large"
-                >
+                <v-icon class="me-2" :class="{ 'text-primary': loadingFile === file.name }" size="large">
                   {{ loadingFile === file.name ? "mdi-loading" : "mdi-file-document" }}
                 </v-icon>
                 <div class="flex-grow-1">
@@ -50,23 +40,11 @@
                   <v-chip size="small" variant="outlined">
                     {{ formatFileSize(file.size) }}
                   </v-chip>
-                  <v-chip
-                    v-if="file.lastModified"
-                    class="text-caption"
-                    size="small"
-                    variant="outlined"
-                  >
+                  <v-chip v-if="file.lastModified" class="text-caption" size="small" variant="outlined">
                     {{ formatTimeAgo(file.lastModified) }}
                   </v-chip>
                 </div>
-                <v-chip
-                  color="primary"
-                  :href="getFileUrl(file.name)"
-                  size="small"
-                  target="_blank"
-                  variant="flat"
-                  @click.stop
-                >
+                <v-chip color="primary" :href="getFileUrl(file.name)" size="small" target="_blank" variant="flat" @click.stop>
                   <v-icon size="small">mdi-download</v-icon>
                 </v-chip>
               </div>
@@ -182,13 +160,7 @@ export default {
         try {
           this.loadingFile = file.name;
           const fileUrl = this.getFileUrl(file.name);
-          await hdf5Service.loadFileToStore(
-            file,
-            fileUrl,
-            this.store,
-            () => this.enrichSatellitesWithProgress(),
-            1,
-          );
+          await hdf5Service.loadFileToStore(file, fileUrl, this.store, () => this.enrichSatellitesWithProgress(), 1);
         } catch (error) {
           console.error("Failed to load HDF5 file:", error);
         } finally {
@@ -222,9 +194,7 @@ export default {
       if (this.bulkLoading) return;
 
       const maxFiles = 30;
-      const hdf5Files = this.allFiles
-        .filter((file) => file.name.endsWith(".hdf") || file.name.endsWith(".h5"))
-        .slice(0, maxFiles);
+      const hdf5Files = this.allFiles.filter((file) => file.name.endsWith(".hdf") || file.name.endsWith(".h5")).slice(0, maxFiles);
 
       if (hdf5Files.length === 0) {
         console.warn("No HDF5 files found to add to timeline");

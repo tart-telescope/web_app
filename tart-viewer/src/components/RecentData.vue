@@ -14,13 +14,7 @@
     <v-tabs-window v-model="tab">
       <v-tabs-window-item :key="1" :value="1">
         <v-container fluid>
-          <v-data-table
-            density="compact"
-            :headers="visHeaders"
-            hide-default-footer
-            hide-default-header
-            :items="visFileList"
-          >
+          <v-data-table density="compact" :headers="visHeaders" hide-default-footer hide-default-header :items="visFileList">
             <template #item.timestamp="{ item }">
               <v-chip :href="TART_URL + '/' + item.filename" size="small">
                 <v-icon start size="x-small"> mdi-download </v-icon>
@@ -51,13 +45,7 @@
 
       <v-tabs-window-item :key="2" :value="2">
         <v-container fluid>
-          <v-data-table
-            density="compact"
-            :headers="rawHeaders"
-            hide-default-footer
-            hide-default-header
-            :items="rawFileList"
-          >
+          <v-data-table density="compact" :headers="rawHeaders" hide-default-footer hide-default-header :items="rawFileList">
             <template #item.timestamp="{ item }">
               <v-chip :href="TART_URL + '/' + item.filename" size="small">
                 <v-icon start size="x-small"> mdi-download </v-icon>

@@ -194,9 +194,7 @@ export const RecorderUtils = {
     const invalidEntries = visHistory.filter((entry) => !entry.timestamp || !entry.data);
 
     if (invalidEntries.length > 0) {
-      throw new Error(
-        `${invalidEntries.length} entries missing required timestamp or data properties`,
-      );
+      throw new Error(`${invalidEntries.length} entries missing required timestamp or data properties`);
     }
 
     return true;

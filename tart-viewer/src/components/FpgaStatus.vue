@@ -9,19 +9,8 @@
         {{ fpgaStatus ? formatTimestamp(fpgaStatus.timestamp) : "--" }}
       </v-chip>
 
-      <v-chip-group
-        v-model="selectedRefreshIndex"
-        active-class="text-primary"
-        mandatory
-        @change="updateRefreshInterval"
-      >
-        <v-chip
-          v-for="(option, index) in refreshOptions"
-          :key="index"
-          variant="outlined"
-          size="small"
-          :value="index"
-        >
+      <v-chip-group v-model="selectedRefreshIndex" active-class="text-primary" mandatory @change="updateRefreshInterval">
+        <v-chip v-for="(option, index) in refreshOptions" :key="index" variant="outlined" size="small" :value="index">
           {{ option.label }}
         </v-chip>
       </v-chip-group>
@@ -56,10 +45,7 @@
                     {{ aqSystem.SDRAM_ready ? "ON" : "OFF" }}
                   </v-chip>
                 </div>
-                <div
-                  class="d-flex justify-space-between mb-2"
-                  :class="{ 'flash-change': isFieldChanged('AQ_SYSTEM.error') }"
-                >
+                <div class="d-flex justify-space-between mb-2" :class="{ 'flash-change': isFieldChanged('AQ_SYSTEM.error') }">
                   <span>Error:</span>
                   <v-chip :color="aqSystem.error ? 'error' : 'success'" size="small">
                     {{ aqSystem.error ? "ERROR" : "OK" }}
@@ -76,19 +62,13 @@
                     {{ aqSystem.overflow ? "ERROR" : "OK" }}
                   </v-chip>
                 </div>
-                <div
-                  class="d-flex justify-space-between mb-2"
-                  :class="{ 'flash-change': isFieldChanged('AQ_SYSTEM.state') }"
-                >
+                <div class="d-flex justify-space-between mb-2" :class="{ 'flash-change': isFieldChanged('AQ_SYSTEM.state') }">
                   <span>State:</span>
                   <v-chip color="info" size="small">
                     {{ aqSystem.state }}
                   </v-chip>
                 </div>
-                <div
-                  class="d-flex justify-space-between mb-2"
-                  :class="{ 'flash-change': isFieldChanged('AQ_SYSTEM.512Mb') }"
-                >
+                <div class="d-flex justify-space-between mb-2" :class="{ 'flash-change': isFieldChanged('AQ_SYSTEM.512Mb') }">
                   <span>512Mb:</span>
                   <v-chip :color="aqSystem['512Mb'] ? 'success' : 'grey'" size="small">
                     {{ aqSystem["512Mb"] ? "YES" : "NO" }}
@@ -135,10 +115,7 @@
                     {{ sysStats.viz_en ? "ON" : "OFF" }}
                   </v-chip>
                 </div>
-                <div
-                  class="d-flex justify-space-between mb-2"
-                  :class="{ 'flash-change': isFieldChanged('SYS_STATS.state') }"
-                >
+                <div class="d-flex justify-space-between mb-2" :class="{ 'flash-change': isFieldChanged('SYS_STATS.state') }">
                   <span>State:</span>
                   <v-chip color="info" size="small">
                     {{ sysStats.state }}
@@ -196,10 +173,7 @@
                     {{ tcSystem.locked ? "ON" : "OFF" }}
                   </v-chip>
                 </div>
-                <div
-                  class="d-flex justify-space-between mb-2"
-                  :class="{ 'flash-change': isFieldChanged('TC_SYSTEM.error') }"
-                >
+                <div class="d-flex justify-space-between mb-2" :class="{ 'flash-change': isFieldChanged('TC_SYSTEM.error') }">
                   <span>Error:</span>
                   <v-chip :color="tcSystem.error ? 'error' : 'success'" size="small">
                     {{ tcSystem.error ? "ERROR" : "OK" }}
@@ -265,10 +239,7 @@
             <v-card variant="outlined">
               <v-card-subtitle>Acquisition Stream</v-card-subtitle>
               <v-card-text>
-                <div
-                  class="d-flex justify-space-between mb-2"
-                  :class="{ 'flash-change': isFieldChanged('AQ_STREAM.data') }"
-                >
+                <div class="d-flex justify-space-between mb-2" :class="{ 'flash-change': isFieldChanged('AQ_STREAM.data') }">
                   <span>Stream Data:</span>
                   <v-chip color="info" size="small">
                     {{ aqStream.data }}
@@ -293,10 +264,7 @@
                     {{ tcCentre.centre ? "ON" : "OFF" }}
                   </v-chip>
                 </div>
-                <div
-                  class="d-flex justify-space-between mb-2"
-                  :class="{ 'flash-change': isFieldChanged('TC_CENTRE.drift') }"
-                >
+                <div class="d-flex justify-space-between mb-2" :class="{ 'flash-change': isFieldChanged('TC_CENTRE.drift') }">
                   <span>Drift:</span>
                   <v-chip :color="tcCentre.drift ? 'success' : 'grey'" size="small">
                     {{ tcCentre.drift ? "ON" : "OFF" }}
@@ -313,10 +281,7 @@
                     {{ tcCentre.invert ? "ON" : "OFF" }}
                   </v-chip>
                 </div>
-                <div
-                  class="d-flex justify-space-between mb-2"
-                  :class="{ 'flash-change': isFieldChanged('TC_CENTRE.delay') }"
-                >
+                <div class="d-flex justify-space-between mb-2" :class="{ 'flash-change': isFieldChanged('TC_CENTRE.delay') }">
                   <span>Delay:</span>
                   <v-chip color="info" size="small">
                     {{ tcCentre.delay != null ? tcCentre.delay.toFixed(3) : "N/A" }}
@@ -330,19 +295,13 @@
             <v-card variant="outlined">
               <v-card-subtitle>Timing Controller Status</v-card-subtitle>
               <v-card-text>
-                <div
-                  class="d-flex justify-space-between mb-2"
-                  :class="{ 'flash-change': isFieldChanged('TC_STATUS.phase') }"
-                >
+                <div class="d-flex justify-space-between mb-2" :class="{ 'flash-change': isFieldChanged('TC_STATUS.phase') }">
                   <span>Phase:</span>
                   <v-chip color="info" size="small">
                     {{ tcStatus.phase != null ? Math.round(tcStatus.phase) : "N/A" }}
                   </v-chip>
                 </div>
-                <div
-                  class="d-flex justify-space-between mb-2"
-                  :class="{ 'flash-change': isFieldChanged('TC_STATUS.delta') }"
-                >
+                <div class="d-flex justify-space-between mb-2" :class="{ 'flash-change': isFieldChanged('TC_STATUS.delta') }">
                   <span>Delta:</span>
                   <v-chip color="info" size="small">
                     {{ tcStatus.delta != null ? Math.round(tcStatus.delta) : "N/A" }}
@@ -356,28 +315,19 @@
             <v-card variant="outlined">
               <v-card-subtitle>Timing Controller Debug</v-card-subtitle>
               <v-card-text>
-                <div
-                  class="d-flex justify-space-between mb-2"
-                  :class="{ 'flash-change': isFieldChanged('TC_DEBUG.debug') }"
-                >
+                <div class="d-flex justify-space-between mb-2" :class="{ 'flash-change': isFieldChanged('TC_DEBUG.debug') }">
                   <span>Debug:</span>
                   <v-chip :color="tcDebug.debug ? 'warning' : 'grey'" size="small">
                     {{ tcDebug.debug ? "ON" : "OFF" }}
                   </v-chip>
                 </div>
-                <div
-                  class="d-flex justify-space-between mb-2"
-                  :class="{ 'flash-change': isFieldChanged('TC_DEBUG.count') }"
-                >
+                <div class="d-flex justify-space-between mb-2" :class="{ 'flash-change': isFieldChanged('TC_DEBUG.count') }">
                   <span>Count:</span>
                   <v-chip :color="tcDebug.count ? 'success' : 'grey'" size="small">
                     {{ tcDebug.count ? "ON" : "OFF" }}
                   </v-chip>
                 </div>
-                <div
-                  class="d-flex justify-space-between mb-2"
-                  :class="{ 'flash-change': isFieldChanged('TC_DEBUG.shift') }"
-                >
+                <div class="d-flex justify-space-between mb-2" :class="{ 'flash-change': isFieldChanged('TC_DEBUG.shift') }">
                   <span>Shift:</span>
                   <v-chip :color="tcDebug.shift ? 'success' : 'grey'" size="small">
                     {{ tcDebug.shift ? "ON" : "OFF" }}
@@ -443,10 +393,7 @@
             <v-card variant="outlined">
               <v-card-subtitle>VX Status</v-card-subtitle>
               <v-card-text>
-                <div
-                  class="d-flex justify-space-between mb-2"
-                  :class="{ 'flash-change': isFieldChanged('VX_STATUS.bank') }"
-                >
+                <div class="d-flex justify-space-between mb-2" :class="{ 'flash-change': isFieldChanged('VX_STATUS.bank') }">
                   <span>Bank:</span>
                   <v-chip color="info" size="small">
                     {{ vxStatus.bank }}
@@ -493,28 +440,19 @@
             <v-card variant="outlined">
               <v-card-subtitle>VX Stream & Debug</v-card-subtitle>
               <v-card-text>
-                <div
-                  class="d-flex justify-space-between mb-2"
-                  :class="{ 'flash-change': isFieldChanged('VX_STREAM.data') }"
-                >
+                <div class="d-flex justify-space-between mb-2" :class="{ 'flash-change': isFieldChanged('VX_STREAM.data') }">
                   <span>Stream Data:</span>
                   <v-chip color="info" size="small">
                     {{ vxStream.data }}
                   </v-chip>
                 </div>
-                <div
-                  class="d-flex justify-space-between mb-2"
-                  :class="{ 'flash-change': isFieldChanged('VX_DEBUG.limp') }"
-                >
+                <div class="d-flex justify-space-between mb-2" :class="{ 'flash-change': isFieldChanged('VX_DEBUG.limp') }">
                   <span>Limp:</span>
                   <v-chip color="info" size="small">
                     {{ vxDebug.limp }}
                   </v-chip>
                 </div>
-                <div
-                  class="d-flex justify-space-between mb-2"
-                  :class="{ 'flash-change': isFieldChanged('VX_DEBUG.stuck') }"
-                >
+                <div class="d-flex justify-space-between mb-2" :class="{ 'flash-change': isFieldChanged('VX_DEBUG.stuck') }">
                   <span>Stuck:</span>
                   <v-chip :color="vxDebug.stuck ? 'warning' : 'success'" size="small">
                     {{ vxDebug.stuck }}
@@ -526,9 +464,7 @@
         </v-row>
       </div>
 
-      <v-alert v-show="!loading && !fpgaStatus" variant="outlined" type="error">
-        Failed to load FPGA status
-      </v-alert>
+      <v-alert v-show="!loading && !fpgaStatus" variant="outlined" type="error"> Failed to load FPGA status </v-alert>
     </v-card-text>
   </v-card>
 </template>

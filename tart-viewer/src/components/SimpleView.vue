@@ -6,12 +6,7 @@
         <div class="text-h6 text-grey">Loading synthesis data...</div>
       </div>
     </div>
-    <Synthesis
-      v-else
-      :key="`synthesis-${TART_URL}-${localMode}`"
-      :show-title="false"
-      :simple-view="true"
-    />
+    <Synthesis v-else :key="`synthesis-${TART_URL}-${localMode}`" :show-title="false" :simple-view="true" />
   </div>
 </template>
 

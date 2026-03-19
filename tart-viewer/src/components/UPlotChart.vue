@@ -1,11 +1,6 @@
 <template>
   <div class="uplot-chart">
-    <UplotVue
-      :data="chartData"
-      :options="chartOptions"
-      @create="onChartCreate"
-      @delete="onChartDelete"
-    />
+    <UplotVue :data="chartData" :options="chartOptions" @create="onChartCreate" @delete="onChartDelete" />
   </div>
 </template>
 
@@ -118,15 +113,14 @@ function normalizeTimestamp(value) {
 
   if (typeof value === "number") {
     // Convert seconds to milliseconds if needed
-    return value > 1e12 ? value : (value > 1e9 ? value * 1000 : value);
+    return value > 1e12 ? value : value > 1e9 ? value * 1000 : value;
   }
 
   return value;
 }
 
 const chartOptions = computed(() => {
-  const height =
-    typeof props.height === "number" ? props.height : Number.parseInt(props.height) || 300;
+  const height = typeof props.height === "number" ? props.height : Number.parseInt(props.height) || 300;
 
   const options = {
     width: props.width || containerWidth.value,

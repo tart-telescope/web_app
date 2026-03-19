@@ -4,12 +4,7 @@
 
     <v-card-text v-if="currentGain && currentGain.gain && currentGain.phase_offset" class="pa-3">
       <v-row density="compact">
-        <v-col
-          v-for="(gainValue, index) in currentGain.gain"
-          :key="`combined-${index}`"
-          class="pa-1"
-          cols="2"
-        >
+        <v-col v-for="(gainValue, index) in currentGain.gain" :key="`combined-${index}`" class="pa-1" cols="2">
           <v-card class="combined-tile" elevation="1">
             <!-- Antenna number badge -->
             <div class="antenna-badge">
@@ -19,10 +14,7 @@
             <div v-if="index === 0" class="amp-label">Mag</div>
             <div v-if="index === 0" class="phase-label">Pha</div>
             <!-- Gain (top half) -->
-            <div
-              class="gain-section text-center pa-1"
-              :style="{ backgroundColor: getGainColorHex(gainValue) }"
-            >
+            <div class="gain-section text-center pa-1" :style="{ backgroundColor: getGainColorHex(gainValue) }">
               <div class="body-2 text-white">{{ roundValue(gainValue) }}</div>
             </div>
             <!-- Phase (bottom half) -->
@@ -41,9 +33,7 @@
       </v-row>
     </v-card-text>
 
-    <v-card-text v-else class="text-center text--secondary">
-      No gain/phase data available
-    </v-card-text>
+    <v-card-text v-else class="text-center text--secondary"> No gain/phase data available </v-card-text>
   </v-card>
 </template>
 
