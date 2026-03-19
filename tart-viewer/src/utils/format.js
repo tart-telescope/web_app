@@ -9,13 +9,11 @@
  */
 export function formatFileSize(bytes) {
   if (!bytes) {
-return "0 B";
-}
+    return "0 B";
+  }
   const sizes = ["B", "KB", "MB", "GB"];
   const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  return (
-    Math.round((bytes / Math.pow(1024, i)) * 100) / 100 + " " + sizes[i]
-  );
+  return Math.round((bytes / Math.pow(1024, i)) * 100) / 100 + " " + sizes[i];
 }
 
 /**
@@ -25,8 +23,8 @@ return "0 B";
  */
 export function formatDate(date) {
   if (!date) {
-return "";
-}
+    return "";
+  }
   const d = new Date(date);
   return d.toLocaleDateString() + " " + d.toLocaleTimeString();
 }
@@ -38,8 +36,8 @@ return "";
  */
 export function formatTimeAgo(date) {
   if (!date) {
-return "";
-}
+    return "";
+  }
   const now = new Date();
   const diff = now - new Date(date);
   const minutes = Math.floor(diff / 60_000);
@@ -47,14 +45,14 @@ return "";
   const days = Math.floor(diff / 86_400_000);
 
   if (minutes < 60) {
-return `${minutes}m ago`;
-}
+    return `${minutes}m ago`;
+  }
   if (hours < 24) {
-return `${hours}h ago`;
-}
+    return `${hours}h ago`;
+  }
   if (days < 30) {
-return `${days}d ago`;
-}
+    return `${days}d ago`;
+  }
   return new Date(date).toLocaleDateString();
 }
 
@@ -65,8 +63,8 @@ return `${days}d ago`;
  */
 export function formatDateOnly(date) {
   if (!date) {
-return "";
-}
+    return "";
+  }
   return new Date(date).toLocaleDateString();
 }
 
@@ -77,8 +75,8 @@ return "";
  */
 export function formatNumber(num) {
   if (num == null) {
-return "";
-}
+    return "";
+  }
   return num.toLocaleString();
 }
 
@@ -90,8 +88,8 @@ return "";
  */
 export function formatPercentage(value, decimals = 1) {
   if (value == null) {
-return "";
-}
+    return "";
+  }
   return `${(value * 100).toFixed(decimals)}%`;
 }
 
@@ -102,23 +100,23 @@ return "";
  */
 export function formatDuration(ms) {
   if (ms == null) {
-return "";
-}
-  
+    return "";
+  }
+
   const seconds = Math.floor(ms / 1000);
   const minutes = Math.floor(seconds / 60);
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
 
   if (days > 0) {
-return `${days}d ${hours % 24}h`;
-}
+    return `${days}d ${hours % 24}h`;
+  }
   if (hours > 0) {
-return `${hours}h ${minutes % 60}m`;
-}
+    return `${hours}h ${minutes % 60}m`;
+  }
   if (minutes > 0) {
-return `${minutes}m ${seconds % 60}s`;
-}
+    return `${minutes}m ${seconds % 60}s`;
+  }
   return `${seconds}s`;
 }
 
@@ -129,12 +127,12 @@ return `${minutes}m ${seconds % 60}s`;
  * @param {string} locale - Locale for formatting (default: 'en-US')
  * @returns {string} Formatted currency string
  */
-export function formatCurrency(amount, currency = 'USD', locale = 'en-US') {
+export function formatCurrency(amount, currency = "USD", locale = "en-US") {
   if (amount == null) {
-return "";
-}
+    return "";
+  }
   return new Intl.NumberFormatter(locale, {
-    style: 'currency',
+    style: "currency",
     currency,
   }).format(amount);
 }
@@ -147,10 +145,10 @@ return "";
  */
 export function truncateText(text, maxLength = 50) {
   if (!text) {
-return "";
-}
+    return "";
+  }
   if (text.length <= maxLength) {
-return text;
-}
+    return text;
+  }
   return text.slice(0, maxLength - 3) + "...";
 }

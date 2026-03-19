@@ -2,7 +2,7 @@
   <v-card class="mx-auto" elevation="3">
     <v-card-title class="py-3 d-flex align-center">
       <v-icon class="mr-2">mdi-file-download</v-icon>
-      <span >Edge Cache</span>
+      <span>Edge Cache</span>
       <v-spacer />
       <v-tabs v-model="tab" class="ml-2" color="primary" density="compact">
         <v-tab :value="1">Visibilities</v-tab>
@@ -79,9 +79,7 @@
     <v-snackbar v-model="snackbar" :timeout="1000">
       Copied sha256 checksum to clipboard
       <template #actions>
-        <v-btn color="cyan" variant="text" @click="snackbar = false">
-          Close
-        </v-btn>
+        <v-btn color="cyan" variant="text" @click="snackbar = false"> Close </v-btn>
       </template>
     </v-snackbar>
   </v-card>
@@ -152,11 +150,7 @@ export default {
     },
   },
   methods: {
-    ...mapActions(useAppStore, [
-      "enrichBulkSatellites",
-      "renewVisData",
-      "renewRawData",
-    ]),
+    ...mapActions(useAppStore, ["enrichBulkSatellites", "renewVisData", "renewRawData"]),
     startAutoRefresh() {
       this.refreshInterval = setInterval(() => {
         this.renewVisData();
@@ -207,12 +201,7 @@ export default {
     },
   },
   computed: {
-    ...mapState(useAppStore, [
-      "telescope_mode",
-      "visFileList",
-      "rawFileList",
-      "TART_URL",
-    ]),
+    ...mapState(useAppStore, ["telescope_mode", "visFileList", "rawFileList", "TART_URL"]),
   },
   setup() {
     const store = useAppStore();

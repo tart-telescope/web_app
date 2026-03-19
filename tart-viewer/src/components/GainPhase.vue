@@ -2,10 +2,7 @@
   <v-card class="mx-auto" elevation="3">
     <v-card-title class="my-0 py-2"> Antenna Gains & Phases </v-card-title>
 
-    <v-card-text
-      v-if="currentGain && currentGain.gain && currentGain.phase_offset"
-      class="pa-3"
-    >
+    <v-card-text v-if="currentGain && currentGain.gain && currentGain.phase_offset" class="pa-3">
       <v-row density="compact">
         <v-col
           v-for="(gainValue, index) in currentGain.gain"
@@ -32,15 +29,11 @@
             <div
               class="phase-section text-center pa-1"
               :style="{
-                backgroundColor: getPhaseColorHex(
-                  currentGain.phase_offset[index],
-                ),
+                backgroundColor: getPhaseColorHex(currentGain.phase_offset[index]),
               }"
             >
               <div class="body-2 text-white">
-                {{
-                  roundValue(normalizePhase(currentGain.phase_offset[index]))
-                }}
+                {{ roundValue(normalizePhase(currentGain.phase_offset[index])) }}
               </div>
             </div>
           </v-card>

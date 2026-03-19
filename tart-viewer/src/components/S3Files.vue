@@ -2,7 +2,7 @@
   <v-card v-if="files.length > 0" class="mx-auto" elevation="3">
     <v-card-title class="py-3 d-flex align-center">
       <v-icon class="mr-2">mdi-folder</v-icon>
-      <span >Cloud Files</span>
+      <span>Cloud Files</span>
       <v-spacer />
       <v-chip
         color="primary"
@@ -11,14 +11,10 @@
         variant="flat"
         @click="addToTimeline"
       >
-        <v-icon v-if="bulkLoading || enrichLoading" class="mr-1"
-          >mdi-loading mdi-spin</v-icon
-        >
+        <v-icon v-if="bulkLoading || enrichLoading" class="mr-1">mdi-loading mdi-spin</v-icon>
         <span v-if="enrichLoading"> Enriching satellites... </span>
         <span v-else-if="bulkLoading">
-          {{
-            bulkPhase === "loading" ? "Loading files" : "Enriching satellites"
-          }}
+          {{ bulkPhase === "loading" ? "Loading files" : "Enriching satellites" }}
           ({{ bulkProgress }}/{{ bulkTotal }})
         </span>
         <span v-else> Add to timeline </span>
@@ -27,15 +23,7 @@
 
     <v-card-text class="pa-2">
       <v-row>
-        <v-col
-          v-for="file in files"
-          :key="file.name"
-          cols="12"
-          lg="4"
-          md="4"
-          sm="6"
-          xl="3"
-        >
+        <v-col v-for="file in files" :key="file.name" cols="12" lg="4" md="4" sm="6" xl="3">
           <v-card
             class="file-card"
             :disabled="loadingFile === file.name"
@@ -49,11 +37,7 @@
                   :class="{ 'text-primary': loadingFile === file.name }"
                   size="large"
                 >
-                  {{
-                    loadingFile === file.name
-                      ? "mdi-loading"
-                      : "mdi-file-document"
-                  }}
+                  {{ loadingFile === file.name ? "mdi-loading" : "mdi-file-document" }}
                 </v-icon>
                 <div class="flex-grow-1">
                   <div class="text-body-2 font-weight-bold text-wrap">
@@ -169,10 +153,7 @@ export default {
       const minDesiredFiles = 50; // Adjust this threshold as needed
 
       try {
-        const result = await s3Service.fetchLast24Hours(
-          this.basePath,
-          minDesiredFiles,
-        );
+        const result = await s3Service.fetchLast24Hours(this.basePath, minDesiredFiles);
 
         if (result) {
           this.files = result.files;
@@ -242,9 +223,7 @@ export default {
 
       const maxFiles = 30;
       const hdf5Files = this.allFiles
-        .filter(
-          (file) => file.name.endsWith(".hdf") || file.name.endsWith(".h5"),
-        )
+        .filter((file) => file.name.endsWith(".hdf") || file.name.endsWith(".h5"))
         .slice(0, maxFiles);
 
       if (hdf5Files.length === 0) {

@@ -204,12 +204,7 @@
   },
   "overrides": [
     {
-      "files": [
-        "**/*.?([cm])js",
-        "**/*.?([cm])ts",
-        "**/*.?([cm])jsx",
-        "**/*.?([cm])tsx"
-      ],
+      "files": ["**/*.?([cm])js", "**/*.?([cm])ts", "**/*.?([cm])jsx", "**/*.?([cm])tsx"],
       "rules": {
         "constructor-super": "error",
         "for-direction": "error",

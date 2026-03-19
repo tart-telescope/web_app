@@ -55,9 +55,7 @@ export default {
     ...mapState(useAppStore, ["channels", "partition_size"]),
 
     partitionsCount() {
-      return this.partition_size >= 24
-        ? 1
-        : Math.ceil(this.channels.length / this.partition_size);
+      return this.partition_size >= 24 ? 1 : Math.ceil(this.channels.length / this.partition_size);
     },
 
     partitions() {

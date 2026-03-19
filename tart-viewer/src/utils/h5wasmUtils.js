@@ -127,11 +127,7 @@ function parseAntennaData(h5file) {
         // 24 antennas × 3 coordinates
         const shaped = [];
         for (let i = 0; i < 24; i++) {
-          shaped.push([
-            flatArray[i * 3],
-            flatArray[i * 3 + 1],
-            flatArray[i * 3 + 2],
-          ]);
+          shaped.push([flatArray[i * 3], flatArray[i * 3 + 1], flatArray[i * 3 + 2]]);
         }
         return shaped;
       }
@@ -198,9 +194,7 @@ function parseBaselineData(h5file) {
     }
 
     console.warn("Unexpected baseline data format:", baselines);
-    console.warn(
-      "Baselines are critical for visibility mapping - check data format!",
-    );
+    console.warn("Baselines are critical for visibility mapping - check data format!");
     return baselines;
   } catch (error) {
     console.error("Error parsing baseline data:", error);
@@ -253,11 +247,7 @@ function parseConfigData(h5file) {
     }
 
     // For object configs, also add phase_offset if missing
-    if (
-      configData &&
-      typeof configData === "object" &&
-      !configData.phase_offset
-    ) {
+    if (configData && typeof configData === "object" && !configData.phase_offset) {
       configData.phase_offset = configData.phases || [];
     }
 
@@ -279,17 +269,14 @@ export async function loadH5wasmFromBuffer(buffer) {
     if (h5wasm.ready) {
       await h5wasm.ready;
     }
-    const uint8Buffer =
-      buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+    const uint8Buffer = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
 
     // Create unique virtual path to avoid file caching issues
     const virtualPath = `/data_${Date.now()}_${Math.random().toString(36).slice(2, 11)}.hdf5`;
 
     // Clean up any existing files first
     try {
-      const existingFiles = h5wasm.FS.readdir("/").filter((f) =>
-        f.endsWith(".hdf5"),
-      );
+      const existingFiles = h5wasm.FS.readdir("/").filter((f) => f.endsWith(".hdf5"));
       for (const file of existingFiles) {
         try {
           h5wasm.FS.unlink("/" + file);

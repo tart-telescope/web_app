@@ -4,9 +4,7 @@
       <div class="d-flex align-center">
         <v-icon class="mr-2" color="teal lighten-2">mdi-radio-telescope</v-icon>
         <div>
-          <span class="text-h6">{{
-            info.name || "Telescope Information"
-          }}</span>
+          <span class="text-h6">{{ info.name || "Telescope Information" }}</span>
           <div
             v-if="info.location"
             class="text-body-small text-medium-emphasis d-flex align-center"
@@ -21,14 +19,7 @@
     <v-card-text class="pa-4">
       <!-- Info Grid -->
       <v-row density="compact">
-        <v-col
-          v-for="(value, key) in prioritizedInfo"
-          :key="key"
-          cols="12"
-          lg="4"
-          md="6"
-          sm="12"
-        >
+        <v-col v-for="(value, key) in prioritizedInfo" :key="key" cols="12" lg="4" md="6" sm="12">
           <div class="d-flex align-center pa-2">
             <v-icon class="mr-3" :color="getIconColor(key)" size="20">
               {{ getIcon(key) }}
@@ -71,13 +62,7 @@ export default {
       delete filtered.location;
 
       // Prioritize order: important info first
-      const priority = [
-        "num_antenna",
-        "sampling_frequency",
-        "bandwidth",
-        "version",
-        "mode",
-      ];
+      const priority = ["num_antenna", "sampling_frequency", "bandwidth", "version", "mode"];
       const prioritized = {};
 
       // Add prioritized items first
@@ -104,11 +89,7 @@ export default {
         return this.formatLocation(value);
       }
       if (typeof value === "number") {
-        if (
-          key.includes("freq") ||
-          key.includes("rate") ||
-          key.includes("bandwidth")
-        ) {
+        if (key.includes("freq") || key.includes("rate") || key.includes("bandwidth")) {
           return (value / 1e6).toFixed(3) + " MHz";
         }
         if (key.includes("time") || key.includes("timestamp")) {

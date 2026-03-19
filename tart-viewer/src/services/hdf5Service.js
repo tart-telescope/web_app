@@ -45,13 +45,7 @@ class Hdf5Service {
    * @param {number} dataThinning - Data thinning factor (default: 1)
    * @returns {Promise} Promise that resolves when file is loaded and store is populated
    */
-  async loadFileToStore(
-    file,
-    fileUrl,
-    store,
-    enrichBulkSatellites,
-    dataThinning = 1,
-  ) {
+  async loadFileToStore(file, fileUrl, store, enrichBulkSatellites, dataThinning = 1) {
     return await this._handleRequest(async () => {
       this._createAbortController();
 
@@ -92,13 +86,7 @@ class Hdf5Service {
    * @param {number} dataThinning - Data thinning factor
    * @private
    */
-  async _parseAndPopulateStore(
-    hdf5File,
-    filename,
-    store,
-    enrichBulkSatellites,
-    dataThinning = 1,
-  ) {
+  async _parseAndPopulateStore(hdf5File, filename, store, enrichBulkSatellites, dataThinning = 1) {
     try {
       // Import h5wasm utils
       const { parseH5wasmFileData } = await import("@/utils/h5wasmUtils");
@@ -107,12 +95,7 @@ class Hdf5Service {
       const parsedData = await parseH5wasmFileData(hdf5File, filename);
 
       if (parsedData) {
-        this._populateStoreWithParsedData(
-          parsedData,
-          store,
-          enrichBulkSatellites,
-          dataThinning,
-        );
+        this._populateStoreWithParsedData(parsedData, store, enrichBulkSatellites, dataThinning);
       } else {
         throw new Error("Failed to parse HDF5 data - no data returned");
       }
@@ -132,13 +115,7 @@ class Hdf5Service {
    */
   _populateStoreWithParsedData(parsedData, store, enrichBulkSatellites, k = 1) {
     try {
-      const {
-        timestamps,
-        visibilityData,
-        gainPhaseData,
-        antennaData,
-        baselineData,
-      } = parsedData;
+      const { timestamps, visibilityData, gainPhaseData, antennaData, baselineData } = parsedData;
 
       // Create reusable objects
       const gainRecord = gainPhaseData
@@ -162,9 +139,7 @@ class Hdf5Service {
 
           const ts = new Date(timestamp);
           // skip if timestamp already exists
-          if (
-            history.some((record) => Math.abs(record.timestamp - ts) < 0.01)
-          ) {
+          if (history.some((record) => Math.abs(record.timestamp - ts) < 0.01)) {
             continue;
           }
 
@@ -191,9 +166,7 @@ class Hdf5Service {
           history.push(visRecord);
         }
 
-        history = history.toSorted(
-          (a, b) => new Date(a.timestamp) - new Date(b.timestamp),
-        );
+        history = history.toSorted((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
         store.vis_history = history;
       }

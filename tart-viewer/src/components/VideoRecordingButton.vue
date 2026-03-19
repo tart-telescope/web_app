@@ -13,12 +13,7 @@
 
   <!-- Recording Progress -->
   <div v-else class="recording-status">
-    <v-btn
-      color="error"
-      size="small"
-      variant="outlined"
-      @click="stopRecording"
-    >
+    <v-btn color="error" size="small" variant="outlined" @click="stopRecording">
       <v-icon size="small" start>mdi-stop</v-icon>
       Stop
     </v-btn>
@@ -38,82 +33,76 @@
   </div>
 
   <!-- Error Snackbar -->
-  <v-snackbar
-    v-model="showError"
-    color="error"
-    timeout="5000"
-  >
+  <v-snackbar v-model="showError" color="error" timeout="5000">
     Recording Failed: {{ recordingError }}
     <template #actions>
-      <v-btn
-        color="white"
-        variant="text"
-        @click="showError = false"
-      >
-        Close
-      </v-btn>
+      <v-btn color="white" variant="text" @click="showError = false"> Close </v-btn>
     </template>
   </v-snackbar>
 </template>
 
 <script setup>
-  import { computed, ref, watch } from 'vue'
-  import { useVideoRecorder } from '@/composables/useVideoRecorder'
+import { computed, ref, watch } from "vue";
+import { useVideoRecorder } from "@/composables/useVideoRecorder";
 
-  const props = defineProps({
-    is3D: {
-      type: Boolean,
-      required: true
-    },
-    componentRefs: {
-      type: Object,
-      required: true
-    },
-    visHistory: {
-      type: Array,
-      default: () => []
-    },
-    nside: {
-      type: Number,
-      default: 64
-    },
-    info: {
-      type: Object,
-      default: () => ({})
-    }
-  })
+const props = defineProps({
+  is3D: {
+    type: Boolean,
+    required: true,
+  },
+  componentRefs: {
+    type: Object,
+    required: true,
+  },
+  visHistory: {
+    type: Array,
+    default: () => [],
+  },
+  nside: {
+    type: Number,
+    default: 64,
+  },
+  info: {
+    type: Object,
+    default: () => ({}),
+  },
+});
 
-  // Use video recorder composable
-  const {
-    isRecording,
-    recordingProgress,
-    recordingError,
-    hasHistoryData,
-    canRecord,
-    progressText,
-    startRecording,
-    stopRecording
-  } = useVideoRecorder(props.visHistory, props.nside, props.info)
+// Use video recorder composable
+const {
+  isRecording,
+  recordingProgress,
+  recordingError,
+  hasHistoryData,
+  canRecord,
+  progressText,
+  startRecording,
+  stopRecording,
+} = useVideoRecorder(props.visHistory, props.nside, props.info);
 
-  // Local state for error display
-  const showError = ref(false)
+// Local state for error display
+const showError = ref(false);
 
-  // Watch for recording errors
-  watch(recordingError, (newError) => {
+// Watch for recording errors
+watch(
+  recordingError,
+  (newError) => {
     if (newError) {
-      showError.value = true
+      showError.value = true;
     }
-  }, { immediate: true })
+  },
+  { immediate: true },
+);
 
-  // Start recording
-  async function startRecordingWithMethod() {
-    try {
-      await startRecording(props.is3D, props.componentRefs)
-    } catch (error) {
-      console.error('❌ Failed to start recording:', error)
-      recordingError.value = error.message
-    }
+// Start recording
+async function startRecordingWithMethod() {
+  try {
+    await startRecording(props.is3D, props.componentRefs);
+  } catch (error) {
+    console.error("❌ Failed to start recording:", error);
+    recordingError.value = error.message;
   }
+}
 </script>
 
 <style scoped>

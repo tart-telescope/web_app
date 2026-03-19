@@ -8,8 +8,8 @@
   >
     <div class="title">Operating Mode: {{ telescope_mode }}</div>
     <div>
-      Visibilities most likely outdated because the telescope is currently not
-      operating in visibility mode.
+      Visibilities most likely outdated because the telescope is currently not operating in
+      visibility mode.
     </div>
   </v-alert>
 
@@ -18,7 +18,7 @@
     <div class="card-content">
       <v-card-title v-if="showTitle" class="py-3 d-flex align-center">
         <v-icon class="mr-2">mdi-eye</v-icon>
-        <span >Realtime View</span>
+        <span>Realtime View</span>
         <v-spacer />
         <v-btn
           :color="show_sat ? 'primary' : 'default'"
@@ -28,12 +28,7 @@
         >
           <v-icon>mdi-satellite-variant</v-icon>
         </v-btn>
-        <v-btn
-          :color="is3D ? 'primary' : 'default'"
-          icon
-          size="small"
-          @click="is3D = !is3D"
-        >
+        <v-btn :color="is3D ? 'primary' : 'default'" icon size="small" @click="is3D = !is3D">
           <v-icon>mdi-rotate-3d-variant</v-icon>
         </v-btn>
 
@@ -99,23 +94,13 @@
     <div class="fullscreen-container">
       <div class="close-controls">
         <span class="esc-text">Press ESC to close</span>
-        <v-btn
-          class="close-btn"
-          color="white"
-          icon
-          size="large"
-          @click="fullscreen = false"
-        >
+        <v-btn class="close-btn" color="white" icon size="large" @click="fullscreen = false">
           <v-icon>mdi-close</v-icon>
         </v-btn>
       </div>
 
       <div class="fullscreen-threejs">
-        <Threejs3D
-          v-if="fullscreen"
-          ref="fullscreenThreejsRef"
-          :auto-resize="true"
-        />
+        <Threejs3D v-if="fullscreen" ref="fullscreenThreejsRef" :auto-resize="true" />
       </div>
     </div>
   </v-overlay>
@@ -201,9 +186,7 @@ export default {
         (v) => v.timestamp.toString() === this.hoveredTimestamp.toString(),
       );
 
-      return historicalVis && historicalVis.satellites
-        ? historicalVis.satellites
-        : this.sat_list;
+      return historicalVis && historicalVis.satellites ? historicalVis.satellites : this.sat_list;
     },
 
     formattedTimestamp() {
@@ -373,11 +356,7 @@ export default {
       if (!this.renderPayload) {
         return;
       }
-      if (
-        !sphereCache &&
-        this.$refs.threejsRef &&
-        this.$refs.threejsRef.createSphereFromCorners
-      ) {
+      if (!sphereCache && this.$refs.threejsRef && this.$refs.threejsRef.createSphereFromCorners) {
         sphereCache = get_hemisphere_pixel_corners(this.nside);
         this.$refs.threejsRef.createSphereFromCorners(sphereCache);
       }
@@ -398,11 +377,7 @@ export default {
 
       // Ensure rendering component is ready before painting pixels
       this.$nextTick(() => {
-        if (
-          this.is3D &&
-          this.$refs.threejsRef &&
-          this.$refs.threejsRef.updateSphereColors
-        ) {
+        if (this.is3D && this.$refs.threejsRef && this.$refs.threejsRef.updateSphereColors) {
           this.$refs.threejsRef.updateSphereColors(bytes);
 
           // Also update fullscreen component if active
@@ -413,11 +388,7 @@ export default {
           ) {
             this.$refs.fullscreenThreejsRef.updateSphereColors(bytes);
           }
-        } else if (
-          !this.is3D &&
-          this.$refs.svgRef &&
-          this.$refs.svgRef.updatePolygonColors
-        ) {
+        } else if (!this.is3D && this.$refs.svgRef && this.$refs.svgRef.updatePolygonColors) {
           this.$refs.svgRef.updatePolygonColors(bytes);
         }
         this.timings.setting = (performance.now() - start).toFixed(1);
@@ -439,10 +410,7 @@ export default {
           }
           this.timings.render = (performance.now() - start).toFixed(1);
           start = performance.now();
-          if (
-            this.$refs.threejsRef &&
-            this.$refs.threejsRef.createSphereFromCorners
-          ) {
+          if (this.$refs.threejsRef && this.$refs.threejsRef.createSphereFromCorners) {
             this.$refs.threejsRef.createSphereFromCorners(sphereCache);
           }
         } else {
@@ -465,10 +433,7 @@ export default {
 
     updateSatelliteOverlays() {
       if (this.is3D && this.$refs.threejsRef) {
-        this.$refs.threejsRef.updateSatelliteOverlays(
-          this.currentSatelliteData,
-          this.show_sat,
-        );
+        this.$refs.threejsRef.updateSatelliteOverlays(this.currentSatelliteData, this.show_sat);
       } else if (!this.is3D && this.$refs.svgRef) {
         this.$refs.svgRef.updateSatelliteOverlays();
       }
@@ -483,11 +448,7 @@ export default {
     },
 
     updateFullscreenComponent() {
-      if (
-        this.fullscreen &&
-        this.$refs.fullscreenThreejsRef &&
-        this.isReadyToRender
-      ) {
+      if (this.fullscreen && this.$refs.fullscreenThreejsRef && this.isReadyToRender) {
         // Update geometry
         if (sphereCache) {
           this.$refs.fullscreenThreejsRef.createSphereFromCorners(sphereCache);
@@ -518,17 +479,9 @@ export default {
     handleResize() {
       // Trigger resize on both 2D and 3D components
       this.$nextTick(() => {
-        if (
-          this.is3D &&
-          this.$refs.threejsRef &&
-          this.$refs.threejsRef.handleResize
-        ) {
+        if (this.is3D && this.$refs.threejsRef && this.$refs.threejsRef.handleResize) {
           this.$refs.threejsRef.handleResize();
-        } else if (
-          !this.is3D &&
-          this.$refs.svgRef &&
-          this.$refs.svgRef.handleResize
-        ) {
+        } else if (!this.is3D && this.$refs.svgRef && this.$refs.svgRef.handleResize) {
           this.$refs.svgRef.handleResize();
         }
 
@@ -582,11 +535,7 @@ export default {
       // Access store directly using useAppStore
       const store = useAppStore();
       store.vis_history.splice(0, store.vis_history.length, ...testData);
-      console.log(
-        "✅ Test data added to store vis_history:",
-        store.vis_history.length,
-        "frames",
-      );
+      console.log("✅ Test data added to store vis_history:", store.vis_history.length, "frames");
     },
   },
 };

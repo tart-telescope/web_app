@@ -43,7 +43,7 @@ export const useAppStore = defineStore("app", {
     };
 
     // Auto-detect local mode on first load based on protocol
-    if (window.location.protocol === 'http:') {
+    if (window.location.protocol === "http:") {
       state.localMode = true;
     }
 
@@ -65,9 +65,7 @@ export const useAppStore = defineStore("app", {
       if (!state.TART_URL) {
         return "zm-cbu";
       }
-      const urlParts = state.TART_URL.split("/").filter(
-        (part) => part.length > 0,
-      );
+      const urlParts = state.TART_URL.split("/").filter((part) => part.length > 0);
       const telescopeName = urlParts.at(-1);
       return telescopeName || "zm-cbu";
     },
@@ -96,7 +94,7 @@ export const useAppStore = defineStore("app", {
     },
 
     setTART_URL(postFix) {
-      if (postFix === 'local') {
+      if (postFix === "local") {
         this.setLocalMode(true);
       } else {
         this.setLocalMode(false);
@@ -248,13 +246,13 @@ export const useAppStore = defineStore("app", {
 
       // Validate location data
       if (!this.info?.location?.lat || !this.info?.location?.lon) {
-        console.warn('Location data not available for satellite enrichment');
-        return { success: false, error: 'Missing location data' };
+        console.warn("Location data not available for satellite enrichment");
+        return { success: false, error: "Missing location data" };
       }
 
       // Get timestamps that need enrichment
-      const visToEnrich = this.vis_history.filter(vis =>
-        !vis.satellites || vis.satellites.length === 0
+      const visToEnrich = this.vis_history.filter(
+        (vis) => !vis.satellites || vis.satellites.length === 0,
       );
 
       if (visToEnrich.length === 0) {
@@ -262,8 +260,7 @@ export const useAppStore = defineStore("app", {
       }
 
       // Use Date objects directly like getCatalog does
-      const timestamps = visToEnrich.map(vis => vis.timestamp);
-
+      const timestamps = visToEnrich.map((vis) => vis.timestamp);
 
       let processedCount = 0;
       let errorCount = 0;
@@ -275,43 +272,44 @@ export const useAppStore = defineStore("app", {
           let retries = 0;
           let batchSuccess = false;
 
-
-
           while (retries < maxRetries && !batchSuccess) {
             try {
               const response = await satelliteApi.getBulkAzEl(
                 this.info.location.lat,
                 this.info.location.lon,
                 this.info.location.alt || 0,
-                batch
+                batch,
               );
 
               if (response?.dates && response?.az_el) {
                 this._processSatelliteResponse(response, visToEnrich);
                 processedCount += batch.length;
                 batchSuccess = true;
-
-
               } else {
-                throw new Error('Invalid response format from satellite API');
+                throw new Error("Invalid response format from satellite API");
               }
             } catch (error) {
               retries++;
-              console.warn(`Satellite enrichment batch ${Math.floor(i / batchSize) + 1} failed (attempt ${retries}):`, error.message);
+              console.warn(
+                `Satellite enrichment batch ${Math.floor(i / batchSize) + 1} failed (attempt ${retries}):`,
+                error.message,
+              );
 
               if (retries >= maxRetries) {
                 errorCount += batch.length;
                 console.error(`Failed to enrich batch after ${maxRetries} attempts`);
               } else {
                 // Exponential backoff
-                await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, retries - 1)));
+                await new Promise((resolve) =>
+                  setTimeout(resolve, 1000 * Math.pow(2, retries - 1)),
+                );
               }
             }
           }
 
           // Small delay between batches to be respectful to the API
           if (i + batchSize < timestamps.length) {
-            await new Promise(resolve => setTimeout(resolve, 100));
+            await new Promise((resolve) => setTimeout(resolve, 100));
           }
         }
 
@@ -319,16 +317,15 @@ export const useAppStore = defineStore("app", {
           success: true,
           processed: processedCount,
           errors: errorCount,
-          total: timestamps.length
+          total: timestamps.length,
         };
         return result;
-
       } catch (error) {
-        console.error('Bulk satellite enrichment failed:', error);
+        console.error("Bulk satellite enrichment failed:", error);
         return {
           success: false,
           error: error.message,
-          processed: processedCount
+          processed: processedCount,
         };
       }
     },
@@ -383,7 +380,7 @@ export const useAppStore = defineStore("app", {
         }
 
         if (matchedVis && satelliteData) {
-          matchedVis.satellites = satelliteData.map(satellite => ({
+          matchedVis.satellites = satelliteData.map((satellite) => ({
             name: satellite.name,
             az: satellite.az,
             el: satellite.el,
@@ -395,21 +392,21 @@ export const useAppStore = defineStore("app", {
       return enrichedCount;
     },
     async synthesisData() {
-      console.log('🔄 synthesisData() called');
-      console.log('📡 Current telescope mode:', this.telescope_mode);
-      console.log('📍 Current TART_URL:', this.TART_URL);
-      console.log('📊 Current vis_history length:', this.vis_history.length);
+      console.log("🔄 synthesisData() called");
+      console.log("📡 Current telescope mode:", this.telescope_mode);
+      console.log("📍 Current TART_URL:", this.TART_URL);
+      console.log("📊 Current vis_history length:", this.vis_history.length);
       const synthesisData = await telescopeApi.getSynthesisData();
       if (!synthesisData) {
-        console.log('❌ No synthesis data received');
+        console.log("❌ No synthesis data received");
         return;
       }
-      console.log('📊 Synthesis data received:', {
+      console.log("📊 Synthesis data received:", {
         hasVis: !!synthesisData.vis,
         hasGain: !!synthesisData.gain,
         hasAntennas: !!synthesisData.antennas,
         visTimestamp: synthesisData.vis?.timestamp,
-        visDataLength: synthesisData.vis?.data?.length
+        visDataLength: synthesisData.vis?.data?.length,
       });
 
       const { vis, gain, antennas } = synthesisData;
@@ -419,17 +416,17 @@ export const useAppStore = defineStore("app", {
       const antPos = antennas;
       const info = this.info;
 
-      console.log('📈 Processing vis data:', {
+      console.log("📈 Processing vis data:", {
         timestamp: visData?.timestamp,
         dataLength: visData?.data?.length || 0,
         hasGain: !!gainsData,
         hasAntennas: !!antPos,
-        currentHistoryLength: this.vis_history.length
+        currentHistoryLength: this.vis_history.length,
       });
 
       // Safety check for info.location before accessing coordinates
       if (!info || !info.location) {
-        console.warn('Telescope info not loaded yet, skipping satellite catalog');
+        console.warn("Telescope info not loaded yet, skipping satellite catalog");
         return;
       }
 
@@ -437,7 +434,7 @@ export const useAppStore = defineStore("app", {
         visData.timestamp,
         info.location.lat,
         info.location.lon,
-        0
+        0,
       );
 
       if (catalogData) {
@@ -463,15 +460,15 @@ export const useAppStore = defineStore("app", {
         while (this.vis_history.length > 3600) {
           this.vis_history.shift();
         }
-        console.log('➕ Adding to vis_history:', {
+        console.log("➕ Adding to vis_history:", {
           timestamp: visWithSatellites.timestamp,
           previousLength: this.vis_history.length,
-          satelliteCount: satellites.length
+          satelliteCount: satellites.length,
         });
         this.vis_history.push(visWithSatellites);
-        console.log('✅ vis_history updated, new length:', this.vis_history.length);
+        console.log("✅ vis_history updated, new length:", this.vis_history.length);
       } else {
-        console.log('❌ No catalog data received for satellites');
+        console.log("❌ No catalog data received for satellites");
       }
 
       this.antennas = antPos;
@@ -502,7 +499,7 @@ export const useAppStore = defineStore("app", {
           this.vis.timestamp,
           this.info.location.lat,
           this.info.location.lon,
-          0
+          0,
         );
 
         if (catalogData) {

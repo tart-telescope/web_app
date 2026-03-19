@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios from "axios";
 
 class MapApiService {
   constructor() {
@@ -33,7 +33,7 @@ class MapApiService {
       baseURL: this.baseURL,
       timeout: this.defaultTimeout,
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
     });
 
@@ -66,7 +66,7 @@ class MapApiService {
    */
   _getRequestConfig() {
     return {
-      signal: this.abortController?.signal
+      signal: this.abortController?.signal,
     };
   }
 
@@ -74,11 +74,11 @@ class MapApiService {
    * Handle async operations with centralized error handling
    * @private
    */
-  async _handleRequest(operation, context = 'Map API request') {
+  async _handleRequest(operation, context = "Map API request") {
     try {
       return await operation();
     } catch (error) {
-      if (error.name === 'AbortError') {
+      if (error.name === "AbortError") {
         console.log(`${context} was cancelled`);
         return null;
       }
@@ -94,9 +94,9 @@ class MapApiService {
   async getTelescopes() {
     return await this._handleRequest(async () => {
       const client = this._getClient();
-      const response = await client.get('/telescopes', this._getRequestConfig());
+      const response = await client.get("/telescopes", this._getRequestConfig());
       return response.data;
-    }, 'Get telescopes');
+    }, "Get telescopes");
   }
 
   /**
@@ -112,7 +112,7 @@ class MapApiService {
     }, `Get telescope ${telescopeId}`);
   }
   client = null;
-  baseURL = 'https://map.elec.ac.nz/api/v1';
+  baseURL = "https://map.elec.ac.nz/api/v1";
   defaultTimeout = 10_000;
   abortController = null;
 }

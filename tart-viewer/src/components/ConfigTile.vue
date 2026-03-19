@@ -14,18 +14,11 @@
       <v-icon class="mr-2">mdi-cog</v-icon>
       Acquisition Config
       <v-spacer />
-      <v-chip
-        v-if="!authenticated"
-        color="warning"
-        size="small"
-        variant="outlined"
-      >
+      <v-chip v-if="!authenticated" color="warning" size="small" variant="outlined">
         Login Required
       </v-chip>
       <v-btn icon size="small" variant="text">
-        <v-icon>{{
-          showConfig ? "mdi-chevron-up" : "mdi-chevron-down"
-        }}</v-icon>
+        <v-icon>{{ showConfig ? "mdi-chevron-up" : "mdi-chevron-down" }}</v-icon>
       </v-btn>
     </v-card-title>
 
@@ -59,9 +52,7 @@
                   <template #item="{ props, internalItem }">
                     <v-list-item v-bind="props">
                       <template #title>
-                        {{ internalItem.title }} ({{
-                          getIntegrationTime(internalItem.value)
-                        }}ms)
+                        {{ internalItem.title }} ({{ getIntegrationTime(internalItem.value) }}ms)
                       </template>
                     </v-list-item>
                   </template>
@@ -102,9 +93,7 @@
                   <template #item="{ props, internalItem }">
                     <v-list-item v-bind="props">
                       <template #title>
-                        {{ internalItem.title }} ({{
-                          getIntegrationTime(internalItem.value)
-                        }}ms)
+                        {{ internalItem.title }} ({{ getIntegrationTime(internalItem.value) }}ms)
                       </template>
                     </v-list-item>
                   </template>
@@ -140,23 +129,15 @@
                       Latch acquisition to these seconds of the minute:
                     </div>
                     <div class="text-caption text-warning mb-2">
-                      <v-icon class="mr-1" color="warning" size="14"
-                        >mdi-alert</v-icon
-                      >
+                      <v-icon class="mr-1" color="warning" size="14">mdi-alert</v-icon>
                       Trigger edges are skipped during data transfer
                     </div>
                     <div class="d-flex flex-wrap ga-1">
                       <v-chip
                         v-for="sec in availableSeconds"
                         :key="sec"
-                        :color="
-                          syncAcquireAtSeconds.includes(sec)
-                            ? 'primary'
-                            : 'default'
-                        "
-                        :disabled="
-                          !authenticated || loading || loadingSyncSeconds
-                        "
+                        :color="syncAcquireAtSeconds.includes(sec) ? 'primary' : 'default'"
+                        :disabled="!authenticated || loading || loadingSyncSeconds"
                         size="small"
                         variant="flat"
                         @click="toggleSecond(sec)"
@@ -166,9 +147,7 @@
                     </div>
                     <div class="d-flex align-center mt-2 ga-2">
                       <v-btn
-                        :disabled="
-                          !authenticated || loading || loadingSyncSeconds
-                        "
+                        :disabled="!authenticated || loading || loadingSyncSeconds"
                         size="x-small"
                         variant="text"
                         @click="selectPreset('every10')"
@@ -177,9 +156,7 @@
                       </v-btn>
 
                       <v-btn
-                        :disabled="
-                          !authenticated || loading || loadingSyncSeconds
-                        "
+                        :disabled="!authenticated || loading || loadingSyncSeconds"
                         size="x-small"
                         variant="text"
                         @click="selectPreset('every30')"
@@ -187,9 +164,7 @@
                         Every 30s
                       </v-btn>
                       <v-btn
-                        :disabled="
-                          !authenticated || loading || loadingSyncSeconds
-                        "
+                        :disabled="!authenticated || loading || loadingSyncSeconds"
                         size="x-small"
                         variant="text"
                         @click="selectPreset('onTheMinute')"
@@ -329,8 +304,7 @@ export default {
           if (rawSync && syncSeconds) {
             this.syncSupported = true;
             this.rawSync = Boolean(rawSync.sync);
-            this.syncAcquireAtSeconds =
-              syncSeconds.sync_acquire_at_seconds || [];
+            this.syncAcquireAtSeconds = syncSeconds.sync_acquire_at_seconds || [];
           }
         } catch {
           // API doesn't support sync endpoints — leave syncSupported false
@@ -403,9 +377,7 @@ export default {
       this.successMessage = "";
 
       try {
-        const result = await telescopeApi.setRawNumSamplesExp(
-          this.rawSamplesExp,
-        );
+        const result = await telescopeApi.setRawNumSamplesExp(this.rawSamplesExp);
 
         if (result) {
           const integrationTime = this.getIntegrationTime(this.rawSamplesExp);
@@ -431,9 +403,7 @@ export default {
       this.successMessage = "";
 
       try {
-        const result = await telescopeApi.setVisNumSamplesExp(
-          this.visSamplesExp,
-        );
+        const result = await telescopeApi.setVisNumSamplesExp(this.visSamplesExp);
 
         if (result) {
           const integrationTime = this.getIntegrationTime(this.visSamplesExp);

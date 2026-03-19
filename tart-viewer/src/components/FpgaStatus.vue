@@ -2,7 +2,7 @@
   <v-card :loading="loading">
     <v-card-title class="py-3 d-flex align-center">
       <v-icon start>mdi-chip</v-icon>
-      <span >FPGA Status</span>
+      <span>FPGA Status</span>
       <v-chip class="ml-2" color="info" size="small">ALPHA</v-chip>
       <v-spacer />
       <v-chip v-show="fpgaStatus" class="ml-2" color="info" size="small">
@@ -41,10 +41,7 @@
                   }"
                 >
                   <span>Enabled:</span>
-                  <v-chip
-                    :color="aqSystem.enabled ? 'success' : 'grey'"
-                    size="small"
-                  >
+                  <v-chip :color="aqSystem.enabled ? 'success' : 'grey'" size="small">
                     {{ aqSystem.enabled ? "ON" : "OFF" }}
                   </v-chip>
                 </div>
@@ -55,10 +52,7 @@
                   }"
                 >
                   <span>SDRAM Ready:</span>
-                  <v-chip
-                    :color="aqSystem.SDRAM_ready ? 'success' : 'grey'"
-                    size="small"
-                  >
+                  <v-chip :color="aqSystem.SDRAM_ready ? 'success' : 'grey'" size="small">
                     {{ aqSystem.SDRAM_ready ? "ON" : "OFF" }}
                   </v-chip>
                 </div>
@@ -67,10 +61,7 @@
                   :class="{ 'flash-change': isFieldChanged('AQ_SYSTEM.error') }"
                 >
                   <span>Error:</span>
-                  <v-chip
-                    :color="aqSystem.error ? 'error' : 'success'"
-                    size="small"
-                  >
+                  <v-chip :color="aqSystem.error ? 'error' : 'success'" size="small">
                     {{ aqSystem.error ? "ERROR" : "OK" }}
                   </v-chip>
                 </div>
@@ -81,10 +72,7 @@
                   }"
                 >
                   <span>Overflow:</span>
-                  <v-chip
-                    :color="aqSystem.overflow ? 'error' : 'success'"
-                    size="small"
-                  >
+                  <v-chip :color="aqSystem.overflow ? 'error' : 'success'" size="small">
                     {{ aqSystem.overflow ? "ERROR" : "OK" }}
                   </v-chip>
                 </div>
@@ -102,10 +90,7 @@
                   :class="{ 'flash-change': isFieldChanged('AQ_SYSTEM.512Mb') }"
                 >
                   <span>512Mb:</span>
-                  <v-chip
-                    :color="aqSystem['512Mb'] ? 'success' : 'grey'"
-                    size="small"
-                  >
+                  <v-chip :color="aqSystem['512Mb'] ? 'success' : 'grey'" size="small">
                     {{ aqSystem["512Mb"] ? "YES" : "NO" }}
                   </v-chip>
                 </div>
@@ -124,10 +109,7 @@
                   }"
                 >
                   <span>Acquisition Enabled:</span>
-                  <v-chip
-                    :color="sysStats.acq_en ? 'success' : 'grey'"
-                    size="small"
-                  >
+                  <v-chip :color="sysStats.acq_en ? 'success' : 'grey'" size="small">
                     {{ sysStats.acq_en ? "ON" : "OFF" }}
                   </v-chip>
                 </div>
@@ -138,10 +120,7 @@
                   }"
                 >
                   <span>Capture Enabled:</span>
-                  <v-chip
-                    :color="sysStats.cap_en ? 'success' : 'grey'"
-                    size="small"
-                  >
+                  <v-chip :color="sysStats.cap_en ? 'success' : 'grey'" size="small">
                     {{ sysStats.cap_en ? "ON" : "OFF" }}
                   </v-chip>
                 </div>
@@ -152,10 +131,7 @@
                   }"
                 >
                   <span>Viz Enabled:</span>
-                  <v-chip
-                    :color="sysStats.viz_en ? 'success' : 'grey'"
-                    size="small"
-                  >
+                  <v-chip :color="sysStats.viz_en ? 'success' : 'grey'" size="small">
                     {{ sysStats.viz_en ? "ON" : "OFF" }}
                   </v-chip>
                 </div>
@@ -175,10 +151,7 @@
                   }"
                 >
                   <span>Capture Debug:</span>
-                  <v-chip
-                    :color="sysStats.cap_debug ? 'warning' : 'grey'"
-                    size="small"
-                  >
+                  <v-chip :color="sysStats.cap_debug ? 'warning' : 'grey'" size="small">
                     {{ sysStats.cap_debug ? "ON" : "OFF" }}
                   </v-chip>
                 </div>
@@ -189,10 +162,7 @@
                   }"
                 >
                   <span>Viz Pending:</span>
-                  <v-chip
-                    :color="sysStats.viz_pend ? 'warning' : 'grey'"
-                    size="small"
-                  >
+                  <v-chip :color="sysStats.viz_pend ? 'warning' : 'grey'" size="small">
                     {{ sysStats.viz_pend ? "ON" : "OFF" }}
                   </v-chip>
                 </div>
@@ -211,10 +181,7 @@
                   }"
                 >
                   <span>Enabled:</span>
-                  <v-chip
-                    :color="tcSystem.enabled ? 'success' : 'grey'"
-                    size="small"
-                  >
+                  <v-chip :color="tcSystem.enabled ? 'success' : 'grey'" size="small">
                     {{ tcSystem.enabled ? "ON" : "OFF" }}
                   </v-chip>
                 </div>
@@ -225,10 +192,7 @@
                   }"
                 >
                   <span>Locked:</span>
-                  <v-chip
-                    :color="tcSystem.locked ? 'success' : 'grey'"
-                    size="small"
-                  >
+                  <v-chip :color="tcSystem.locked ? 'success' : 'grey'" size="small">
                     {{ tcSystem.locked ? "ON" : "OFF" }}
                   </v-chip>
                 </div>
@@ -237,10 +201,7 @@
                   :class="{ 'flash-change': isFieldChanged('TC_SYSTEM.error') }"
                 >
                   <span>Error:</span>
-                  <v-chip
-                    :color="tcSystem.error ? 'error' : 'success'"
-                    size="small"
-                  >
+                  <v-chip :color="tcSystem.error ? 'error' : 'success'" size="small">
                     {{ tcSystem.error ? "ERROR" : "OK" }}
                   </v-chip>
                 </div>
@@ -270,10 +231,7 @@
                   }"
                 >
                   <span>SPI Busy:</span>
-                  <v-chip
-                    :color="spiStats.spi_busy ? 'warning' : 'success'"
-                    size="small"
-                  >
+                  <v-chip :color="spiStats.spi_busy ? 'warning' : 'success'" size="small">
                     {{ spiStats.spi_busy ? "BUSY" : "IDLE" }}
                   </v-chip>
                 </div>
@@ -284,10 +242,7 @@
                   }"
                 >
                   <span>FIFO Overflow:</span>
-                  <v-chip
-                    :color="spiStats.FIFO_overflow ? 'error' : 'success'"
-                    size="small"
-                  >
+                  <v-chip :color="spiStats.FIFO_overflow ? 'error' : 'success'" size="small">
                     {{ spiStats.FIFO_overflow ? "ERROR" : "OK" }}
                   </v-chip>
                 </div>
@@ -298,10 +253,7 @@
                   }"
                 >
                   <span>FIFO Underrun:</span>
-                  <v-chip
-                    :color="spiStats.FIFO_underrun ? 'error' : 'success'"
-                    size="small"
-                  >
+                  <v-chip :color="spiStats.FIFO_underrun ? 'error' : 'success'" size="small">
                     {{ spiStats.FIFO_underrun ? "ERROR" : "OK" }}
                   </v-chip>
                 </div>
@@ -337,10 +289,7 @@
                   }"
                 >
                   <span>Centre:</span>
-                  <v-chip
-                    :color="tcCentre.centre ? 'success' : 'grey'"
-                    size="small"
-                  >
+                  <v-chip :color="tcCentre.centre ? 'success' : 'grey'" size="small">
                     {{ tcCentre.centre ? "ON" : "OFF" }}
                   </v-chip>
                 </div>
@@ -349,10 +298,7 @@
                   :class="{ 'flash-change': isFieldChanged('TC_CENTRE.drift') }"
                 >
                   <span>Drift:</span>
-                  <v-chip
-                    :color="tcCentre.drift ? 'success' : 'grey'"
-                    size="small"
-                  >
+                  <v-chip :color="tcCentre.drift ? 'success' : 'grey'" size="small">
                     {{ tcCentre.drift ? "ON" : "OFF" }}
                   </v-chip>
                 </div>
@@ -363,10 +309,7 @@
                   }"
                 >
                   <span>Invert:</span>
-                  <v-chip
-                    :color="tcCentre.invert ? 'warning' : 'grey'"
-                    size="small"
-                  >
+                  <v-chip :color="tcCentre.invert ? 'warning' : 'grey'" size="small">
                     {{ tcCentre.invert ? "ON" : "OFF" }}
                   </v-chip>
                 </div>
@@ -376,9 +319,7 @@
                 >
                   <span>Delay:</span>
                   <v-chip color="info" size="small">
-                    {{
-                      tcCentre.delay != null ? tcCentre.delay.toFixed(3) : "N/A"
-                    }}
+                    {{ tcCentre.delay != null ? tcCentre.delay.toFixed(3) : "N/A" }}
                   </v-chip>
                 </div>
               </v-card-text>
@@ -395,11 +336,7 @@
                 >
                   <span>Phase:</span>
                   <v-chip color="info" size="small">
-                    {{
-                      tcStatus.phase != null
-                        ? Math.round(tcStatus.phase)
-                        : "N/A"
-                    }}
+                    {{ tcStatus.phase != null ? Math.round(tcStatus.phase) : "N/A" }}
                   </v-chip>
                 </div>
                 <div
@@ -408,11 +345,7 @@
                 >
                   <span>Delta:</span>
                   <v-chip color="info" size="small">
-                    {{
-                      tcStatus.delta != null
-                        ? Math.round(tcStatus.delta)
-                        : "N/A"
-                    }}
+                    {{ tcStatus.delta != null ? Math.round(tcStatus.delta) : "N/A" }}
                   </v-chip>
                 </div>
               </v-card-text>
@@ -428,10 +361,7 @@
                   :class="{ 'flash-change': isFieldChanged('TC_DEBUG.debug') }"
                 >
                   <span>Debug:</span>
-                  <v-chip
-                    :color="tcDebug.debug ? 'warning' : 'grey'"
-                    size="small"
-                  >
+                  <v-chip :color="tcDebug.debug ? 'warning' : 'grey'" size="small">
                     {{ tcDebug.debug ? "ON" : "OFF" }}
                   </v-chip>
                 </div>
@@ -440,10 +370,7 @@
                   :class="{ 'flash-change': isFieldChanged('TC_DEBUG.count') }"
                 >
                   <span>Count:</span>
-                  <v-chip
-                    :color="tcDebug.count ? 'success' : 'grey'"
-                    size="small"
-                  >
+                  <v-chip :color="tcDebug.count ? 'success' : 'grey'" size="small">
                     {{ tcDebug.count ? "ON" : "OFF" }}
                   </v-chip>
                 </div>
@@ -452,10 +379,7 @@
                   :class="{ 'flash-change': isFieldChanged('TC_DEBUG.shift') }"
                 >
                   <span>Shift:</span>
-                  <v-chip
-                    :color="tcDebug.shift ? 'success' : 'grey'"
-                    size="small"
-                  >
+                  <v-chip :color="tcDebug.shift ? 'success' : 'grey'" size="small">
                     {{ tcDebug.shift ? "ON" : "OFF" }}
                   </v-chip>
                 </div>
@@ -485,10 +409,7 @@
                   }"
                 >
                   <span>Enabled:</span>
-                  <v-chip
-                    :color="vxSystem.enabled ? 'success' : 'grey'"
-                    size="small"
-                  >
+                  <v-chip :color="vxSystem.enabled ? 'success' : 'grey'" size="small">
                     {{ vxSystem.enabled ? "ON" : "OFF" }}
                   </v-chip>
                 </div>
@@ -499,10 +420,7 @@
                   }"
                 >
                   <span>Overwrite:</span>
-                  <v-chip
-                    :color="vxSystem.overwrite ? 'warning' : 'grey'"
-                    size="small"
-                  >
+                  <v-chip :color="vxSystem.overwrite ? 'warning' : 'grey'" size="small">
                     {{ vxSystem.overwrite ? "ON" : "OFF" }}
                   </v-chip>
                 </div>
@@ -563,10 +481,7 @@
                   }"
                 >
                   <span>Overflow:</span>
-                  <v-chip
-                    :color="vxStatus.overflow ? 'error' : 'success'"
-                    size="small"
-                  >
+                  <v-chip :color="vxStatus.overflow ? 'error' : 'success'" size="small">
                     {{ vxStatus.overflow ? "ERROR" : "OK" }}
                   </v-chip>
                 </div>
@@ -601,10 +516,7 @@
                   :class="{ 'flash-change': isFieldChanged('VX_DEBUG.stuck') }"
                 >
                   <span>Stuck:</span>
-                  <v-chip
-                    :color="vxDebug.stuck ? 'warning' : 'success'"
-                    size="small"
-                  >
+                  <v-chip :color="vxDebug.stuck ? 'warning' : 'success'" size="small">
                     {{ vxDebug.stuck }}
                   </v-chip>
                 </div>
@@ -715,8 +627,7 @@ export default {
     },
     updateRefreshInterval() {
       this.stopAutoRefresh();
-      this.refreshInterval =
-        this.refreshOptions[this.selectedRefreshIndex].value;
+      this.refreshInterval = this.refreshOptions[this.selectedRefreshIndex].value;
       this.startAutoRefresh();
     },
     trackChanges(newStatus) {
@@ -724,66 +635,18 @@ export default {
       if (!this.previousFpgaStatus || !newStatus) return;
 
       // Track changes in nested objects
-      this.checkObjectChanges(
-        "AQ_SYSTEM",
-        this.previousFpgaStatus.AQ_SYSTEM,
-        newStatus.AQ_SYSTEM,
-      );
-      this.checkObjectChanges(
-        "SYS_STATS",
-        this.previousFpgaStatus.SYS_STATS,
-        newStatus.SYS_STATS,
-      );
-      this.checkObjectChanges(
-        "TC_SYSTEM",
-        this.previousFpgaStatus.TC_SYSTEM,
-        newStatus.TC_SYSTEM,
-      );
-      this.checkObjectChanges(
-        "SPI_STATS",
-        this.previousFpgaStatus.SPI_STATS,
-        newStatus.SPI_STATS,
-      );
-      this.checkObjectChanges(
-        "AQ_STREAM",
-        this.previousFpgaStatus.AQ_STREAM,
-        newStatus.AQ_STREAM,
-      );
-      this.checkObjectChanges(
-        "TC_CENTRE",
-        this.previousFpgaStatus.TC_CENTRE,
-        newStatus.TC_CENTRE,
-      );
-      this.checkObjectChanges(
-        "TC_STATUS",
-        this.previousFpgaStatus.TC_STATUS,
-        newStatus.TC_STATUS,
-      );
-      this.checkObjectChanges(
-        "TC_DEBUG",
-        this.previousFpgaStatus.TC_DEBUG,
-        newStatus.TC_DEBUG,
-      );
-      this.checkObjectChanges(
-        "VX_SYSTEM",
-        this.previousFpgaStatus.VX_SYSTEM,
-        newStatus.VX_SYSTEM,
-      );
-      this.checkObjectChanges(
-        "VX_STATUS",
-        this.previousFpgaStatus.VX_STATUS,
-        newStatus.VX_STATUS,
-      );
-      this.checkObjectChanges(
-        "VX_STREAM",
-        this.previousFpgaStatus.VX_STREAM,
-        newStatus.VX_STREAM,
-      );
-      this.checkObjectChanges(
-        "VX_DEBUG",
-        this.previousFpgaStatus.VX_DEBUG,
-        newStatus.VX_DEBUG,
-      );
+      this.checkObjectChanges("AQ_SYSTEM", this.previousFpgaStatus.AQ_SYSTEM, newStatus.AQ_SYSTEM);
+      this.checkObjectChanges("SYS_STATS", this.previousFpgaStatus.SYS_STATS, newStatus.SYS_STATS);
+      this.checkObjectChanges("TC_SYSTEM", this.previousFpgaStatus.TC_SYSTEM, newStatus.TC_SYSTEM);
+      this.checkObjectChanges("SPI_STATS", this.previousFpgaStatus.SPI_STATS, newStatus.SPI_STATS);
+      this.checkObjectChanges("AQ_STREAM", this.previousFpgaStatus.AQ_STREAM, newStatus.AQ_STREAM);
+      this.checkObjectChanges("TC_CENTRE", this.previousFpgaStatus.TC_CENTRE, newStatus.TC_CENTRE);
+      this.checkObjectChanges("TC_STATUS", this.previousFpgaStatus.TC_STATUS, newStatus.TC_STATUS);
+      this.checkObjectChanges("TC_DEBUG", this.previousFpgaStatus.TC_DEBUG, newStatus.TC_DEBUG);
+      this.checkObjectChanges("VX_SYSTEM", this.previousFpgaStatus.VX_SYSTEM, newStatus.VX_SYSTEM);
+      this.checkObjectChanges("VX_STATUS", this.previousFpgaStatus.VX_STATUS, newStatus.VX_STATUS);
+      this.checkObjectChanges("VX_STREAM", this.previousFpgaStatus.VX_STREAM, newStatus.VX_STREAM);
+      this.checkObjectChanges("VX_DEBUG", this.previousFpgaStatus.VX_DEBUG, newStatus.VX_DEBUG);
 
       // Clear flash after animation duration
       setTimeout(() => {

@@ -5,14 +5,7 @@
       <div class="svg-container">
         <svg id="overlaySVG" viewBox="0 0 512 512">
           <defs>
-            <marker
-              id="mid"
-              markerHeight="20"
-              markerWidth="10"
-              orient="auto"
-              refX="0.1"
-              refY="5"
-            >
+            <marker id="mid" markerHeight="20" markerWidth="10" orient="auto" refX="0.1" refY="5">
               <path d="M0,0 V10 L5,5 Z" fill="#4db6ac" />
             </marker>
           </defs>
@@ -36,13 +29,7 @@
             >
               1 metre
             </text>
-            <path
-              id="scaleLine"
-              :d="scaleLine"
-              fill="none"
-              stroke="teal"
-              stroke-width="2.5"
-            />
+            <path id="scaleLine" :d="scaleLine" fill="none" stroke="teal" stroke-width="2.5" />
             <path
               id="arrow-line"
               :d="line"

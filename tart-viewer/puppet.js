@@ -16,25 +16,25 @@ async function testConsole() {
     const text = msg.text();
 
     switch (type) {
-    case "error": {
-      console.log(`❌ CONSOLE ERROR: ${text}`);
-    
-    break;
-    }
-    case "warning": 
-    case "warn": {
-      console.log(`⚠️  CONSOLE WARNING: ${text}`);
-    
-    break;
-    }
-    case "log": {
-      console.log(`ℹ️  CONSOLE LOG: ${text}`);
-    
-    break;
-    }
-    default: {
-      console.log(`📝 CONSOLE ${type.toUpperCase()}: ${text}`);
-    }
+      case "error": {
+        console.log(`❌ CONSOLE ERROR: ${text}`);
+
+        break;
+      }
+      case "warning":
+      case "warn": {
+        console.log(`⚠️  CONSOLE WARNING: ${text}`);
+
+        break;
+      }
+      case "log": {
+        console.log(`ℹ️  CONSOLE LOG: ${text}`);
+
+        break;
+      }
+      default: {
+        console.log(`📝 CONSOLE ${type.toUpperCase()}: ${text}`);
+      }
     }
   });
 

@@ -25,10 +25,7 @@ export const useTelescopeRegistryStore = defineStore("telescopeRegistry", {
         // Normal mode: show all fetched telescopes
         telescopes = Array.from(state.telescopes.values())
           .map((telescope) => ({
-            title:
-              telescope.telescopeName ||
-              telescope.hostname ||
-              telescope.nodeName,
+            title: telescope.telescopeName || telescope.hostname || telescope.nodeName,
             value: telescope.hostname,
             online: telescope.online || false,
             lastSeen: telescope.lastSeen,

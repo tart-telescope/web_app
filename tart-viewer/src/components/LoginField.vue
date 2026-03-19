@@ -12,12 +12,7 @@
         @keydown.enter="auth(pass)"
       />
       <v-spacer />
-      <v-btn
-        block
-        color="secondary"
-        :loading="authenticating"
-        @click="auth(pass)"
-      >
+      <v-btn block color="secondary" :loading="authenticating" @click="auth(pass)">
         Login
         <v-icon end>mdi-key</v-icon>
       </v-btn>

@@ -7,26 +7,18 @@
         <div v-if="filteredData.length === 0" class="loading-container">
           <v-card-title class="py-3 d-flex align-center">
             <v-icon class="mr-2">mdi-chart-line</v-icon>
-            <span >Visibility</span>
+            <span>Visibility</span>
           </v-card-title>
           <div class="chart-container">
-            <v-skeleton-loader
-              class="chart-skeleton"
-              height="150"
-              type="image"
-            />
+            <v-skeleton-loader class="chart-skeleton" height="150" type="image" />
           </div>
 
           <v-card-title class="py-3 d-flex align-center">
             <v-icon class="mr-2">mdi-chart-timeline-variant</v-icon>
-            <span >Visibility Phase</span>
+            <span>Visibility Phase</span>
           </v-card-title>
           <div class="chart-container">
-            <v-skeleton-loader
-              class="chart-skeleton"
-              height="150"
-              type="image"
-            />
+            <v-skeleton-loader class="chart-skeleton" height="150" type="image" />
           </div>
 
           <div class="zoom-controls">
@@ -39,15 +31,9 @@
         <div v-else>
           <v-card-title class="py-3 d-flex align-center">
             <v-icon class="mr-2">mdi-chart-line</v-icon>
-            <span >Visibility</span>
+            <span>Visibility</span>
             <v-spacer />
-            <v-chip
-              v-if="hasNewData"
-              class="mr-2"
-              color="primary"
-              size="small"
-              variant="outlined"
-            >
+            <v-chip v-if="hasNewData" class="mr-2" color="primary" size="small" variant="outlined">
               New Data
             </v-chip>
             <v-btn size="small" @click="resetZoom">Reset Zoom</v-btn>
@@ -94,15 +80,9 @@
 
           <!-- Tooltip showing local and UTC times -->
           <div v-if="hoveredData" class="hover-tooltip" :style="tooltipStyle">
-            <div class="tooltip-time">
-              <strong>Local:</strong> {{ hoveredData.localTime }}
-            </div>
-            <div class="tooltip-time">
-              <strong>UTC:</strong> {{ hoveredData.utcTime }}
-            </div>
-            <div class="tooltip-data">
-              Amplitude: {{ hoveredData.amplitude }}
-            </div>
+            <div class="tooltip-time"><strong>Local:</strong> {{ hoveredData.localTime }}</div>
+            <div class="tooltip-time"><strong>UTC:</strong> {{ hoveredData.utcTime }}</div>
+            <div class="tooltip-data">Amplitude: {{ hoveredData.amplitude }}</div>
             <div class="tooltip-data">Phase: {{ hoveredData.phase }}</div>
           </div>
         </div>
@@ -159,9 +139,7 @@ export default {
 
       const [i, j] = this.selected_baseline;
       const result = this.vis_history.map((x_h, idx) => {
-        const item = x_h.data
-          ? x_h.data.find((x) => x.i === i && x.j === j)
-          : null;
+        const item = x_h.data ? x_h.data.find((x) => x.i === i && x.j === j) : null;
 
         return {
           timestamp: x_h.timestamp,
@@ -198,16 +176,10 @@ export default {
     },
 
     hasNewData() {
-      if (
-        !this.currentZoomRange ||
-        !this.currentZoomRange.max ||
-        this.filteredData.length === 0
-      )
+      if (!this.currentZoomRange || !this.currentZoomRange.max || this.filteredData.length === 0)
         return false;
 
-      const latestDataTimestamp = Math.max(
-        ...this.filteredData.map((d) => d.timestamp),
-      );
+      const latestDataTimestamp = Math.max(...this.filteredData.map((d) => d.timestamp));
       const zoomMaxTimestamp = this.currentZoomRange.max * 1000; // Convert from seconds to milliseconds
 
       return latestDataTimestamp > zoomMaxTimestamp;
@@ -250,11 +222,7 @@ export default {
     },
 
     handleUPlotHover(event) {
-      if (
-        event.idx !== undefined &&
-        event.idx !== null &&
-        event.idx < this.filteredData.length
-      ) {
+      if (event.idx !== undefined && event.idx !== null && event.idx < this.filteredData.length) {
         const data = this.filteredData[event.idx];
 
         if (data) {
@@ -264,10 +232,7 @@ export default {
           // Create tooltip with both local and UTC times
           const date = new Date(data.timestamp);
           const localTime = date.toLocaleString(undefined, { hour12: false });
-          const utcTime = date
-            .toISOString()
-            .replace("T", " ")
-            .replace("Z", " UTC");
+          const utcTime = date.toISOString().replace("T", " ").replace("Z", " UTC");
 
           this.hoveredData = {
             localTime: localTime,
@@ -306,8 +271,7 @@ export default {
 
     updateZoomRange(range) {
       // Only update if range has valid min/max values
-      this.currentZoomRange =
-        range && range.min !== null && range.max !== null ? range : null;
+      this.currentZoomRange = range && range.min !== null && range.max !== null ? range : null;
       // Update store with zoom range for video recording
       if (this.currentZoomRange) {
         this.setZoomRange(this.currentZoomRange);

@@ -15,21 +15,10 @@
       </v-btn>
     </v-app-bar>
 
-    <v-navigation-drawer
-      v-if="!isSimpleView"
-      v-model="drawer"
-      app
-      dark
-      temporary
-    >
+    <v-navigation-drawer v-if="!isSimpleView" v-model="drawer" app dark temporary>
       <!-- Local Mode Toggle at top -->
       <v-list-item class="pt-3">
-        <v-switch
-          v-model="localModeToggle"
-          color="cyan"
-          hide-details
-          label="Local Mode"
-        />
+        <v-switch v-model="localModeToggle" color="cyan" hide-details label="Local Mode" />
       </v-list-item>
 
       <v-list-item class="pb-3" style="overflow: visible">
@@ -58,13 +47,7 @@
         indeterminate
       />
 
-      <v-list
-        v-else
-        v-model:selected="selectedArray"
-        density="compact"
-        :lines="false"
-        nav
-      >
+      <v-list v-else v-model:selected="selectedArray" density="compact" :lines="false" nav>
         <v-list-item
           v-for="item in telescopes"
           :key="item.value"
@@ -88,8 +71,7 @@
           </template>
           <v-list-item-title
             :class="{
-              'text-medium-emphasis':
-                item.value !== 'custom' && item.online === false,
+              'text-medium-emphasis': item.value !== 'custom' && item.online === false,
               'text-primary': item.value === 'custom',
               'font-weight-medium': item.value === 'custom',
             }"
@@ -99,15 +81,9 @@
           <template #append>
             <v-chip
               v-if="item.currentMode && item.value !== 'custom' && item.online"
-              :color="
-                item.currentMode === 'TELESCOPE_MODE_VIS'
-                  ? 'primary'
-                  : 'default'
-              "
+              :color="item.currentMode === 'TELESCOPE_MODE_VIS' ? 'primary' : 'default'"
               size="x-small"
-              :variant="
-                item.currentMode === 'TELESCOPE_MODE_VIS' ? 'flat' : 'outlined'
-              "
+              :variant="item.currentMode === 'TELESCOPE_MODE_VIS' ? 'flat' : 'outlined'"
             >
               {{ item.currentMode.replace("TELESCOPE_MODE_", "") }}
             </v-chip>
@@ -119,11 +95,7 @@
             >
               OFFLINE
             </v-chip>
-            <v-icon
-              v-else-if="item.value === 'custom'"
-              color="primary"
-              size="small"
-            >
+            <v-icon v-else-if="item.value === 'custom'" color="primary" size="small">
               mdi-chevron-right
             </v-icon>
           </template>
@@ -219,18 +191,9 @@
           style="min-height: 60vh"
         >
           <div class="text-center">
-            <v-progress-circular
-              class="mb-6"
-              color="primary"
-              indeterminate
-              size="64"
-            />
-            <h2 class="text-h4 text-grey-lighten-1 mb-4">
-              Fetching telescopes...
-            </h2>
-            <p class="text-body-1 text-grey">
-              Please wait while we load available telescopes.
-            </p>
+            <v-progress-circular class="mb-6" color="primary" indeterminate size="64" />
+            <h2 class="text-h4 text-grey-lighten-1 mb-4">Fetching telescopes...</h2>
+            <p class="text-body-1 text-grey">Please wait while we load available telescopes.</p>
           </div>
         </div>
 
@@ -241,15 +204,11 @@
           style="min-height: 60vh"
         >
           <div class="text-center">
-            <v-icon class="mb-6" color="grey-lighten-1" size="120">
-              mdi-alert-triangle
-            </v-icon>
+            <v-icon class="mb-6" color="grey-lighten-1" size="120"> mdi-alert-triangle </v-icon>
             <h2 class="text-h4 text-grey-lighten-1 mb-4">
               No telescopes available at the moment :(
             </h2>
-            <p class="text-body-1 text-grey">
-              Please try again later or check back soon.
-            </p>
+            <p class="text-body-1 text-grey">Please try again later or check back soon.</p>
           </div>
         </div>
 
@@ -335,9 +294,7 @@ export default {
     toggleLocalMode(enabled) {
       // Update both stores
       this.setLocalMode(enabled);
-      this.setTART_URL(
-        enabled ? "local" : this.TART_URL_DEFAULT.split("/").pop(),
-      );
+      this.setTART_URL(enabled ? "local" : this.TART_URL_DEFAULT.split("/").pop());
 
       if (enabled) {
         // Entering local mode
@@ -388,10 +345,7 @@ export default {
     },
     setRefresher() {
       window.clearTimeout(this.refresher);
-      this.refresher = window.setTimeout(
-        this.getData,
-        this.refreshInterval * 1000,
-      );
+      this.refresher = window.setTimeout(this.getData, this.refreshInterval * 1000);
     },
     async applyCustomUrl() {
       if (!this.isValidUrl(this.CUSTOM_TART_URL)) return;
@@ -469,10 +423,7 @@ export default {
           // Switch to predefined telescope
           this.switchToTelescope(newPostfix);
           // Update route to match selection (unless in local mode)
-          if (
-            !this.appLocalMode &&
-            this.$route.params.telescope !== newPostfix
-          ) {
+          if (!this.appLocalMode && this.$route.params.telescope !== newPostfix) {
             this.$router.replace({
               path: "/" + newPostfix,
               query: this.$route.query,
@@ -483,11 +434,7 @@ export default {
     },
     "$route.params.telescope": function (newTelescope) {
       // Don't respond to route changes in local mode
-      if (
-        !this.appLocalMode &&
-        newTelescope &&
-        this.currentTelescope !== newTelescope
-      ) {
+      if (!this.appLocalMode && newTelescope && this.currentTelescope !== newTelescope) {
         this.selectedArray = [newTelescope];
       }
     },
@@ -589,9 +536,7 @@ export default {
       if (this.appLocalMode) return false;
       // Show error if not loading and no telescopes available
       if (this.initialLoading || this.loadingTelescopes) return false;
-      const availableTelescopes = this.telescopes.filter(
-        (t) => t.value !== "custom",
-      );
+      const availableTelescopes = this.telescopes.filter((t) => t.value !== "custom");
       return availableTelescopes.length === 0;
     },
   },
