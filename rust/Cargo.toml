@@ -11,6 +11,7 @@ num = "0.4"
 rayon = "1.8"
 libm = "0.2"
 ryu = "1.0"
+once_cell = "1.20"
 
 # For data handling
 chrono = { version = "0.4", features = ["serde"] } # To parse Dates
@@ -18,8 +19,7 @@ chrono = { version = "0.4", features = ["serde"] } # To parse Dates
 # CLI dependencies (optional)
 clap = { version = "4.4", features = ["derive"], optional = true }
 
-# For templating
-sailfish = "0.9"
+# For templating / error handling
 thiserror = "2.0"
 
 # For requests
