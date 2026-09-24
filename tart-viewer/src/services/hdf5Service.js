@@ -1,3 +1,5 @@
+import { SUPPORTED_ANTENNA_COUNTS } from "@/utils/antennaConfig";
+
 class Hdf5Service {
   constructor() {}
 
@@ -109,7 +111,7 @@ class Hdf5Service {
    */
   _populateStoreWithParsedData(parsedData, store, enrichBulkSatellites, k = 1) {
     try {
-      const { timestamps, visibilityData, gainPhaseData, antennaData, baselineData } = parsedData;
+      const { timestamps, visibilityData, gainPhaseData, antennaData, baselineData, antennaConfig } = parsedData;
 
       // Create reusable objects
       const gainRecord = gainPhaseData
@@ -121,6 +123,12 @@ class Hdf5Service {
         : null;
 
       const antennas = antennaData || null;
+
+      // Synchronize the store (and the UI selection state) with the array size
+      // detected in the file, so 24- and 32-antenna files can be mixed.
+      if (antennaConfig?.nAntennas) {
+        this._applyAntennaConfig(antennaConfig, store);
+      }
 
       // Populate visibility data
       if (timestamps && visibilityData) {
@@ -142,6 +150,7 @@ class Hdf5Service {
           const timeStepVis = visibilityData[index];
           for (const [baselineIndex, complexVis] of timeStepVis.entries()) {
             const res = baselineData[baselineIndex];
+            if (!res) continue;
             data.push({
               i: res[0],
               j: res[1],
@@ -156,6 +165,7 @@ class Hdf5Service {
             satellites: [],
             gain: gainRecord,
             antennas,
+            nAntennas: antennaConfig?.nAntennas ?? antennas?.length ?? null,
           };
           history.push(visRecord);
         }
@@ -166,34 +176,37 @@ class Hdf5Service {
       }
 
       // Populate antenna positions
-      // if (antennaData) {
-      //   store.antennas = Object.freeze(antennaData);
-      // }
+      if (antennas) {
+        store.antennas = antennas;
+      }
 
-      // if (gainRecord) {
-      //   store.gain = Object.freeze(gainRecord);
-      // }
+      if (gainRecord) {
+        store.gain = gainRecord;
+      }
 
-      // // Populate baseline data if available
-      // if (baselineData) {
-      //   // Store baseline mapping for future use
-      //   store.baselines = Object.freeze(baselineData);
-      // }
+      // Populate baseline data if available
+      if (baselineData) {
+        // Store baseline mapping for future use
+        store.baselines = baselineData;
+      }
 
-      // // Populate config/info data - only update specific fields
-      // if (configData) {
-      //   const updatedInfo = { ...store.info };
+      // Populate config/info data - only update specific fields
+      if (parsedData.configData) {
+        const configData = parsedData.configData;
+        const updatedInfo = { ...store.info };
 
-      //   // Only update known info fields from configData
-      //   if (configData.name) {updatedInfo.name = configData.name;}
-      //   if (configData.location) {updatedInfo.location = configData.location;}
-      //   if (configData.operating_frequency) {updatedInfo.operating_frequency = configData.operating_frequency;}
-      //   if (configData.bandwidth) {updatedInfo.bandwidth = configData.bandwidth;}
-      //   if (configData.sample_rate) {updatedInfo.sample_rate = configData.sample_rate;}
-      //   if (configData.n_ant) {updatedInfo.n_ant = configData.n_ant;}
+        if (configData.name) updatedInfo.name = configData.name;
+        if (configData.location) updatedInfo.location = configData.location;
+        if (configData.operating_frequency) updatedInfo.operating_frequency = configData.operating_frequency;
+        if (configData.bandwidth) updatedInfo.bandwidth = configData.bandwidth;
+        if (configData.sampling_frequency) updatedInfo.sampling_frequency = configData.sampling_frequency;
+        if (configData.num_antenna) updatedInfo.num_antenna = configData.num_antenna;
+        if (configData.lat !== undefined && configData.lon !== undefined && !updatedInfo.location) {
+          updatedInfo.location = { lat: configData.lat, lon: configData.lon, alt: configData.alt };
+        }
 
-      //   store.info = Object.freeze(updatedInfo);
-      // }
+        store.info = updatedInfo;
+      }
 
       // Enrich satellite data
       if (enrichBulkSatellites) {
@@ -202,6 +215,36 @@ class Hdf5Service {
     } catch (error) {
       console.error("Error populating store:", error);
       throw new Error(`Failed to populate store with data: ${error.message}`);
+    }
+  }
+
+  /**
+   * Reconcile store state with the array size detected in a loaded file.
+   *
+   * Antenna-derived state (which antennas are enabled, the selected baseline)
+   * must follow the file: a 32-antenna file needs 32 enabled antennas and a
+   * valid selected baseline, and switching back to a 24-antenna file must not
+   * leave stale 32-antenna selections behind.
+   *
+   * @param {Object} antennaConfig - Detected config ({ nAntennas, nBaselines })
+   * @param {Object} store - Pinia store instance
+   * @private
+   */
+  _applyAntennaConfig(antennaConfig, store) {
+    const { nAntennas } = antennaConfig;
+
+    if (!SUPPORTED_ANTENNA_COUNTS.includes(nAntennas)) {
+      console.warn(
+        `Loaded file has ${nAntennas} antennas, which is outside the supported set (${SUPPORTED_ANTENNA_COUNTS.join(", ")}). Rendering may be incorrect.`,
+      );
+    }
+
+    // Delegate to the store action so the UI and store stay consistent.
+    if (typeof store.setAntennaCount === "function") {
+      store.setAntennaCount(nAntennas);
+    } else {
+      store.nAntennas = nAntennas;
+      store.nBaselines = antennaConfig.nBaselines;
     }
   }
 

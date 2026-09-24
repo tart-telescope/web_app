@@ -2,7 +2,13 @@
  * H5WASM Utilities for TART HDF5 Files
  *
  * This module provides utilities for parsing TART HDF5 files using the h5wasm library.
+ *
+ * Array sizes vary between deployments (24 or 32 antennas), so parsing never
+ * assumes 24 antennas / 276 baselines. The antenna count is detected from the
+ * file contents (baselines, vis shape, config, gains) instead.
  */
+
+import { detectAntennaConfig, reshapeAntennaPositions, reshapeVisData } from "./antennaConfig";
 
 /**
  * Parse H5WASM file data and extract all structured data
@@ -15,22 +21,82 @@ export async function parseH5wasmFileData(h5file, filename) {
     const timestamps = parseTimestamps(h5file);
     const visibilityData = parseVisibilityData(h5file);
     const gainPhaseData = parseGainPhaseData(h5file);
-    const antennaData = parseAntennaData(h5file);
     const baselineData = parseBaselineData(h5file);
     const configData = parseConfigData(h5file);
+
+    // Detect the array size up front so antenna positions and vis data can be
+    // reshaped for either 24 or 32 (or any full-correlation) antenna layout.
+    const antennaConfig = detectAntennaConfig({
+      baselines: baselineData,
+      visibilityData,
+      configData,
+      gainPhaseData,
+    });
+
+    const antennaData = parseAntennaData(h5file, antennaConfig);
+
+    // Reshape vis data if it came back flat/timeseries. The old parser keyed off
+    // a single hardcoded flat length (16,560), which only matched 24 antennas;
+    // here the expected either-or is expressed in terms of the detected sizes.
+    const reshapedVisibilityData = maybeReshapeVisData(visibilityData, timestamps, antennaConfig.nBaselines);
+
+    if (antennaConfig.nAntennas) {
+      console.info(
+        `HDF5 ${filename}: detected ${antennaConfig.nAntennas} antennas / ${antennaConfig.nBaselines} baselines (source: ${antennaConfig.source})`,
+      );
+    } else {
+      console.warn(`HDF5 ${filename}: could not determine antenna count from file contents`);
+    }
+
     return {
       timestamps,
-      visibilityData,
+      visibilityData: reshapedVisibilityData,
       gainPhaseData,
       antennaData,
       baselineData,
       configData,
+      antennaConfig,
       filename,
     };
   } catch (error) {
     console.error("Error parsing HDF5 file:", error);
     return null;
   }
+}
+
+/**
+ * Reshape flat visibility data into [nTimes, nBaselines] when possible.
+ *
+ * Returns the input untouched when it is already a 2-D matrix, or when the
+ * shape cannot be reconciled with the detected baseline count.
+ *
+ * @param {Array|TypedArray} visData
+ * @param {Array} timestamps
+ * @param {number|null} nBaselines
+ * @returns {Array|TypedArray}
+ */
+function maybeReshapeVisData(visData, timestamps, nBaselines) {
+  if (!visData || !timestamps) return visData;
+
+  // Already [nTimes, nBaselines]: rows are arrays of per-baseline entries.
+  if (Array.isArray(visData) && visData.length === timestamps.length && Array.isArray(visData[0])) {
+    const rowLength = visData[0].length;
+    // A [nTimes, nBaselines] matrix has rows of length nBaselines. A flat
+    // [nTimes*nBaselines] array has rows that are [re, im] pairs (length 2).
+    if (!nBaselines || rowLength === nBaselines) return visData;
+  }
+
+  if (!nBaselines) return visData;
+
+  const flatLength = visData.length;
+  if (flatLength === timestamps.length * nBaselines) {
+    return reshapeVisData(visData, timestamps.length, nBaselines);
+  }
+
+  console.warn(
+    `Visibility data length ${flatLength} does not match ${timestamps.length} timestamps x ${nBaselines} baselines; using data as-is.`,
+  );
+  return visData;
 }
 
 function parseTimestamps(h5file) {
@@ -42,26 +108,13 @@ function parseVisibilityData(h5file) {
   try {
     const visDataset = h5file.get("vis");
     const visData = visDataset.value;
-    if (Array.isArray(visData)) {
-      if (visData.length === 16_560) {
-        const reshapedData = [];
-        for (let t = 0; t < 60; t++) {
-          const timeData = [];
-          for (let b = 0; b < 276; b++) {
-            const index = t * 276 + b;
-            timeData.push(visData[index]);
-          }
-          reshapedData.push(timeData);
-        }
-        return reshapedData;
-      }
 
-      // If already 2D array
-      if (visData[0] && Array.isArray(visData[0])) {
-        return visData;
-      }
+    // Already a 2D array ([nTimes, nBaselines]) - return as-is.
+    if (Array.isArray(visData) && visData[0] && Array.isArray(visData[0])) {
+      return visData;
     }
 
+    // Flat data is reshaped later, once the baseline count has been detected.
     return visData;
   } catch (error) {
     console.error("Error parsing visibility data:", error);
@@ -108,9 +161,10 @@ function parseGainPhaseData(h5file) {
 /**
  * Parse antenna position data from HDF5 file using h5wasm
  * @param {Object} h5file - H5WASM file object
- * @returns {Array|null} Array of antenna positions [24×3]
+ * @param {Object} [antennaConfig] - Detected antenna config ({ nAntennas, ... })
+ * @returns {Array|null} Array of antenna positions [N×3]
  */
-function parseAntennaData(h5file) {
+function parseAntennaData(h5file, antennaConfig = {}) {
   try {
     const antennaDataset = h5file.get("antenna_positions");
     const antennaPositions = antennaDataset.value;
@@ -119,17 +173,14 @@ function parseAntennaData(h5file) {
       return antennaPositions;
     }
 
-    // Handle different possible formats from h5wasm
+    // Handle different possible formats from h5wasm: a flat typed array of
+    // N×3 coordinates is reshaped using the detected antenna count.
     if (antennaPositions && typeof antennaPositions === "object") {
-      // If it's a flat typed array, reshape it to 24×3
+      const nAntennas = antennaConfig.nAntennas;
       const flatArray = Array.from(antennaPositions);
-      if (flatArray.length === 72) {
-        // 24 antennas × 3 coordinates
-        const shaped = [];
-        for (let i = 0; i < 24; i++) {
-          shaped.push([flatArray[i * 3], flatArray[i * 3 + 1], flatArray[i * 3 + 2]]);
-        }
-        return shaped;
+      if ((nAntennas && flatArray.length === nAntennas * 3) || flatArray.length % 3 === 0) {
+        const count = nAntennas || flatArray.length / 3;
+        return reshapeAntennaPositions(flatArray, count);
       }
     }
 
@@ -141,9 +192,57 @@ function parseAntennaData(h5file) {
 }
 
 /**
- * Parse baseline data from HDF5 file using h5wasm
+ * Reshape a flat baseline array ([nBaselines × 2]) into pairs of antenna indices.
+ * @param {Array|TypedArray} flatArray
+ * @returns {Array} Array of [ant1, ant2] pairs
+ */
+function pairsFromFlatBaselines(flatArray) {
+  const pairs = [];
+  for (let i = 0; i + 1 < flatArray.length; i += 2) {
+    // Number() also converts BigInt values from BigInt64Array
+    const ant1 = Number(flatArray[i]);
+    const ant2 = Number(flatArray[i + 1]);
+    if (Number.isFinite(ant1) && Number.isFinite(ant2)) {
+      pairs.push([ant1, ant2]);
+    }
+  }
+  return pairs;
+}
+
+/**
+ * Convert a single [ant1, ant2] entry to an array of plain numbers.
+ * Handles nested typed arrays (e.g. BigInt64Array rows from h5wasm).
+ * @param {Array|TypedArray} pair
+ * @returns {Array} [ant1, ant2]
+ */
+function normalizePair(pair) {
+  const arr = Array.from(pair, Number);
+  return [arr[0], arr[1]];
+}
+
+/**
+ * True when the value looks like a list of [ant1, ant2] rows rather than a
+ * flat list of scalar antenna indices.
+ * @param {*} baselines
+ * @returns {boolean}
+ */
+function isNestedBaselines(baselines) {
+  if (!Array.isArray(baselines) || baselines.length === 0) return false;
+  const first = baselines[0];
+  if (Array.isArray(first)) return true;
+  // Typed arrays (Float64Array/Int32Array) — a row of 2 indices, NOT a scalar
+  if (ArrayBuffer.isView(first)) return first.length === 2;
+  return false;
+}
+
+/**
+ * Parse baseline data from HDF5 file using h5wasm.
+ *
+ * The number of baselines is whatever the file contains (276 for 24 antennas,
+ * 496 for 32 antennas, ...), so it is never assumed here.
+ *
  * @param {Object} h5file - H5WASM file object
- * @returns {Array|null} Array of baseline pairs [276×2]
+ * @returns {Array|null} Array of baseline pairs [nBaselines×2]
  */
 function parseBaselineData(h5file) {
   try {
@@ -155,42 +254,23 @@ function parseBaselineData(h5file) {
 
     const baselineDataset = h5file.get("baselines");
     const baselines = baselineDataset.value;
-    if (baselines) {
-      // Handle BigInt64Array (common for baseline indices)
-      if (baselines.constructor.name === "BigInt64Array") {
-        const flatArray = Array.from(baselines);
 
-        if (flatArray.length === 552) {
-          // 276 baseline pairs × 2 elements each
-          const baselinePairs = [];
-          for (let i = 0; i < 276; i++) {
-            // Convert BigInt to regular numbers for antenna indices
-            const ant1 = Number(flatArray[i * 2]);
-            const ant2 = Number(flatArray[i * 2 + 1]);
-            baselinePairs.push([ant1, ant2]);
-          }
-          return baselinePairs;
-        }
-      }
+    if (!baselines) {
+      console.warn("No baseline data found - baselines are critical for visibility mapping");
+      return null;
+    }
 
-      // Handle regular arrays or other typed arrays
-      if (baselines.constructor.name.includes("Array")) {
-        const flatArray = Array.from(baselines);
+    // Already a list of [ant1, ant2] rows (any length). h5wasm may return each
+    // row as a plain array OR a 2-element typed array, so detect both.
+    if (isNestedBaselines(baselines)) {
+      return baselines.map((pair) => normalizePair(pair));
+    }
 
-        if (flatArray.length === 552) {
-          // 276 * 2
-          const baselinePairs = [];
-          for (let i = 0; i < 276; i++) {
-            baselinePairs.push([flatArray[i * 2], flatArray[i * 2 + 1]]);
-          }
-          return baselinePairs;
-        }
-      }
-
-      // If it's already a 2D array [276, 2]
-      if (Array.isArray(baselines) && baselines.length === 276) {
-        return baselines.map((pair) => Array.from(pair)); // Ensure regular arrays
-      }
+    // Flat scalar array ([ant1, ant2, ant1, ant2, ...]) or a 1-D typed array
+    // such as BigInt64Array: length = nBaselines * 2.
+    const flatArray = Array.from(baselines, Number);
+    if (flatArray.length > 0 && flatArray.length % 2 === 0) {
+      return pairsFromFlatBaselines(flatArray);
     }
 
     console.warn("Unexpected baseline data format:", baselines);
