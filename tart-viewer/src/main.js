@@ -26,6 +26,12 @@ registerPlugins(app);
 window.wasmReady = false;
 window.wasmError = null;
 
+// The catalogue module (satellite positions) is initialised lazily on first
+// satellite query rather than here, so it costs nothing for sessions that
+// never fetch satellites. `services/satellite/localPropagation.js` owns that
+// init and flips this flag once the module is loaded.
+window.catalogueWasmReady = false;
+
 // Initialize WASM before mounting the app
 init()
   .then(() => {

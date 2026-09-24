@@ -190,6 +190,9 @@ importers:
       roboto-fontface:
         specifier: ^0.10.0
         version: 0.10.0
+      tart-catalogue:
+        specifier: file:pkg-catalogue
+        version: file:pkg-catalogue
       three:
         specifier: ^0.183.2
         version: 0.183.2
@@ -1818,6 +1821,9 @@ packages:
     resolution: {integrity: sha512-gAQ9qrUN/UCypHtGFbbe7Rc/f9bzO88IwrG8TDo/aMKAApKyD6E3W4Cm0EfhfBb6Z6SKt59tTCTfD+n1xmAvMg==}
     engines: {node: '>=16.0.0'}
 
+  tart-catalogue@file:pkg-catalogue:
+    resolution: {directory: pkg-catalogue, type: directory}
+
   three@0.183.2:
     resolution: {integrity: sha512-di3BsL2FEQ1PA7Hcvn4fyJOlxRRgFYBpMTcyOgkwJIaDOdJMebEFPA+t98EvjuljDx4hNulAGwF6KIjtwI5jgQ==}
 
@@ -3439,6 +3445,8 @@ snapshots:
       sync-message-port: 1.2.0
 
   sync-message-port@1.2.0: {}
+
+  tart-catalogue@file:pkg-catalogue: {}
 
   three@0.183.2: {}
 

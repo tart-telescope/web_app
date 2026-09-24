@@ -22,6 +22,17 @@ RUN --mount=type=cache,target=/root/.cargo/registry \
     RUST_LOG=info wasm-pack build --release --target web --out-dir ./pkg \
         -- --features fast-math,simd,browser --no-default-features
 
+# Satellite catalogue module (TLE propagation to az/el).
+# No SIMD flags: sgp4 has no SIMD paths, so +simd128 would only risk changing
+# float behaviour for no gain.
+COPY rust-catalogue /app/rust-catalogue
+
+RUN --mount=type=cache,target=/root/.cargo/registry \
+    --mount=type=cache,target=/root/.cargo/git \
+    --mount=type=cache,target=/app/rust-catalogue/target \
+    cd /app/rust-catalogue && \
+    RUST_LOG=info wasm-pack build --release --target web --out-dir ./pkg
+
 # Web App build stage
 FROM --platform=linux/amd64 node:24-alpine AS node-build-stage
 WORKDIR /app/tart-viewer
@@ -39,11 +50,12 @@ COPY tart-viewer/package.json tart-viewer/pnpm-lock.yaml tart-viewer/pnpm-worksp
 
 # Install dependencies with cache mount
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
-    mkdir -p ./pkg && \
+    mkdir -p ./pkg ./pkg-catalogue && \
     pnpm install --frozen-lockfile
 
-# Copy WASM package from rust build
+# Copy WASM packages from rust build
 COPY --from=rust-build /app/rust/pkg ./pkg
+COPY --from=rust-build /app/rust-catalogue/pkg ./pkg-catalogue
 
 # Reinstall to link WASM package
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \

@@ -21,6 +21,7 @@
     "gridless": "file:pkg",
     "h5wasm": "^0.9.0",
     "roboto-fontface": "^0.10.0",
+    "tart-catalogue": "file:pkg-catalogue",
     "three": "^0.183.2",
     "uplot": "^1.6.32",
     "uplot-vue": "^1.2.4",
