@@ -1,7 +1,6 @@
-onlyBuiltDependencies:
-  - "@swc/core"
-  - core-js
-  - vue-demi
+allowBuilds:
+  "@parcel/watcher": false
+  core-js: false
 peerDependencyRules:
   allowedVersions:
     vite: "*"
