@@ -30,8 +30,12 @@ WORKDIR /app/tart-viewer
 RUN --mount=type=cache,target=/root/.npm \
     npm install -g pnpm
 
-# Copy package files for better layer caching
-COPY tart-viewer/package.json tart-viewer/pnpm-lock.yaml ./
+# Copy package files for better layer caching.
+# pnpm-workspace.yaml must be here, not just in the later `COPY tart-viewer ./`:
+# since pnpm 11 the dependency build-script decisions (allowBuilds) live in that
+# file rather than in package.json, so an install without it sees no decisions,
+# falls back to default-deny, and fails under CI with ERR_PNPM_IGNORED_BUILDS.
+COPY tart-viewer/package.json tart-viewer/pnpm-lock.yaml tart-viewer/pnpm-workspace.yaml ./
 
 # Install dependencies with cache mount
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
