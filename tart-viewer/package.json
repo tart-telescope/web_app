@@ -15,9 +15,9 @@
   "dependencies": {
     "@mdi/font": "^7.4.47",
     "@mdi/js": "^7.4.47",
-    "axios": "^1.13.6",
-    "axios-cache-interceptor": "^1.12.0",
-    "core-js": "^3.49.0",
+    "axios": "^1.20.0",
+    "axios-cache-interceptor": "^1.12.3",
+    "core-js": "^3.50.0",
     "gridless": "file:pkg",
     "h5wasm": "^0.9.0",
     "roboto-fontface": "^0.10.0",
@@ -25,40 +25,26 @@
     "uplot": "^1.6.32",
     "uplot-vue": "^1.2.4",
     "vite-plugin-wasm": "^3.6.0",
-    "vue": "^3.5.30",
-    "vue-axios": "^3.5.2",
-    "vuetify": "^4.0.2"
+    "vue": "^3.5.43",
+    "vue-axios": "^3.6.0",
+    "vuetify": "^4.2.1"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^6.0.5",
-    "eslint-plugin-antfu": "^3.2.2",
-    "eslint-plugin-perfectionist": "^5.7.0",
-    "eslint-plugin-pnpm": "^1.6.0",
-    "oxfmt": "^0.41.0",
-    "oxlint": "^1.56.0",
+    "@vitejs/plugin-vue": "^6.0.9",
+    "eslint-plugin-antfu": "^3.2.3",
+    "eslint-plugin-perfectionist": "^5.12.0",
+    "eslint-plugin-pnpm": "^1.9.1",
+    "oxfmt": "^0.70.0",
+    "oxlint": "^1.85.0",
     "pinia": "^3.0.4",
     "sass-embedded": "1.98.0",
-    "unplugin-auto-import": "^21.0.0",
+    "unplugin-auto-import": "^21.1.0",
     "unplugin-fonts": "^1.4.0",
-    "unplugin-vue-components": "^31.0.0",
-    "vite": "^8.0.0",
+    "unplugin-vue-components": "^31.1.0",
+    "vite": "^8.3.0",
     "vite-plugin-vue-layouts": "^0.11.0",
     "vite-plugin-vuetify": "^2.1.3",
-    "vue-router": "^5.0.3"
+    "vue-router": "^5.3.1"
   },
-  "packageManager": "pnpm@10.32.1",
-  "pnpm": {
-    "peerDependencyRules": {
-      "allowedVersions": {
-        "vite": "*",
-        "vue-router": "*"
-      }
-    },
-    "onlyBuiltDependencies": [
-      "@parcel/watcher",
-      "@swc/core",
-      "core-js",
-      "vue-demi"
-    ]
-  }
+  "packageManager": "pnpm@12.6.0"
 }

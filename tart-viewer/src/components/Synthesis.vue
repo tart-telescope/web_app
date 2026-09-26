@@ -92,9 +92,6 @@ import { useAppStore } from "@/stores/app";
 import SvgThreejs from "./SvgThreejs.vue";
 import Threejs3D from "./Threejs3D.vue";
 
-// Constants
-const ANTENNA_INDICES = Array.from({ length: 24 }, (_, i) => i);
-
 // Cache for expensive computations
 let polygonCache = null;
 let sphereCache = null;
@@ -120,7 +117,6 @@ export default {
 
   data() {
     return {
-      ANTENNA_INDICES,
       timings: { payload: 0, render: 0, setting: 0 },
       use_simd: true,
       show_sat: true,
@@ -144,6 +140,7 @@ export default {
       "showTimings",
       "nside",
       "antennasUsed",
+      "nAntennas",
       "currentVisData",
     ]),
 
@@ -186,7 +183,10 @@ export default {
     filteredVisData() {
       if (!this.currentVisData?.data) return null;
 
-      if (this.antennasUsed.length == 24) return this.currentVisData.data;
+      // All antennas in use: nothing to filter. Derive the expected count from
+      // the loaded array (24 or 32) rather than assuming 24.
+      const allUsed = this.nAntennas || this.antennas?.length;
+      if (!allUsed || this.antennasUsed.length >= allUsed) return this.currentVisData.data;
 
       const filtered = this.currentVisData.data.filter((v) => this.antennaSet.has(v.i) && this.antennaSet.has(v.j));
 

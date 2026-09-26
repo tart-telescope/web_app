@@ -9,13 +9,19 @@ export const useAppStore = defineStore("app", {
       TART_API_HUB_URL: "https://api.elec.ac.nz/tart/",
       TART_URL_DEFAULT: "https://api.elec.ac.nz/tart/zm-cbu",
       TART_URL: "https://api.elec.ac.nz/tart/zm-cbu",
-      CATALOG_URL: "https://tart.elec.ac.nz/catalog",
+      // Defaults to the public catalog; override with VITE_CATALOG_URL to point
+      // a local deployment at another catalog (e.g. a self-hosted one).
+      CATALOG_URL: import.meta.env.VITE_CATALOG_URL || "https://tart.elec.ac.nz/catalog",
       API_PREFIX: "/api/v1",
       num_bin: 512,
       nw: 128,
       vis: null,
       gain: null,
       antennas: [],
+      // Number of antennas in the currently loaded array (detected from the file).
+      // Defaults to 24, the zm-cbu layout; 32-antenna files update this on load.
+      nAntennas: 24,
+      nBaselines: (24 * 23) / 2,
       selectedBaseline: [0, 23],
       sat_list: [],
       vis_history: [],
@@ -171,6 +177,31 @@ export const useAppStore = defineStore("app", {
     },
     setAntennasUsed(antennas) {
       this.antennasUsed = antennas;
+    },
+    /**
+     * Update the array size in use and keep antenna-derived selection state
+     * within bounds. Called when a 24- or 32-antenna file is loaded.
+     * @param {number} nAntennas
+     */
+    setAntennaCount(nAntennas) {
+      const count = Number(nAntennas);
+      if (!Number.isInteger(count) || count < 2) return;
+
+      const maxIndex = count - 1;
+      this.nAntennas = count;
+      this.nBaselines = (count * (count - 1)) / 2;
+
+      const inRange = (id) => id >= 0 && id <= maxIndex;
+      const existing = (this.antennasUsed || []).filter((id) => inRange(id));
+      if (existing.length !== count) {
+        const merged = new Set([...existing, ...Array.from({ length: count }, (_, i) => i)]);
+        this.antennasUsed = [...merged].toSorted((a, b) => a - b);
+      }
+
+      const [i, j] = this.selectedBaseline || [];
+      if (!Number.isInteger(i) || !Number.isInteger(j) || i > maxIndex || j > maxIndex) {
+        this.selectedBaseline = [0, maxIndex];
+      }
     },
     toggleAntenna(antennaId) {
       const index = this.antennasUsed.indexOf(antennaId);
@@ -459,6 +490,11 @@ export const useAppStore = defineStore("app", {
       this.gain = gainsData;
       this.info = info;
       this.vis = visData;
+
+      // Keep antenna selection state in step with the telescope array size.
+      if (Array.isArray(antPos) && antPos.length > 0) {
+        this.setAntennaCount(antPos.length);
+      }
     },
     resetUI() {
       delete this.vis_history;

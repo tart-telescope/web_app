@@ -91,7 +91,7 @@
         <v-range-slider
           v-model="selected_baseline"
           label="Baseline"
-          max="23"
+          :max="maxAntennaIndex"
           min="0"
           outlined
           step="1"
@@ -119,6 +119,7 @@ export default {
 
   data() {
     return {
+      // Local mirror of the store selection; synced/validated by the watcher.
       selected_baseline: [0, 23],
       currentZoomRange: null,
       telescopeChanged: false,
@@ -129,7 +130,12 @@ export default {
   },
 
   computed: {
-    ...mapState(useAppStore, ["vis_history", "info"]),
+    ...mapState(useAppStore, ["vis_history", "info", "selectedBaseline", "nAntennas", "nside"]),
+
+    // Highest valid antenna index for the currently loaded array (23 or 31).
+    maxAntennaIndex() {
+      return Math.max((this.nAntennas || 1) - 1, 0);
+    },
 
     // Get filtered data once and reuse
     filteredData() {
@@ -184,6 +190,20 @@ export default {
   },
 
   watch: {
+    // Keep the slider in range when the array size changes (24 <-> 32 antennas).
+    selectedBaseline: {
+      handler(newVal) {
+        const [i, j] = newVal || [];
+        if (!Number.isInteger(i) || !Number.isInteger(j) || i > this.maxAntennaIndex || j > this.maxAntennaIndex) {
+          this.selected_baseline = [0, this.maxAntennaIndex];
+          this.selectBaseline(this.selected_baseline);
+        } else {
+          this.selected_baseline = newVal;
+        }
+      },
+      deep: true,
+    },
+
     "info.name": {
       handler(newName, oldName) {
         if (oldName && newName && newName !== oldName) {
