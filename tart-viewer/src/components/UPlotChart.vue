@@ -204,10 +204,32 @@ const chartOptions = computed(() => {
               if (sel.width > 0) {
                 const min = u.posToVal(sel.left, "x");
                 const max = u.posToVal(sel.left + sel.width, "x");
+                // The restore target for the next data change; the emitted
+                // range comes from the setScale hook below, which the setScale
+                // call here triggers.
                 currentZoomRange.value = { min, max };
                 u.setScale("x", { min, max });
-                emit("zoom-changed", { min, max });
               }
+            },
+          ],
+
+          /**
+           * Report the range the chart is actually showing.
+           *
+           * A selection is not the only thing that moves the x scale. A
+           * double-click resets it to the full range (`dblClick` calls
+           * `autoScaleX`, and never `setSelect`), dragging an axis pans it, and
+           * loading data re-ranges it. Emitting only from `setSelect` left the
+           * parent believing the chart still showed the last selection — so an
+           * MP4 export covered a time range the timeline was no longer showing.
+           * setScale fires on every one of those paths.
+           */
+          setScale: [
+            (u, key) => {
+              if (key !== "x") return;
+              const { min, max } = u.scales.x;
+              if (min == null || max == null) return;
+              emit("zoom-changed", { min, max });
             },
           ],
           setCursor: [
