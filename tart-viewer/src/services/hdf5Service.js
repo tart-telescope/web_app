@@ -133,6 +133,15 @@ class Hdf5Service {
       // Populate visibility data
       if (timestamps && visibilityData) {
         let history = store.vis_history;
+
+        // Skip timestamps already present, keyed by exact millisecond. The
+        // previous `history.some(...)` scan ran per timestamp and read every
+        // record through the reactive proxy, so it cost O(history) each time.
+        // Date carries integer milliseconds, so the old 0.01ms tolerance was
+        // equivalent to exact equality. Records added below are seeded into the
+        // set too, so duplicates within one file are still caught.
+        const seen = new Set(history.map((record) => new Date(record.timestamp).getTime()));
+
         for (const [index, timestamp] of timestamps.entries()) {
           // Apply decimation - only process every k-th record
           if (index % k !== 0) {
@@ -140,8 +149,7 @@ class Hdf5Service {
           }
 
           const ts = new Date(timestamp);
-          // skip if timestamp already exists
-          if (history.some((record) => Math.abs(record.timestamp - ts) < 0.01)) {
+          if (seen.has(ts.getTime())) {
             continue;
           }
 
@@ -168,6 +176,7 @@ class Hdf5Service {
             nAntennas: antennaConfig?.nAntennas ?? antennas?.length ?? null,
           };
           history.push(visRecord);
+          seen.add(ts.getTime());
         }
 
         history = history.toSorted((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
