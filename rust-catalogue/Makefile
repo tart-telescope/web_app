@@ -34,4 +34,8 @@ build_wasm_node:
 parity:
 	./scripts/parity_check.sh
 
-.PHONY: all test check_wasm build_wasm_pkg build_wasm_tart export-wasm-production build_wasm_node parity
+# Chunk-size trade-off for the viewer's enrichment loop.
+benchmark-chunks: build_wasm_node
+	node scripts/benchmark-chunk-sizes.mjs 3600 /tmp/eph.json
+
+.PHONY: all test check_wasm build_wasm_pkg build_wasm_tart export-wasm-production build_wasm_node parity benchmark-chunks
