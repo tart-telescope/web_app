@@ -20,6 +20,14 @@ const DEFAULTS = {
    * smaller. See utils/visLayout.js.
    */
   "vis-typed-arrays": import.meta.env.VITE_VIS_TYPED_ARRAYS === "true",
+
+  /**
+   * Render the sphere's colour map in a worker instead of on the main thread.
+   * `get_color_bytes_only` costs ~69 ms at nside 64 per cursor position, which
+   * is a dropped frame for the whole page on every hover. See
+   * services/colorRenderClient.js.
+   */
+  "color-worker": import.meta.env.VITE_COLOR_WORKER === "true",
 };
 
 const QUERY_PARAM = "flags";

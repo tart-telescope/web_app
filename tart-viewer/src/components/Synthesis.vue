@@ -86,8 +86,9 @@
 </template>
 
 <script>
-import { get_color_bytes_only, get_color_bytes_only_simd, get_hemisphere_pixel_corners, get_pixel_coords_only_simd } from "gridless";
+import { get_hemisphere_pixel_corners, get_pixel_coords_only_simd } from "gridless";
 import { mapState } from "pinia";
+import { requestColorBytes } from "@/services/colorRenderClient";
 import { useAppStore } from "@/stores/app";
 import { baselineCount, packRecordValues, toVisEntries } from "@/utils/visLayout";
 import SvgThreejs from "./SvgThreejs.vue";
@@ -322,7 +323,12 @@ export default {
     },
 
     // Just update colors (fast)
-    doColorUpdate() {
+    //
+    // Async because the render itself may happen in a worker. Callers are
+    // watchers that fire and forget, so nothing waits on the returned promise —
+    // ordering is handled by the client, which resolves a superseded request to
+    // null rather than making us paint a stale cursor position.
+    async doColorUpdate() {
       if (!this.renderPayload) {
         return;
       }
@@ -339,7 +345,12 @@ export default {
       const currentRef = this.is3D ? this.$refs.threejsRef : this.$refs.svgRef;
       if (!currentRef || this.nside < 2) return;
 
-      const bytes = this.use_simd ? get_color_bytes_only_simd(payload, this.nside) : get_color_bytes_only(payload, this.nside);
+      const bytes = await requestColorBytes(payload, this.nside, this.use_simd);
+      // The cursor has already moved past this one.
+      if (!bytes) return;
+
+      // With the worker this is a round trip rather than pure compute, so it
+      // reads as latency: the time from asking for a colour map to having it.
       this.timings.render = (performance.now() - start).toFixed(1);
       start = performance.now();
 
@@ -408,16 +419,18 @@ export default {
       }
     },
 
-    updateFullscreenComponent() {
+    async updateFullscreenComponent() {
       if (this.fullscreen && this.$refs.fullscreenThreejsRef && this.isReadyToRender) {
         // Update geometry
         if (sphereCache) {
           this.$refs.fullscreenThreejsRef.createSphereFromCorners(sphereCache);
         }
 
-        // Update colors
+        // Update colors. A null result means a newer request overtook this one;
+        // that request repaints the fullscreen ref as well, so skipping is safe.
         const payload = JSON.stringify(this.renderPayload);
-        const bytes = this.use_simd ? get_color_bytes_only_simd(payload, this.nside) : get_color_bytes_only(payload, this.nside);
+        const bytes = await requestColorBytes(payload, this.nside, this.use_simd);
+        if (!bytes) return;
         this.$refs.fullscreenThreejsRef.updateSphereColors(bytes);
 
         // Update satellites

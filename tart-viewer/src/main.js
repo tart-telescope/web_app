@@ -52,12 +52,30 @@ async function warmHdf5Runtime() {
 }
 
 /**
+ * Start the colour render worker, so its own copy of the gridless wasm is
+ * instantiated before the first hover needs it. Does nothing unless the
+ * `color-worker` flag is on.
+ */
+async function warmColorWorker() {
+  try {
+    const m = await import("@/services/colorRenderClient");
+    if (m.warmColorWorker()) {
+      console.log("Colour render worker started in the background");
+    }
+  } catch (error) {
+    console.warn("Colour render worker warm-up skipped:", error);
+  }
+}
+
+/**
  * Warm the background runtimes once the page is idle.
  *
  * Order matters. The catalogue module is small and is needed by the satellite
  * enrichment that runs on every visibility load, so it goes first; the HDF5
  * runtime is ~4.8 MB and must not compete with it for bandwidth. Both are off
- * the critical path, so they run sequentially rather than in parallel.
+ * the critical path, so they run sequentially rather than in parallel. The
+ * colour worker is tiny by comparison and only matters once a chart is being
+ * hovered, so it goes last.
  */
 async function warmBackgroundRuntimes() {
   try {
@@ -70,6 +88,7 @@ async function warmBackgroundRuntimes() {
   }
 
   await warmHdf5Runtime();
+  await warmColorWorker();
 }
 
 function scheduleBackgroundWarmup() {
