@@ -19,7 +19,9 @@ import { edgeCacheRows, gotoApp, measureRowLoad, waitForEdgeCache } from "./supp
  * `tools/profile-baseline-slider.mjs`.
  */
 
-const FILES = Number(process.env.E2E_FILES ?? 4);
+// Three files is ~180 records. Every file is a full HDF5 parse on the main
+// thread and more frames for the chart to hold; nothing here needs more.
+const FILES = Number(process.env.E2E_FILES ?? 3);
 const DEFAULT_SELECTION = [0, 23];
 const TARGET_SELECTION = [4, 10];
 

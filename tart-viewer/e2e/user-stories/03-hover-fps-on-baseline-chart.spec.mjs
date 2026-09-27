@@ -47,9 +47,21 @@ import { formatFrames, startFrameSampler, stopFrameSampler } from "./support/fra
 
 test.use({ viewport: { width: 1440, height: 1080 } });
 
-const FILES = Number(process.env.E2E_FILES ?? 5);
-const WINDOW_MS = Number(process.env.E2E_WINDOW_MS ?? 3000);
-const SWEEP_STEPS = Number(process.env.E2E_SWEEP_STEPS ?? 40);
+// Three files is ~180 records, plenty for the rates below, and a third less
+// HDF5 parsing and chart work than five.
+const FILES = Number(process.env.E2E_FILES ?? 3);
+// This story is the expensive one by construction: it holds the cursor over the
+// chart and keeps it moving, so every sample is a real render — and headless
+// Chromium software-renders the whole scene. Two seconds is ~120 frames, enough
+// for the medians to settle, at two thirds of the cost of three.
+const WINDOW_MS = Number(process.env.E2E_WINDOW_MS ?? 2000);
+const WARMUP_MS = Number(process.env.E2E_WARMUP_MS ?? 500);
+// Events per mouse.move call, which is also how often the sweep checks whether
+// its budget is spent. At 40 the check came once per 80 events — and with the
+// colour worker off a frame is ~70 ms, so a pair takes over five seconds and a
+// two-second window ran for seventeen. Each of those is a real render, so the
+// overshoot was most of this story's cost.
+const SWEEP_STEPS = Number(process.env.E2E_SWEEP_STEPS ?? 10);
 
 /**
  * The uPlot *plot area* — the `.u-over` overlay — of the chart immediately
@@ -115,7 +127,15 @@ test("sweep the cursor across the baseline chart", async ({ page }) => {
 
   const plot = await plotAboveSlider(page);
 
-  const tooltip = page.locator(".hover-tooltip");
+  // What the cursor resolved to, read from the store rather than from the
+  // tooltip element. The tooltip is created and destroyed as the cursor moves,
+  // so it can vanish between checking it is visible and reading its text — the
+  // read then waits forever for an element only a mouse move would bring back.
+  const hoveredAt = () =>
+    page.evaluate(() => {
+      const store = document.querySelector("#app").__vue_app__.config.globalProperties.$pinia._s.get("app");
+      return store.hoveredTimestamp ? new Date(store.hoveredTimestamp).toISOString() : null;
+    });
   const geometry = async () => {
     // uPlot replaces its overlay whenever the chart re-renders, so the handle
     // can be detached for a frame. Wait for it rather than failing the run on
@@ -137,9 +157,9 @@ test("sweep the cursor across the baseline chart", async ({ page }) => {
   // A first pass warms whatever is lazy on the first hover (the tooltip, the
   // store getter, any wasm hand-off), so the measured window is steady state.
   let box = await geometry();
-  await sweep(page, box.middle, box.left, box.right, 800);
-  await expect(tooltip, "no tooltip while hovering the left of the chart").toBeVisible();
-  const tooltipAtLeft = (await tooltip.textContent()) ?? "";
+  await sweep(page, box.middle, box.left, box.right, WARMUP_MS);
+  await expect.poll(hoveredAt, { message: "nothing resolved while hovering the left of the chart" }).not.toBeNull();
+  const hoveredLeft = await hoveredAt();
 
   // 1. Idle: no input at all.
   await page.mouse.move(2, 2);
@@ -175,12 +195,11 @@ test("sweep the cursor across the baseline chart", async ({ page }) => {
   }));
   const updatesDuringSweep = rendered.count - renderedBefore;
 
-  // The tooltip only exists while hovering, and only differs if the cursor
-  // resolved to a different index — so it doubles as the proof that the sweep
-  // traversed the plot rather than sitting on one point.
+  // The cursor resolving to a different point at the far end proves the sweep
+  // traversed the plot rather than sitting on one spot.
   await page.mouse.move(box.right, box.middle);
-  await expect(tooltip, "no tooltip while hovering the right of the chart").toBeVisible();
-  const tooltipAtRight = (await tooltip.textContent()) ?? "";
+  await expect.poll(hoveredAt, { message: "nothing resolved while hovering the right of the chart" }).not.toBeNull();
+  const hoveredRight = await hoveredAt();
 
   const hoverCost = offChart.fps - onChart.fps;
   const lines = [
@@ -210,7 +229,7 @@ test("sweep the cursor across the baseline chart", async ({ page }) => {
   // happened, and must have resolved to more than one point on the plot.
   expect(onChart.frameCount, "no frames were sampled — the page was not rendering").toBeGreaterThan(10);
   expect(onChart.moves, "no mouse events reached the plot").toBeGreaterThan(0);
-  expect(tooltipAtLeft, "the cursor resolved to the same point across the whole sweep").not.toBe(tooltipAtRight);
+  expect(hoveredLeft, "the cursor resolved to the same point across the whole sweep").not.toBe(hoveredRight);
 
   // The sphere must keep up with the pointer, not just catch up when it stops.
   // One render is ~69 ms, so a 3 s sweep that applies only one or two colour

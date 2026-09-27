@@ -60,29 +60,103 @@ async function readyScene(page) {
  * there is no fixed point to aim at. Found quickly in practice — the scan is
  * bounded so a miss fails loudly rather than hanging.
  */
-async function findSatellite(page, box, budgetMs = 40_000) {
-  const started = Date.now();
-  for (let attempt = 0; attempt < 400; attempt++) {
-    // Budgeted, so a miss fails on the assertion below with a readable message
-    // rather than running the scan out into a test timeout.
-    if (Date.now() - started > budgetMs) break;
-    const fx = 0.15 + (attempt % 18) * 0.04;
-    const fy = 0.15 + Math.floor(attempt / 18) * 0.04;
-    if (fx > 0.85 || fy > 0.85) break;
-    const px = box.x + box.width * fx;
-    const py = box.y + box.height * fy;
-    await page.touchscreen.tap(px, py);
-    await page.waitForTimeout(40);
-    if (await page.evaluate(TOOLTIP)) return { px, py };
+/**
+ * Wait until the scene actually has satellites in it.
+ *
+ * The sphere appears on its first colour update, but the satellites come from
+ * the catalogue afterwards, so interacting before they arrive is a race rather
+ * than a failure. Polled on a timer, not the default every-animation-frame,
+ * because the viewer renders continuously.
+ */
+async function waitForSatellites(page) {
+  await page.waitForFunction(
+    () => {
+      const setup = document.querySelector(".threejs-3d-container")?.__vueParentComponent?.setupState;
+      const satellites = setup?.satellites;
+      const list = Array.isArray(satellites) ? satellites : satellites?.value;
+      return Array.isArray(list) && list.length > 0;
+    },
+    null,
+    { timeout: 60_000, polling: 250 },
+  );
+}
+
+/**
+ * Where each satellite is on screen, projected with the scene's own camera.
+ *
+ * Aiming is otherwise guesswork: the satellites are small and their positions
+ * come from the catalogue. The alternative — tapping a grid and checking after
+ * each one — costs hundreds of taps, and every tap is a raycast across every
+ * satellite plus a repaint, in a browser that is software-rendering the whole
+ * scene. That is real CPU for no extra confidence.
+ *
+ * Column-major matrices, matching three.js `elements`.
+ */
+function satelliteScreenPositions(page) {
+  return page.evaluate(() => {
+    const setup = document.querySelector(".threejs-3d-container")?.__vueParentComponent?.setupState;
+    const satellites = Array.isArray(setup?.satellites) ? setup.satellites : setup?.satellites?.value;
+    const camera = setup?.camera?.value ?? setup?.camera;
+    const canvas = document.querySelector("canvas.threejs-canvas");
+    if (!Array.isArray(satellites) || !camera || !canvas) return [];
+
+    const rect = canvas.getBoundingClientRect();
+    const apply = (m, v) => [
+      m[0] * v[0] + m[4] * v[1] + m[8] * v[2] + m[12] * v[3],
+      m[1] * v[0] + m[5] * v[1] + m[9] * v[2] + m[13] * v[3],
+      m[2] * v[0] + m[6] * v[1] + m[10] * v[2] + m[14] * v[3],
+      m[3] * v[0] + m[7] * v[1] + m[11] * v[2] + m[15] * v[3],
+    ];
+
+    return satellites
+      .map((satellite) => {
+        const e = satellite.matrixWorld.elements;
+        const clip = apply(camera.projectionMatrix.elements, apply(camera.matrixWorldInverse.elements, [e[12], e[13], e[14], 1]));
+        if (clip[3] === 0) return null;
+        const ndc = [clip[0] / clip[3], clip[1] / clip[3]];
+        return {
+          x: rect.left + ((ndc[0] + 1) * rect.width) / 2,
+          y: rect.top + ((-ndc[1] + 1) * rect.height) / 2,
+          onScreen: Math.abs(ndc[0]) <= 1 && Math.abs(ndc[1]) <= 1,
+        };
+      })
+      .filter(Boolean);
+  });
+}
+
+/**
+ * A point on the canvas as far as possible from every satellite, so a tap there
+ * is guaranteed to miss. Derived from the projected positions rather than
+ * guessed, because the constellations move.
+ */
+function emptySpot(positions, box) {
+  let best = null;
+  let bestGap = -1;
+  for (let fx = 0.05; fx <= 0.95; fx += 0.05) {
+    for (let fy = 0.05; fy <= 0.95; fy += 0.05) {
+      const x = box.x + box.width * fx;
+      const y = box.y + box.height * fy;
+      const gap = Math.min(...positions.map((p) => Math.hypot(p.x - x, p.y - y)));
+      if (gap > bestGap) {
+        bestGap = gap;
+        best = { x, y };
+      }
+    }
   }
-  return null;
+  return best;
 }
 
 test("tapping a satellite shows its name and coordinates", async ({ page }) => {
   const box = await readyScene(page);
+  await waitForSatellites(page);
 
-  const satellite = await findSatellite(page, box);
-  expect(satellite, "no satellite could be found by tapping across the sphere").not.toBeNull();
+  const positions = await satelliteScreenPositions(page);
+  const onScreen = positions.filter((p) => p.onScreen);
+  expect(onScreen.length, `no satellite is on screen to tap (${positions.length} in the scene)`).toBeGreaterThan(0);
+
+  const target = onScreen[0];
+  await page.touchscreen.tap(target.x, target.y);
+  await page.waitForTimeout(400);
 
   const shown = await page.evaluate(TOOLTIP);
   expect(shown, "tapping a satellite showed no tooltip").toMatch(/El: [\d.-]+°\s*Az: [\d.-]+°/);
@@ -92,27 +166,29 @@ test("tapping a satellite shows its name and coordinates", async ({ page }) => {
   const readout = await page.evaluate(READOUT);
   expect(readout?.display ?? "none", "the position readout and the satellite tooltip are both showing").not.toBe("block");
 
-  // Tapping away from it clears the tooltip.
-  await page.touchscreen.tap(box.x + box.width * 0.5, box.y + box.height * 0.95);
+  // Tapping away from every satellite clears the tooltip.
+  const away = emptySpot(onScreen, box);
+  await page.touchscreen.tap(away.x, away.y);
   await page.waitForTimeout(400);
   expect(await page.evaluate(TOOLTIP), "the tooltip stayed after tapping empty sky").toBeNull();
 
   // Dragging from a satellite rotates the sphere; it must not mark one.
-  await findSatellite(page, box);
-  expect(await page.evaluate(TOOLTIP), "the satellite could not be re-found for the drag check").not.toBeNull();
-  await page.touchscreen.tap(box.x + box.width * 0.5, box.y + box.height * 0.95);
+  await page.touchscreen.tap(target.x, target.y);
+  await page.waitForTimeout(400);
+  expect(await page.evaluate(TOOLTIP), "the satellite could not be re-marked for the drag check").not.toBeNull();
+  await page.touchscreen.tap(away.x, away.y);
   await page.waitForTimeout(300);
 
   const cdp = await page.context().newCDPSession(page);
   const send = (type, touchPoints) => cdp.send("Input.dispatchTouchEvent", { type, touchPoints });
-  await send("touchStart", [{ x: satellite.px, y: satellite.py }]);
-  for (let step = 1; step <= 8; step++) await send("touchMove", [{ x: satellite.px + step * 10, y: satellite.py }]);
+  await send("touchStart", [{ x: target.x, y: target.y }]);
+  for (let step = 1; step <= 8; step++) await send("touchMove", [{ x: target.x + step * 10, y: target.y }]);
   await send("touchEnd", []);
   await page.waitForTimeout(500);
 
   expect(await page.evaluate(TOOLTIP), "dragging the sphere marked a satellite instead of rotating").toBeNull();
 
-  console.log(`\nsatellite tapped at (${Math.round(satellite.px)}, ${Math.round(satellite.py)}) -> ${shown}\n`);
+  console.log(`\nsatellite tapped at (${Math.round(target.x)}, ${Math.round(target.y)}) -> ${shown}\n`);
 });
 
 /**
