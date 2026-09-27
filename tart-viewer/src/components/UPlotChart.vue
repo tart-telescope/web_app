@@ -229,6 +229,18 @@ const chartOptions = computed(() => {
               if (key !== "x") return;
               const { min, max } = u.scales.x;
               if (min == null || max == null) return;
+
+              // A range that spans the whole history is not a zoom to preserve.
+              // Leaving the old range here is what made a reset undo itself:
+              // the next data change re-applied it, so double-clicking put the
+              // chart back to the full history and the following record — live
+              // data arrives continuously — silently zoomed it in again. It also
+              // left the recorder filtering by a range the chart was no longer
+              // showing, which is an export covering a fraction of the timeline.
+              const xs = u.data[0];
+              const wholeHistory = xs.length > 0 && min <= xs[0] && max >= xs.at(-1);
+              currentZoomRange.value = wholeHistory ? null : { min, max };
+
               emit("zoom-changed", { min, max });
             },
           ],

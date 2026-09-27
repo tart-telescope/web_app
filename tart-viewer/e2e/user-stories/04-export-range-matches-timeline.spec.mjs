@@ -79,6 +79,25 @@ test("the export range follows the timeline", async ({ page }) => {
   expect(snapshot.ok, `the export could not snapshot the history: ${snapshot.error}`).toBe(true);
   expect(snapshot.frames).toBe(reset.totalRecords);
 
+  // The reset must survive more data arriving. Loading a file re-ranges the
+  // chart, and the restore target used to be re-applied afterwards — zooming
+  // the chart back in, undoing the reset, and leaving the recorder filtering by
+  // a range that was no longer on screen. Live data does the same thing
+  // continuously, which is how this presented: full range on screen, a
+  // fraction of it in the export.
+  if (rowCount > toLoad) {
+    await measureRowLoad(page, toLoad);
+    await page.waitForTimeout(1000);
+    const afterData = await record("after new data");
+    expect(afterData.exportFrames, "new data re-applied the zoom the reset had cleared").toBe(afterData.totalRecords);
+    expect(rangesMatch(afterData), "the chart and the recorder disagreed after new data").toBe(true);
+  }
+
+  expect(
+    report.some((r) => r.label === "after new data"),
+    "not enough edge cache rows to load one more",
+  ).toBe(rowCount > toLoad);
+
   const lines = report.map(
     (r) =>
       `${r.label.padEnd(20)} chart[${Math.round(r.chart.min)},${Math.round(r.chart.max)}]  ` +
