@@ -55,15 +55,29 @@ Everything that happens once per page load: bundle evaluation, wasm init, first
 synthesis render, sphere geometry, shader compilation. The visibility load here
 is the cold path.
 
+The HDF5 runtime (~4.8 MB plus a wasm instantiation) is warmed in the
+background after first paint, so the click no longer pays for it. This story
+waits for that warm-up before clicking, which is what a real user reading the
+page does.
+
 Three runs on a dev box through the tunnel:
 
 | Segment                     | Time        |
 | --------------------------- | ----------- |
 | nav → gridless wasm         | 380–587 ms  |
-| nav → catalogue wasm        | 972–1382 ms |
+| nav → catalogue wasm        | 972–1518 ms |
 | nav → app usable            | 880–1269 ms |
-| first load click → fetched  | 108–134 ms  |
-| first load click → finished | 1.8–2.4 s   |
+| nav → HDF5 runtime warm     | 1.3–1.9 s   |
+| first load click → fetched  | 108–297 ms  |
+| first load click → finished | 327–355 ms  |
+
+Before the background warm-up that last figure was 1.8–2.4 s. The runtime is
+ready ~1.3–1.9 s in, while the user is still reading, so the click finds it
+loaded.
+
+The caveat is inherent: a user who clicks within the first ~1.3 s still waits.
+Not a regression though — `prepareH5wasm()` memoises, so a click during the
+warm-up shares that in-flight promise rather than starting a second download.
 
 ### 01 — load a visibility from the edge cache
 

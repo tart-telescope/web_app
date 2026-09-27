@@ -24,6 +24,7 @@ test("page load, then the first visibility", async ({ page }) => {
     for (const [prop, mark] of [
       ["wasmReady", "gridlessWasm"],
       ["catalogueWasmReady", "catalogueWasm"],
+      ["h5wasmWarm", "h5wasmWarm"],
     ]) {
       let value = false;
       Object.defineProperty(window, prop, {
@@ -54,6 +55,17 @@ test("page load, then the first visibility", async ({ page }) => {
     .then((h) => h.jsonValue());
 
   const rowCount = await waitForEdgeCache(page);
+
+  // The HDF5 runtime warms in the background after first paint, so give it a
+  // bounded chance to land: a real user reads the page before clicking, and
+  // that is precisely the window the warm-up exists to use. The result is
+  // reported either way, so a warm-up that stops working is visible rather
+  // than silently costing the click.
+  const warmedInTime = await page
+    .waitForFunction(() => window.__marks.h5wasmWarm !== undefined, { timeout: 20_000 })
+    .then(() => true)
+    .catch(() => false);
+
   const marks = await page.evaluate(() => ({ ...window.__marks }));
 
   // The cold load: first synthesis render, sphere geometry, shaders.
@@ -65,6 +77,7 @@ test("page load, then the first visibility", async ({ page }) => {
     `nav -> gridless wasm    : ${fmt(marks.gridlessWasm)}`,
     `nav -> catalogue wasm   : ${fmt(marks.catalogueWasm)}`,
     `nav -> app usable       : ${fmt(rowsAt)}`,
+    `nav -> HDF5 runtime warm: ${fmt(marks.h5wasmWarm)}${warmedInTime ? "" : "  (did not finish in time)"}`,
     `first load: click -> fetched : ${load.toFetch} ms`,
     `first load: click -> finished: ${load.toFinish} ms`,
     `first load: file        : ${load.file}`,

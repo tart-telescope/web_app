@@ -343,12 +343,57 @@ function parseConfigData(h5file) {
  * @param {Buffer|Uint8Array} buffer - File buffer
  * @returns {Object} h5wasm File object
  */
+/**
+ * Memoised h5wasm module and runtime instantiation.
+ *
+ * `import("h5wasm")` pulls in the ~4.8 MB hdf5_hl chunk and the module then has
+ * to instantiate its wasm runtime. Both used to happen inside the first file
+ * load, i.e. on the click. Funnelling every caller through here means the
+ * background warm-up and the real load share one attempt.
+ */
+let h5wasmModule = null;
+
+/**
+ * Load the h5wasm module and wait for its runtime to be ready.
+ *
+ * Idempotent: concurrent and later callers share the first attempt. A failure
+ * is not cached, so a subsequent load can retry.
+ *
+ * @returns {Promise<Object>} the h5wasm module namespace
+ */
+export function prepareH5wasm() {
+  if (!h5wasmModule) {
+    h5wasmModule = (async () => {
+      const h5wasm = await import("h5wasm");
+      if (h5wasm.ready) {
+        await h5wasm.ready;
+      }
+      return h5wasm;
+    })().catch((error) => {
+      h5wasmModule = null;
+      throw error;
+    });
+  }
+
+  return h5wasmModule;
+}
+
+/**
+ * Warm the HDF5 runtime ahead of first use, so the first file load does not pay
+ * for downloading and instantiating it.
+ *
+ * Best effort by design: callers are expected to swallow rejections rather than
+ * surface them, since a failed warm-up only means the old behaviour.
+ *
+ * @returns {Promise<void>}
+ */
+export async function warmH5wasm() {
+  await prepareH5wasm();
+}
+
 export async function loadH5wasmFromBuffer(buffer) {
   try {
-    const h5wasm = await import("h5wasm");
-    if (h5wasm.ready) {
-      await h5wasm.ready;
-    }
+    const h5wasm = await prepareH5wasm();
     const uint8Buffer = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
 
     // Create unique virtual path to avoid file caching issues
