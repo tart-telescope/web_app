@@ -16,10 +16,12 @@ let failed = false;
  * @param {number} [timeoutMs] - bail out rather than hang the first query
  * @returns {Promise<Object|null>}
  */
-export async function ensureLocalReady(timeoutMs = 2000) {
-  if (wasm) return wasm;
-  if (failed) return null;
-
+/**
+ * The memoised module load. Shared by ensureLocalReady and warmCatalogueWasm
+ * so a warm-up in flight is never duplicated by a query arriving during it.
+ * @returns {Promise<Object|null>}
+ */
+function loadModule() {
   if (!modulePromise) {
     modulePromise = (async () => {
       try {
@@ -36,14 +38,41 @@ export async function ensureLocalReady(timeoutMs = 2000) {
     })();
   }
 
+  return modulePromise;
+}
+
+export async function ensureLocalReady(timeoutMs = 2000) {
+  if (wasm) return wasm;
+  if (failed) return null;
+
   // Never let a slow module load stall a satellite query indefinitely; the
   // caller falls back to remote and the load continues in the background.
-  const loaded = await Promise.race([modulePromise, new Promise((resolve) => setTimeout(() => resolve(null), timeoutMs))]);
+  const loaded = await Promise.race([loadModule(), new Promise((resolve) => setTimeout(() => resolve(null), timeoutMs))]);
 
   if (!loaded) return wasm;
 
   wasm = loaded;
   return wasm;
+}
+
+/**
+ * Warm the module ahead of first use.
+ *
+ * Unlike ensureLocalReady this races no timeout: warming happens off the
+ * critical path, so it waits as long as the module needs rather than giving up
+ * and leaving the first satellite query to pay for it.
+ *
+ * @returns {Promise<boolean>} whether the module ended up usable
+ */
+export async function warmCatalogueWasm() {
+  if (wasm) return true;
+
+  const mod = await loadModule();
+  if (mod) {
+    wasm = mod;
+  }
+
+  return mod !== null;
 }
 
 /** Synchronous readiness check. */

@@ -55,41 +55,43 @@ Everything that happens once per page load: bundle evaluation, wasm init, first
 synthesis render, sphere geometry, shader compilation. The visibility load here
 is the cold path.
 
-The HDF5 runtime (~4.8 MB plus a wasm instantiation) is warmed in the
-background after first paint, so the click no longer pays for it. This story
-waits for that warm-up before clicking, which is what a real user reading the
-page does.
+Both background runtimes are warmed after first paint, in a deliberate order:
+the catalogue module first (small, and needed by the satellite enrichment that
+runs on every visibility load), then the HDF5 runtime (~4.8 MB, which must not
+compete with it for bandwidth). This story waits for the warm-up before
+clicking, which is what a real user reading the page does.
 
 Three runs on a dev box through the tunnel:
 
 | Segment                     | Time        |
 | --------------------------- | ----------- |
-| nav → gridless wasm         | 380–587 ms  |
-| nav → catalogue wasm        | 972–1518 ms |
+| nav → gridless wasm         | 365–405 ms  |
+| nav → catalogue wasm        | 569–607 ms  |
 | nav → app usable            | 880–1269 ms |
-| nav → HDF5 runtime warm     | 1.3–1.9 s   |
-| first load click → fetched  | 108–297 ms  |
-| first load click → finished | 327–355 ms  |
+| nav → HDF5 runtime warm     | 1.3–1.5 s   |
+| first load click → fetched  | 96–108 ms   |
+| first load click → finished | 290–358 ms  |
 
-Before the background warm-up that last figure was 1.8–2.4 s. The runtime is
-ready ~1.3–1.9 s in, while the user is still reading, so the click finds it
-loaded.
+Before the background warm-up, the catalogue module loaded on the first
+satellite query (972–1518 ms) and the HDF5 runtime inside the click (first load
+1.8–2.4 s). Both are now ready while the user is still reading.
 
-The caveat is inherent: a user who clicks within the first ~1.3 s still waits.
-Not a regression though — `prepareH5wasm()` memoises, so a click during the
-warm-up shares that in-flight promise rather than starting a second download.
+The caveat is inherent: a user who clicks within the first ~1.3 s still waits
+for the HDF5 runtime. Not a regression though — both loaders memoise, so a
+click during a warm-up shares the in-flight promise rather than starting a
+second download.
 
 ### 01 — load a visibility from the edge cache
 
 The steady-state figure. A warm-up load pays the costs story 00 owns, so what
 remains is the per-load cost.
 
-| Segment                 | Time        |
-| ----------------------- | ----------- |
-| click → file fetched    | 0.1–1.1 s   |
-| click → action finished | 1.26–1.29 s |
+| Segment                 | Time       |
+| ----------------------- | ---------- |
+| click → file fetched    | 96–155 ms  |
+| click → action finished | 193–236 ms |
 
-Subtracting the fetch leaves roughly **150–440 ms of client work per load** —
+Subtracting the fetch leaves roughly **100–150 ms of client work per load** —
 the parse, the store update and the enrichment. So most of what looked like a
 slow load is one-time setup, and the rest is dominated by the network: the fetch
 alone swings from ~100 ms to ~1.1 s between runs.
