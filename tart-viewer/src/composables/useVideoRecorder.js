@@ -10,40 +10,54 @@ import { computed, onUnmounted, ref, watch } from "vue";
 import { createVideoRecorder, detectBestRecordingMethod, RecorderUtils, RECORDING_SETTINGS } from "@/services/videoRecorder";
 import { useAppStore } from "@/stores/app";
 
-export function useVideoRecorder(visHistoryProp, nsideProp, infoProp) {
+/**
+ * Resolve a data source that may be a getter or a plain value.
+ *
+ * Callers pass getters now. A prop handed over by value is a snapshot taken at
+ * setup: `watch(() => prop, ...)` has no reactive dependency and never fires,
+ * and a ref built from it keeps pointing at whatever array existed then.
+ *
+ * That is how the recorder came to export 60 frames of a 601-record history.
+ * The store replaces vis_history on every file load — the sort at the end of it
+ * returns a new array — so a captured reference is not merely stale, it is
+ * permanently detached, while the live data path keeps pushing into the
+ * current array and makes it look like it is creeping along.
+ */
+function resolve(source, fallback) {
+  const value = typeof source === "function" ? source() : source;
+  return value ?? fallback;
+}
+
+/**
+ * State in one line: how many frames are selected, out of how many, and the
+ * timestamps the video will actually start and end on.
+ *
+ * The first and last timestamps are the point. A frame count on its own cannot
+ * be checked against the timeline by eye, and "60 of 601" looked like a
+ * plausible export until the span was printed next to it — the recorder was
+ * working from a stale copy of the history, so the video silently covered one
+ * file while every other number in the app looked right.
+ */
+function announce(all, selected, kind) {
+  const stamp = (item) => (item ? new Date(item.timestamp).toISOString() : "—");
+  const elapsed = selected.length > 1 ? (new Date(selected.at(-1).timestamp) - new Date(selected[0].timestamp)) / 1000 : 0;
+
+  console.log(
+    `📹 Export ${kind}: ${selected.length}/${all.length} frames` +
+      `  ${stamp(selected[0])} .. ${stamp(selected.at(-1))}` +
+      `  (${elapsed.toFixed(0)}s of data, ${(selected.length / RECORDING_SETTINGS.frameRate).toFixed(1)}s of video)`,
+  );
+}
+
+export function useVideoRecorder(visHistorySource, nsideSource, infoSource) {
   // Access store for zoom range
   const store = useAppStore();
 
-  // Use provided data as reactive refs
-  const vis_history = ref(visHistoryProp || []);
-  const nside = ref(nsideProp || 64);
-  const info = ref(infoProp || {});
-
-  // Watch for prop changes and update refs
-  watch(
-    () => visHistoryProp,
-    (newValue) => {
-      vis_history.value = newValue || [];
-      console.log("🔄 vis_history updated from props:", vis_history.value.length, "frames");
-    },
-    { immediate: true },
-  );
-
-  watch(
-    () => nsideProp,
-    (newValue) => {
-      nside.value = newValue || 64;
-    },
-    { immediate: true },
-  );
-
-  watch(
-    () => infoProp,
-    (newValue) => {
-      info.value = newValue || {};
-    },
-    { immediate: true },
-  );
+  // Read through on every access, so the recorder always sees the current
+  // history rather than the one that happened to exist when it mounted.
+  const vis_history = computed(() => resolve(visHistorySource, []));
+  const nside = computed(() => resolve(nsideSource, 64));
+  const info = computed(() => resolve(infoSource, {}));
 
   // Debug logging
   console.log("🎬 Video recorder initialized with props");
@@ -78,7 +92,7 @@ export function useVideoRecorder(visHistoryProp, nsideProp, infoProp) {
       // If no zoom range, return full history
       const zoomRange = store.currentZoomRange;
       if (!zoomRange || !zoomRange.min || !zoomRange.max) {
-        console.log("📹 Recording full history:", history.length, "frames");
+        announce(history, history, "full history");
         return history;
       }
 
@@ -91,12 +105,7 @@ export function useVideoRecorder(visHistoryProp, nsideProp, infoProp) {
         return timestamp >= minTime && timestamp <= maxTime;
       });
 
-      console.log("📹 Recording filtered history:", {
-        totalFrames: history.length,
-        filteredFrames: filtered.length,
-        zoomRange: { min: zoomRange.min, max: zoomRange.max },
-        timeRange: { minTime, maxTime },
-      });
+      announce(history, filtered, "filtered");
 
       return filtered;
     } catch (error) {

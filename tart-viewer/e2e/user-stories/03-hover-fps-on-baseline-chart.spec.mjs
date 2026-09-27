@@ -117,6 +117,11 @@ test("sweep the cursor across the baseline chart", async ({ page }) => {
 
   const tooltip = page.locator(".hover-tooltip");
   const geometry = async () => {
+    // uPlot replaces its overlay whenever the chart re-renders, so the handle
+    // can be detached for a frame. Wait for it rather than failing the run on
+    // a race — this is the same replacement that makes the sampler take
+    // coordinates instead of an element.
+    await plot.waitFor({ state: "visible", timeout: 10_000 });
     const box = await plot.boundingBox();
     expect(box, "the plot has no box").not.toBeNull();
     return {

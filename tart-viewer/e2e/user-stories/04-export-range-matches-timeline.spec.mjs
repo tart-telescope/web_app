@@ -20,6 +20,23 @@ import { doubleClickReset, dragZoom, rangesMatch, zoomState } from "./support/zo
 const FILES = Number(process.env.E2E_FILES ?? 5);
 
 test("the export range follows the timeline", async ({ page }) => {
+  // The recorder reports its own view of the history, and it is the only place
+  // that view is visible. It has to be the same array the store holds: the
+  // recorder was handed a snapshot of the prop, so it kept exporting the first
+  // file's 60 records out of 601 while everything else looked correct.
+  const recorderLogs = [];
+  page.on("console", (message) => {
+    const text = message.text();
+    if (/Export \w[\w ]*: \d+\/\d+ frames/.test(text)) recorderLogs.push(text);
+  });
+  const recorderFrames = () => {
+    for (const line of recorderLogs.toReversed()) {
+      const match = line.match(/totalFrames: (\d+)/) ?? line.match(/full history: (\d+) frames/);
+      if (match) return Number(match[1]);
+    }
+    return null;
+  };
+
   await gotoApp(page);
 
   const rowCount = await waitForEdgeCache(page);
@@ -97,6 +114,34 @@ test("the export range follows the timeline", async ({ page }) => {
     report.some((r) => r.label === "after new data"),
     "not enough edge cache rows to load one more",
   ).toBe(rowCount > toLoad);
+
+  // And the recorder's own copy of the history must be the store's. It was
+  // handed a snapshot of the prop, so it kept exporting the first file's 60
+  // records out of 601: every number above still agreed, because they all come
+  // from the store and the chart — the only place the recorder's view is
+  // visible is its own log line.
+  await page.waitForTimeout(500);
+  const reported = recorderLogs
+    .toReversed()
+    .map((line) => line.match(/Export \w[\w ]*: (\d+)\/(\d+) frames\s+(\S+) \.\. (\S+)/))
+    .find(Boolean);
+  expect(reported, "the recorder never reported what it would export").toBeTruthy();
+
+  // Against the latest state, not the first: live data arrives throughout, so
+  // the recorder's most recent report is a record or two ahead of any snapshot
+  // taken earlier. The failure this guards against is a factor of ten, so a
+  // couple of records of slack costs nothing.
+  const latest = report.at(-1);
+  const [, selected, available, from] = reported;
+  expect(
+    Math.abs(Number(available) - latest.totalRecords),
+    `the recorder is looking at ${available} records, not the store's ${latest.totalRecords}`,
+  ).toBeLessThanOrEqual(2);
+  expect(
+    Math.abs(Number(selected) - latest.exportFrames),
+    `the recorder would export ${selected} frames, not the ${latest.exportFrames} on screen`,
+  ).toBeLessThanOrEqual(2);
+  expect(new Date(from).toISOString(), "the export does not start where the timeline does").toBe(latest.firstRecord);
 
   const lines = report.map(
     (r) =>

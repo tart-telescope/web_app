@@ -40,6 +40,10 @@ export async function zoomState(page) {
       zoom: zoom ? { min: zoom.min, max: zoom.max } : null,
       exportFrames,
       totalRecords: records.length,
+      // The span of the whole history, for checking the export's own report
+      // against what the timeline holds.
+      firstRecord: records[0] ? new Date(records[0].timestamp).toISOString() : null,
+      lastRecord: records.length > 0 ? new Date(records.at(-1).timestamp).toISOString() : null,
     };
   });
 }
