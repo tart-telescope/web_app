@@ -25,9 +25,7 @@ const cdp = await context.newCDPSession(page);
 
 await page.goto(BASE_URL);
 
-const rows = page
-  .locator(".v-data-table tbody tr")
-  .filter({ hasText: /\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/ });
+const rows = page.locator(".v-data-table tbody tr").filter({ hasText: /\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/ });
 await rows.first().waitFor({ state: "visible", timeout: 30_000 });
 const rowCount = await rows.count();
 
@@ -40,10 +38,7 @@ async function sample() {
 /** Load one row and wait for the button's spinner to clear. */
 async function loadRow(index) {
   const eye = rows.nth(index).getByRole("button").first();
-  const done = page.waitForResponse(
-    (r) => /\/vis\/.*\.hdf(\?|$)/.test(r.url()) && r.status() === 200,
-    { timeout: 60_000 },
-  );
+  const done = page.waitForResponse((r) => /\/vis\/.*\.hdf(\?|$)/.test(r.url()) && r.status() === 200, { timeout: 60_000 });
   const started = Date.now();
   await eye.click();
   await done;
