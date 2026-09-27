@@ -17,7 +17,17 @@ import { writeFileSync } from "node:fs";
 import { chromium } from "@playwright/test";
 
 const BASE_URL = process.env.E2E_BASE_URL || "http://localhost:3000";
-const ROW_INDEX = Number(process.argv[2] ?? process.env.E2E_ROW_INDEX ?? 0);
+
+// WARM=1 pays the one-time costs (wasm init, first synthesis render, sphere
+// geometry, shaders) with a warm-up load first, so the profile describes the
+// steady-state load. That is the counterpart of the story split: 00 is cold,
+// 01 is warm. Default profiles the cold path.
+const WARM = process.env.WARM === "1";
+const ROW_INDEX = Number(process.argv[2] ?? process.env.E2E_ROW_INDEX ?? (WARM ? 1 : 0));
+
+if (WARM && ROW_INDEX === 0) {
+  throw new Error("WARM=1 warms up on row 0, so pick a different row to profile");
+}
 
 // Headless Chromium has no GPU, so WebGL runs on SwiftShader (software). That
 // inflates anything rendering-related, which is most of this interaction — so
@@ -47,6 +57,19 @@ await page.goto(BASE_URL);
 const rows = page.locator(".v-data-table tbody tr").filter({ hasText: /\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/ });
 await rows.first().waitFor({ state: "visible", timeout: 30_000 });
 const rowCount = await rows.count();
+
+// Pay the one-time costs before profiling, so a WARM run measures steady state.
+if (WARM) {
+  const warmEye = rows.nth(0).getByRole("button").first();
+  const warmDone = page.waitForResponse((r) => /\/vis\/.*\.hdf(\?|$)/.test(r.url()) && r.status() === 200, { timeout: 60_000 });
+  await warmEye.click();
+  await warmDone;
+  await warmEye
+    .locator(".v-progress-circular")
+    .waitFor({ state: "hidden", timeout: 120_000 })
+    .catch(() => {});
+  await page.waitForTimeout(300);
+}
 
 const row = rows.nth(ROW_INDEX);
 const timestamp = (await row.locator("td").first().textContent()).trim();
@@ -139,7 +162,7 @@ function shortUrl(u) {
 const ranked = [...byFunction.entries()].toSorted((a, b) => b[1].micros - a[1].micros);
 const ms = (us) => (us / 1000).toFixed(1);
 
-console.log(`\nEdge Cache load profile  (row #${ROW_INDEX}, ${timestamp})`);
+console.log(`\nEdge Cache load profile  [${WARM ? "steady state" : "cold, first load"}]  (row #${ROW_INDEX}, ${timestamp})`);
 console.log(`  rows=${rowCount}  file=${fetchResponse.url().split("/").pop()}`);
 console.log(`  click -> fetched : ${fetchDoneAt - clickedAt} ms`);
 console.log(`  click -> finished: ${finishedAt - clickedAt} ms`);
