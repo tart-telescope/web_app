@@ -10,7 +10,8 @@
     "fmt:check": "oxfmt --check",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
-    "test:console": "node puppet.js"
+    "test:console": "node puppet.js",
+    "test:e2e": "playwright test -c e2e/playwright.config.mjs"
   },
   "dependencies": {
     "@mdi/font": "^7.4.47",
@@ -31,6 +32,7 @@
     "vuetify": "^4.2.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@vitejs/plugin-vue": "^6.0.9",
     "eslint-plugin-antfu": "^3.2.3",
     "eslint-plugin-perfectionist": "^5.12.0",
