@@ -153,9 +153,22 @@ test("sweep the cursor across the baseline chart", async ({ page }) => {
   //    again here — the plot is a live element and its box is what the sampler
   //    counts events against.
   box = await geometry();
+
+  // With the colour worker on, count the colour maps that actually reach the
+  // sphere. The frame rate alone cannot see the failure this guards: dropping
+  // every result as superseded still produces perfect frames, a perfectly
+  // valid render, and a sphere that never changes until the pointer stops.
+  const renderedBefore = await page.evaluate(() => globalThis.colorRenderApplied ?? 0);
+
   await startFrameSampler(page, box);
   await sweep(page, box.middle, box.left, box.right, WINDOW_MS);
   const onChart = await stopFrameSampler(page);
+
+  const rendered = await page.evaluate(() => ({
+    workerActive: globalThis.colorWorkerActive === true,
+    count: globalThis.colorRenderApplied ?? 0,
+  }));
+  const updatesDuringSweep = rendered.count - renderedBefore;
 
   // The tooltip only exists while hovering, and only differs if the cursor
   // resolved to a different index — so it doubles as the proof that the sweep
@@ -175,6 +188,7 @@ test("sweep the cursor across the baseline chart", async ({ page }) => {
     ``,
     `hover cost               : ${hoverCost.toFixed(1)} fps below the same sweep without hover`,
     `mouse events on the plot : ${onChart.moves}`,
+    `sphere re-rendered       : ${rendered.workerActive ? `${updatesDuringSweep} times during the sweep` : "n/a (colour worker off)"}`,
     `blocked on-chart         : ${onChart.loafBlockingMs.toFixed(0)} ms of ${Math.round(onChart.durationMs)} ms ` +
       `(${((onChart.loafBlockingMs / onChart.durationMs) * 100).toFixed(0)}% of the window)`,
   ];
@@ -192,4 +206,11 @@ test("sweep the cursor across the baseline chart", async ({ page }) => {
   expect(onChart.frameCount, "no frames were sampled — the page was not rendering").toBeGreaterThan(10);
   expect(onChart.moves, "no mouse events reached the plot").toBeGreaterThan(0);
   expect(tooltipAtLeft, "the cursor resolved to the same point across the whole sweep").not.toBe(tooltipAtRight);
+
+  // The sphere must keep up with the pointer, not just catch up when it stops.
+  // One render is ~69 ms, so a 3 s sweep that applies only one or two colour
+  // maps is the frozen-image bug rather than a slow machine.
+  if (rendered.workerActive) {
+    expect(updatesDuringSweep, "the sphere stopped updating while the pointer was moving").toBeGreaterThan(5);
+  }
 });

@@ -24,7 +24,28 @@ const FLAG = "color-worker";
 let worker = null;
 let abandoned = false;
 let nextId = 0;
-let newestId = 0;
+
+/**
+ * Highest request id whose bytes have already been handed over for display.
+ *
+ * The rule is "newer than what is on screen", not "newer than the last request
+ * made". Those are very different under a hover: a render takes ~69 ms while
+ * cursor positions arrive every few milliseconds, so by the time any result
+ * lands a newer request has almost always been made — and dropping on that
+ * basis discards every result, leaving the sphere frozen for as long as the
+ * pointer keeps moving. Applying anything newer than what is displayed instead
+ * keeps the image advancing, one render behind the pointer, which is the best
+ * the render's own cost allows.
+ */
+let appliedId = 0;
+
+/**
+ * How many colour maps have actually reached the caller. Published so a test
+ * can assert the sphere keeps updating while the pointer moves — the failure
+ * this counter exists for produced a perfectly valid-looking render that simply
+ * never changed, which no screenshot taken after the pointer stopped can see.
+ */
+let appliedCount = 0;
 
 /** id -> { resolve, reject } for requests the worker has not answered yet. */
 const waiting = new Map();
@@ -42,6 +63,7 @@ function computeOnMainThread(json, nside, simd) {
  */
 function publish() {
   globalThis.colorWorkerActive = colorWorkerActive();
+  globalThis.colorRenderApplied = appliedCount;
 }
 
 function abandon(error) {
@@ -69,6 +91,17 @@ function ensureWorker() {
   created.addEventListener("message", ({ data }) => {
     const entry = waiting.get(data.id);
     if (!entry) return;
+
+    // The worker renders strictly in order and skips whatever was superseded
+    // while it was busy, so anything still waiting below this id will never be
+    // answered. Settle it here instead of leaving its promise pending forever.
+    for (const [id, older] of waiting) {
+      if (id < data.id) {
+        waiting.delete(id);
+        older.resolve(null);
+      }
+    }
+
     waiting.delete(data.id);
     if (data.error) entry.reject(new Error(data.error));
     else entry.resolve(data.bytes);
@@ -109,14 +142,20 @@ export async function requestColorBytes(json, nside, simd) {
   }
 
   const id = ++nextId;
-  newestId = id;
 
   try {
     const bytes = await new Promise((resolve, reject) => {
       waiting.set(id, { resolve, reject });
       worker.postMessage({ id, json, nside, simd });
     });
-    return id === newestId ? bytes : null;
+
+    // null means the worker skipped it; anything at or below what has already
+    // been displayed would move the sphere backwards.
+    if (!bytes || id <= appliedId) return null;
+    appliedId = id;
+    appliedCount += 1;
+    publish();
+    return bytes;
   } catch {
     // The worker died or refused the job; the sync path answers this one and
     // every subsequent one.

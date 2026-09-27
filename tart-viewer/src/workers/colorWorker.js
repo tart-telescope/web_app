@@ -30,13 +30,31 @@ const ready = init(wasmUrl);
 /** The newest job, or null. Overwritten by each message; never queued. */
 let pending = null;
 let draining = false;
+let scheduled = false;
 
 self.addEventListener("message", ({ data }) => {
   pending = data;
-  if (!draining) drain();
+  schedule();
 });
 
+/**
+ * Start a drain once the queued messages have been delivered.
+ *
+ * Starting one immediately from the message handler would defeat the
+ * collapsing: a render blocks this thread for ~69 ms, so the cursor positions
+ * sent during it sit in the event queue, not in `pending`, and the worker would
+ * wake up and render each of them in turn. Yielding first lets those messages
+ * land on `pending` and overwrite one another, so the burst costs one render
+ * instead of one per position.
+ */
+function schedule() {
+  if (draining || scheduled) return;
+  scheduled = true;
+  setTimeout(drain, 0);
+}
+
 async function drain() {
+  scheduled = false;
   draining = true;
   try {
     await ready;
