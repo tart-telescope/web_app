@@ -1,7 +1,11 @@
 // Utilities
+import { markRaw } from "vue";
+
 import { defineStore } from "pinia";
 import { satelliteApi, telescopeApi } from "@/services";
 import { createCoalescer } from "@/utils/coalesce";
+import { isEnabled } from "@/utils/flags";
+import { baselineCount, packRecordValues } from "@/utils/visLayout";
 
 export const useAppStore = defineStore("app", {
   state: () => {
@@ -452,6 +456,11 @@ export const useAppStore = defineStore("app", {
         record.satellites = satellites;
       }
 
+      // Records are markRaw, so writing `satellites` above triggers nothing on
+      // its own. Replacing the array is what tells Vue the history changed —
+      // one render per flush, not one per record.
+      this.vis_history = this.vis_history.slice();
+
       buffer.length = 0;
     },
     async synthesisData() {
@@ -469,7 +478,7 @@ export const useAppStore = defineStore("app", {
         hasGain: !!synthesisData.gain,
         hasAntennas: !!synthesisData.antennas,
         visTimestamp: synthesisData.vis?.timestamp,
-        visDataLength: synthesisData.vis?.data?.length,
+        visBaselineCount: baselineCount(synthesisData.vis),
       });
 
       const { vis, gain, antennas } = synthesisData;
@@ -481,7 +490,7 @@ export const useAppStore = defineStore("app", {
 
       console.log("📈 Processing vis data:", {
         timestamp: visData?.timestamp,
-        dataLength: visData?.data?.length || 0,
+        baselineCount: baselineCount(visData),
         hasGain: !!gainsData,
         hasAntennas: !!antPos,
         currentHistoryLength: this.vis_history.length,
@@ -507,13 +516,26 @@ export const useAppStore = defineStore("app", {
           });
         this.sat_list = satellites;
 
-        // Store visibility with satellite data in history
-        const visWithSatellites = {
-          ...visData,
-          satellites,
-          gain: gainsData,
-          antennas: antPos,
-        };
+        // Store visibility with satellite data in history. The live API returns
+        // the same {i,j,re,im} wire format as the HDF5 files, so it packs the
+        // same way; markRaw because the payload is never edited in place.
+        const packed = isEnabled("vis-typed-arrays") && Array.isArray(visData?.data) ? packRecordValues(visData.data) : null;
+
+        let visWithSatellites;
+        if (packed) {
+          const { data: legacyData, ...rest } = visData;
+          void legacyData; // replaced by the packed form below
+          visWithSatellites = markRaw({
+            ...rest,
+            values: packed.values,
+            tableId: packed.tableId,
+            satellites,
+            gain: gainsData,
+            antennas: antPos,
+          });
+        } else {
+          visWithSatellites = markRaw({ ...visData, satellites, gain: gainsData, antennas: antPos });
+        }
 
         while (this.vis_history.length > 3600) {
           this.vis_history.shift();

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { measureRowLoad, waitForEdgeCache } from "./support/edge-cache.mjs";
+import { gotoApp, measureRowLoad, waitForEdgeCache } from "./support/edge-cache.mjs";
 
 /**
  * User story: a user opens the viewer for the first time and loads a file.
@@ -38,7 +38,7 @@ test("page load, then the first visibility", async ({ page }) => {
     }
   });
 
-  await page.goto("/", { waitUntil: "commit" });
+  await gotoApp(page, { waitUntil: "commit" });
 
   // App usable: the Edge Cache has real rows. Returns the page-relative time at
   // which that became true.

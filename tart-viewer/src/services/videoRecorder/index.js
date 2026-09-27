@@ -6,6 +6,7 @@
  * 2. CCapture.js - Frame-by-frame capture with more control
  */
 
+import { baselineCount } from "@/utils/visLayout";
 import StreamRecorderService from "./streamRecorderService.js";
 
 /**
@@ -57,10 +58,11 @@ export const RecorderUtils = {
       throw new Error("vis_history must be a non-empty array");
     }
 
-    // Deep copy to create immutable snapshot
-    // Using JSON parse/stringify as it's widely supported and works well for our data structure
-    // eslint-disable-next-line unicorn/prefer-structured-clone
-    const snapshot = JSON.parse(JSON.stringify(visHistory));
+    // structuredClone, not JSON: a JSON round-trip turns a Float32Array into
+    // {"0":…,"1":…} and JSON.parse does not restore it, so the packed layout
+    // would come back corrupted. structuredClone preserves typed arrays, and is
+    // far cheaper than serialising the whole history to a string and back.
+    const snapshot = structuredClone(visHistory);
 
     // Sort by timestamp to ensure proper chronological order
     snapshot.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
@@ -190,11 +192,13 @@ export const RecorderUtils = {
       throw new Error("vis_history is empty - no frames to record");
     }
 
-    // Check that all entries have required properties
-    const invalidEntries = visHistory.filter((entry) => !entry.timestamp || !entry.data);
+    // Check that all entries have required properties. The baseline payload
+    // lives in `data` under the legacy layout and in `values` under the packed
+    // one, so ask the accessor rather than testing the field.
+    const invalidEntries = visHistory.filter((entry) => !entry.timestamp || baselineCount(entry) === 0);
 
     if (invalidEntries.length > 0) {
-      throw new Error(`${invalidEntries.length} entries missing required timestamp or data properties`);
+      throw new Error(`${invalidEntries.length} entries missing required timestamp or baseline data`);
     }
 
     return true;

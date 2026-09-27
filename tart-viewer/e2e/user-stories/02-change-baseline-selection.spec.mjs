@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { edgeCacheRows, measureRowLoad, waitForEdgeCache } from "./support/edge-cache.mjs";
+import { edgeCacheRows, gotoApp, measureRowLoad, waitForEdgeCache } from "./support/edge-cache.mjs";
 
 /**
  * User story: change which baseline the amplitude/phase chart is showing.
@@ -24,7 +24,7 @@ const DEFAULT_SELECTION = [0, 23];
 const TARGET_SELECTION = [4, 10];
 
 test("change the baseline selection", async ({ page }) => {
-  await page.goto("/");
+  await gotoApp(page);
 
   const rowCount = await waitForEdgeCache(page);
   const toLoad = Math.min(FILES, rowCount);

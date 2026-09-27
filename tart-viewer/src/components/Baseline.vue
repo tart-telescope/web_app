@@ -107,6 +107,7 @@
 <script lang="js">
 import { mapActions, mapState } from "pinia";
 import { useAppStore } from "@/stores/app";
+import { amplitudeAt, baselineIndexOf, phaseAt } from "@/utils/visLayout";
 import UPlotChart from "./UPlotChart.vue";
 import VideoRecordingButton from "./VideoRecordingButton.vue";
 
@@ -142,17 +143,32 @@ export default {
       if (this.vis_history.length === 0) return [];
 
       const [i, j] = this.selected_baseline;
-      const result = this.vis_history.map((x_h, idx) => {
-        const item = x_h.data ? x_h.data.find((x) => x.i === i && x.j === j) : null;
+
+      // A baseline's position is a property of the layout, not of the record, so
+      // resolve it once per layout and index from then on. The scan this
+      // replaces was O(records x baselines) and forced a reactive proxy for
+      // every entry it touched.
+      //
+      // Keyed by layout, not memoised across the whole map: vis_history is never
+      // cleared between loads, so a 24-antenna file added after a 32-antenna one
+      // leaves records with different layouts side by side.
+      const positions = new Map();
+
+      return this.vis_history.map((record) => {
+        const layout = record.tableId ?? "legacy";
+
+        let position = positions.get(layout);
+        if (position === undefined) {
+          position = baselineIndexOf(record, i, j);
+          positions.set(layout, position);
+        }
 
         return {
-          timestamp: x_h.timestamp,
-          amplitude: item ? Math.hypot(item.re, item.im) : null,
-          phase: item ? (Math.atan2(item.im, item.re) * 180) / Math.PI : null,
+          timestamp: record.timestamp,
+          amplitude: amplitudeAt(record, position),
+          phase: phaseAt(record, position),
         };
       });
-
-      return result;
     },
 
     amplitudeSeries() {

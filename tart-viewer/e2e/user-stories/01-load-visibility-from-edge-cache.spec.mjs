@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { measureRowLoad, waitForEdgeCache } from "./support/edge-cache.mjs";
+import { gotoApp, measureRowLoad, waitForEdgeCache } from "./support/edge-cache.mjs";
 
 /**
  * User story: load a visibility file from the Edge Cache.
@@ -20,7 +20,7 @@ const WARMUP_ROW = 0;
 const MEASURED_ROW = Number(process.env.E2E_ROW_INDEX ?? 1);
 
 test("load a visibility from the edge cache", async ({ page }) => {
-  await page.goto("/");
+  await gotoApp(page);
 
   const rowCount = await waitForEdgeCache(page);
   expect(rowCount, "need at least two rows: one to warm up on, one to measure").toBeGreaterThan(1);

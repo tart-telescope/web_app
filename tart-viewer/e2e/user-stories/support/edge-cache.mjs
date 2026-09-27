@@ -11,6 +11,15 @@ import { expect } from "@playwright/test";
  * Filtered on a timestamp because until the list arrives the table renders a
  * single "No data available" row, which has no eye button.
  */
+/**
+ * Navigate to the app. E2E_PATH lets a run pick up a query string — notably
+ * `/?flags=vis-typed-arrays` — so the stories can be run against either record
+ * layout without a rebuild.
+ */
+export async function gotoApp(page, options) {
+  await page.goto(process.env.E2E_PATH ?? "/", options);
+}
+
 export function edgeCacheRows(page) {
   return page.locator(".v-data-table tbody tr").filter({ hasText: /\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/ });
 }

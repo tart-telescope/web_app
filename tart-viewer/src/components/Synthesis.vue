@@ -89,6 +89,7 @@
 import { get_color_bytes_only, get_color_bytes_only_simd, get_hemisphere_pixel_corners, get_pixel_coords_only_simd } from "gridless";
 import { mapState } from "pinia";
 import { useAppStore } from "@/stores/app";
+import { baselineCount, packRecordValues, toVisEntries } from "@/utils/visLayout";
 import SvgThreejs from "./SvgThreejs.vue";
 import Threejs3D from "./Threejs3D.vue";
 
@@ -181,16 +182,18 @@ export default {
     },
 
     filteredVisData() {
-      if (!this.currentVisData?.data) return null;
+      const record = this.currentVisData;
+      if (!record || baselineCount(record) === 0) return null;
 
       // All antennas in use: nothing to filter. Derive the expected count from
       // the loaded array (24 or 32) rather than assuming 24.
       const allUsed = this.nAntennas || this.antennas?.length;
-      if (!allUsed || this.antennasUsed.length >= allUsed) return this.currentVisData.data;
+      const antennaSet = !allUsed || this.antennasUsed.length >= allUsed ? null : this.antennaSet;
 
-      const filtered = this.currentVisData.data.filter((v) => this.antennaSet.has(v.i) && this.antennaSet.has(v.j));
-
-      return filtered;
+      // Built per render, for one record. The wasm needs {i,j,re,im} objects
+      // with every field present — serde errors on a missing one and that
+      // surfaces as an empty render, not a throw.
+      return toVisEntries(record, antennaSet);
     },
 
     // Pre-computed payload for rendering
@@ -454,12 +457,14 @@ export default {
       for (let i = 0; i < 30; i++) {
         testData.push({
           timestamp: new Date(now + i * 1000).toISOString(),
-          data: Array.from({ length: 100 }, (_, j) => ({
-            i: Math.floor(j / 10),
-            j: j % 10,
-            re: Math.sin(i * 0.1 + j * 0.05) * Math.random(),
-            im: Math.cos(i * 0.1 + j * 0.05) * Math.random(),
-          })),
+          ...packRecordValues(
+            Array.from({ length: 100 }, (_, j) => ({
+              i: Math.floor(j / 10),
+              j: j % 10,
+              re: Math.sin(i * 0.1 + j * 0.05) * Math.random(),
+              im: Math.cos(i * 0.1 + j * 0.05) * Math.random(),
+            })),
+          ),
           satellites: [
             { name: "GPS Test", az: 45 + i, el: 30 + Math.sin(i * 0.1) * 10 },
             {
