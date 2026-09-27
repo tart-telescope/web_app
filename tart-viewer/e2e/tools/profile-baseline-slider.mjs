@@ -23,7 +23,15 @@ const BASE_URL = process.env.E2E_BASE_URL || "http://localhost:3000";
 const FILES = Number(process.argv[2] ?? 20);
 const PRESSES = 5; // pairs of left/right presses per measurement
 
-const browser = await chromium.launch({ args: ["--enable-unsafe-swiftshader"] });
+// Headless Chromium has no GPU and runs WebGL on SwiftShader, and this app
+// renders continuously — so the unattributed "VM internal / native" bucket is
+// inflated by software rasterisation that a real display absorbs. Compare
+// HEADED=1 against the default before trusting the busy-time split.
+const HEADED = process.env.HEADED === "1";
+const browser = await chromium.launch({
+  headless: !HEADED,
+  args: ["--enable-unsafe-swiftshader"],
+});
 const context = await browser.newContext();
 const page = await context.newPage();
 const cdp = await context.newCDPSession(page);
@@ -103,6 +111,12 @@ async function measure(label) {
     }
   }
 
+  // Let Vue flush and the chart repaint before stopping. Computeds are lazy:
+  // filteredData only re-runs when the render effect reads it, so stopping the
+  // profiler immediately after the last press can miss the recompute entirely
+  // and report near-zero.
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+
   const { profile } = await cdp.send("Profiler.stop");
   const wall = Date.now() - started;
 
@@ -145,14 +159,37 @@ async function measure(label) {
   };
 }
 
-const atDefault = await measure("default [0,23]");
+// Which position is measured first is configurable: in headed mode whether a
+// measurement captures the recompute at all seemed to depend on it, and that
+// needs telling apart from a real position effect.
+const MOVE_FIRST = process.env.MOVE_FIRST === "1";
 
-// Move to [4,10]: high thumb 23 -> 10, low thumb 0 -> 4.
-for (let i = 0; i < 13; i++) await highThumb.press("ArrowLeft");
-for (let i = 0; i < 4; i++) await lowThumb.press("ArrowRight");
-await page.waitForTimeout(300);
+async function moveToMidRange() {
+  for (let i = 0; i < 13; i++) await highThumb.press("ArrowLeft");
+  for (let i = 0; i < 4; i++) await lowThumb.press("ArrowRight");
+  await page.waitForTimeout(300);
+}
 
-const atMidRange = await measure("moved [4,10]");
+async function moveToDefault() {
+  for (let i = 0; i < 13; i++) await highThumb.press("ArrowRight");
+  for (let i = 0; i < 4; i++) await lowThumb.press("ArrowLeft");
+  await page.waitForTimeout(300);
+}
+
+if (MOVE_FIRST) await moveToMidRange();
+
+const first = await measure(MOVE_FIRST ? "moved [4,10]" : "default [0,23]");
+
+if (MOVE_FIRST) {
+  await moveToDefault();
+} else {
+  await moveToMidRange();
+}
+
+const second = await measure(MOVE_FIRST ? "default [0,23]" : "moved [4,10]");
+
+const atDefault = MOVE_FIRST ? second : first;
+const atMidRange = MOVE_FIRST ? first : second;
 
 await browser.close();
 
