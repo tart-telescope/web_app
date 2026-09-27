@@ -6,6 +6,8 @@
  * 2. CCapture.js - Frame-by-frame capture with more control
  */
 
+import { toRaw } from "vue";
+
 import { baselineCount } from "@/utils/visLayout";
 import StreamRecorderService from "./streamRecorderService.js";
 
@@ -62,7 +64,14 @@ export const RecorderUtils = {
     // {"0":…,"1":…} and JSON.parse does not restore it, so the packed layout
     // would come back corrupted. structuredClone preserves typed arrays, and is
     // far cheaper than serialising the whole history to a string and back.
-    const snapshot = structuredClone(visHistory);
+    //
+    // toRaw because structuredClone refuses a Vue reactive proxy outright —
+    // "could not be cloned" — and the caller passes the store's array as-is
+    // when there is no zoom range, where a filtered copy is a plain array. That
+    // made this fail only on the unzoomed path: exporting the full history
+    // threw, exporting a selection worked. JSON.stringify used to hide it by
+    // walking a proxy transparently.
+    const snapshot = toRaw(visHistory).map((record) => structuredClone(toRaw(record)));
 
     // Sort by timestamp to ensure proper chronological order
     snapshot.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));

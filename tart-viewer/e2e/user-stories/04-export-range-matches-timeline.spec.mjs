@@ -61,6 +61,24 @@ test("the export range follows the timeline", async ({ page }) => {
   expect(reset.exportFrames, "double-click reset the chart but not the export range").toBe(reset.totalRecords);
   expect(rangesMatch(reset), "the chart and the recorder disagreed after a reset").toBe(true);
 
+  // ...and the export must be able to take its snapshot. It could not on this
+  // path: structuredClone refuses a Vue reactive proxy, and the recorder is
+  // handed the store's array as-is when nothing is filtered out. The export
+  // therefore failed precisely when the whole history was selected, which is
+  // where every reset-zoom-then-export ends up. Taking the snapshot directly
+  // keeps this cheap — actually recording the MP4 takes minutes.
+  const snapshot = await page.evaluate(async () => {
+    const { RecorderUtils } = await import("/src/services/videoRecorder/index.js");
+    const store = document.querySelector("#app").__vue_app__.config.globalProperties.$pinia._s.get("app");
+    try {
+      return { ok: true, frames: RecorderUtils.createDataSnapshot(store.vis_history).length };
+    } catch (error) {
+      return { ok: false, error: error.message };
+    }
+  });
+  expect(snapshot.ok, `the export could not snapshot the history: ${snapshot.error}`).toBe(true);
+  expect(snapshot.frames).toBe(reset.totalRecords);
+
   const lines = report.map(
     (r) =>
       `${r.label.padEnd(20)} chart[${Math.round(r.chart.min)},${Math.round(r.chart.max)}]  ` +
