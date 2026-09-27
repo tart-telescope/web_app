@@ -59,3 +59,43 @@ Roughly, on a dev box through the tunnel:
 
 The fetch is about 5% of the total, so the cost is client-side: parsing and
 rendering the file, and enriching it with satellite positions.
+
+## Profiling
+
+`tools/profile-load-visibility.mjs` drives the same interaction with a CDP CPU
+profile and a long-task observer running across the click, then prints a
+self-time breakdown grouped by source. It instruments no application code.
+
+```sh
+node e2e/tools/profile-load-visibility.mjs      # headless, SwiftShader
+HEADED=1 node e2e/tools/profile-load-visibility.mjs   # real display
+```
+
+Headless Chromium has no GPU, so WebGL falls back to SwiftShader and roughly
+**doubles** the measured time. Always compare headed against headless before
+trusting an absolute number. The raw profile lands in
+`/tmp/load-profile.cpuprofile`.
+
+### What the profile says
+
+Headed, one visibility (click → finished ≈ 1.3 s; headless ≈ 2.5 s):
+
+| Bucket                             | Share |
+| ---------------------------------- | ----- |
+| VM internal / native (incl. WebGL) | 30%   |
+| gridless wasm (synthesis)          | 15%   |
+| three.js                           | 15%   |
+| app code (geometry building)       | 12%   |
+| vue / vuetify runtime              | 8%    |
+| h5wasm (HDF5 parse)                | 7%    |
+| catalogue wasm (satellites)        | 1.6%  |
+
+Roughly **half the interaction is main-thread blocking** — one 680 ms task
+starts about 200 ms after the click.
+
+So the cost is rendering, not I/O. The network fetch is ~100 ms and the HDF5
+parse ~110 ms; satellite enrichment is ~25 ms, i.e. negligible. The weight sits
+in rebuilding the synthesis geometry on load: `createSphereFromCorners`
+(`Threejs3D.vue:810`), the gridless sphere/pixel wasm (221 ms in one function
+alone), Three.js buffer attributes, and `lonLatToCartesian`
+(`Threejs3D.vue:121`).
