@@ -405,15 +405,22 @@ function onTouchEnd(event) {
 
   isMouseDown = false;
 
-  // Show coordinate sprite when touch dragging ends
-  if (coordinateDiv) {
-    coordinateDiv.style.display = "block";
+  // Read the az/el at the point the finger lifted, and let the update place the
+  // readout. Nothing on the touch path had ever positioned it: `onTouchStart`
+  // hid it and this re-showed it, but `updateCoordinateSprite` — the only code
+  // that sets left/top — is reached from `onMouseMove`, and from `onTouchMove`
+  // only while `!isMouseDown`, which a touch never is. An absolutely positioned
+  // element with no offsets falls back to its static position, so the readout
+  // appeared in the top-left corner of the canvas instead of under the finger.
+  const touch = event.changedTouches?.[0];
+  if (touch) {
+    const rect = canvasRef.value.getBoundingClientRect();
+    mouse.x = ((touch.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((touch.clientY - rect.top) / rect.height) * 2 + 1;
+    mouseX = touch.clientX;
+    mouseY = touch.clientY;
   }
-
-  // Show position indicator when touch dragging ends
-  if (positionIndicator) {
-    positionIndicator.visible = true;
-  }
+  updateCoordinateSprite(mouse);
 }
 
 // Convert azimuth/elevation to 3D coordinates on sphere
