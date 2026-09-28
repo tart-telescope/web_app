@@ -47,6 +47,20 @@ silently poison the next "flag off" measurement.
 Not part of this system, but related: `VITE_CATALOG_URL` (satellite catalogue
 endpoint, defaults to the public one) and `VITE_DISABLE_LOCAL_SATELLITES`.
 
+## 🧪 Tests
+
+Playwright stories and profiling tools live in [`e2e/`](e2e/), against a
+running dev server.
+
+```bash
+pnpm dev                # in another terminal
+pnpm test:e2e           # all stories, ~1 min
+pnpm test:e2e 03-hover --headed
+```
+
+See [`e2e/INSTRUCTIONS.md`](e2e/INSTRUCTIONS.md) for what each story measures,
+the `E2E_*` variables, and why anything measured in frames needs `--headed`.
+
 ## ❗️ Important Links
 
 - 📄 [Docs](https://vuetifyjs.com/)
