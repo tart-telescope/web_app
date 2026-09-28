@@ -46,7 +46,7 @@ const TOOLTIP = `(() => {
 
 /** Where the scene is ready to be interacted with. */
 async function readyScene(page) {
-  await page.goto("/?view=simple");
+  await page.goto("/?view=simple&refresh=120");
   await expect(page.locator(".threejs-3d-container.scene-visible")).toBeVisible({ timeout: 60_000 });
   const box = await page.locator("canvas.threejs-canvas").boundingBox();
   expect(box, "no canvas to tap").not.toBeNull();

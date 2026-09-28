@@ -399,19 +399,12 @@ export async function loadH5wasmFromBuffer(buffer) {
     // Create unique virtual path to avoid file caching issues
     const virtualPath = `/data_${Date.now()}_${Math.random().toString(36).slice(2, 11)}.hdf5`;
 
-    // Clean up any existing files first
-    try {
-      const existingFiles = h5wasm.FS.readdir("/").filter((f) => f.endsWith(".hdf5"));
-      for (const file of existingFiles) {
-        try {
-          h5wasm.FS.unlink("/" + file);
-        } catch {
-          console.warn("Could not clean up file:", file);
-        }
-      }
-    } catch {
-      console.warn("Could not clean up existing files");
-    }
+    // No sweep of the virtual filesystem here. It used to unlink every .hdf5 in
+    // the root before writing, which is only safe while one file is open at a
+    // time — and the filesystem is shared by every load, so a second concurrent
+    // load could delete the first one's file out from under it, mid-read.
+    // `hdf5Service._cleanupHdf5File` unlinks this load's own file in a `finally`
+    // already, so the sweep was redundant as well as unsafe.
 
     // Write buffer to virtual filesystem with unique name
     h5wasm.FS.writeFile(virtualPath, uint8Buffer);

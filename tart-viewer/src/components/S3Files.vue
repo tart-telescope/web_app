@@ -61,6 +61,17 @@ import { mapActions } from "pinia";
 import { hdf5Service, s3Service } from "@/services";
 import { useAppStore } from "@/stores/app";
 import { formatFileSize, formatTimeAgo } from "@/utils/format";
+import { mapWithConcurrency } from "@/utils/pool";
+
+/**
+ * How many files "Add to timeline" loads at once.
+ *
+ * Downloads overlap, so a small pool already hides most of the network wait,
+ * while the parsing stays serial regardless. Raising it holds more files'
+ * records in memory at the same time; 4 is the point where the measured bulk
+ * load stopped improving much. Override with VITE_BULK_CONCURRENCY.
+ */
+const BULK_CONCURRENCY = Number(import.meta.env.VITE_BULK_CONCURRENCY ?? 4);
 
 export default {
   name: "S3Files",
@@ -226,24 +237,26 @@ export default {
       this.bulkPhase = "loading";
 
       try {
-        // Enrich as each file lands, rather than holding it all back to the end
-        // so the user watches a full history with no satellites over it. The
-        // service calls this without awaiting, so the next file's download is
-        // not queued behind the enrichment.
-        for (const [index, file] of hdf5Files.entries()) {
-          this.bulkProgress = index + 1;
-
+        // Files load in parallel, bounded by BULK_CONCURRENCY. One at a time
+        // left the network idle for most of each file's turn; the parsing stays
+        // serial either way, because the wasm is single-threaded, so the bound
+        // only has to overlap downloads without holding every file's parsed
+        // records in memory at once.
+        //
+        // Enrichment still runs as each file lands, and the service calls it
+        // without awaiting, so it never holds up a download.
+        let completed = 0;
+        await mapWithConcurrency(hdf5Files, BULK_CONCURRENCY, async (file) => {
           try {
-            const fileUrl = this.getFileUrl(file.name);
-            await hdf5Service.loadFileToStore(file, fileUrl, this.store, () => this.enrichSatellitesWithProgress(), 10);
-
-            // Small delay to prevent UI blocking
-            await new Promise((resolve) => setTimeout(resolve, 10));
+            await hdf5Service.loadFileToStore(file, this.getFileUrl(file.name), this.store, () => this.enrichSatellitesWithProgress(), 10);
           } catch (error) {
+            // Continue with the rest instead of stopping the batch.
             console.error(`Failed to load file ${file.name}:`, error);
-            // Continue with next file instead of stopping
           }
-        }
+
+          completed += 1;
+          this.bulkProgress = completed;
+        });
 
         // Catch-up. Enrichment has been running alongside the loads, so this is
         // usually a no-op that returns without an API call — but it is what

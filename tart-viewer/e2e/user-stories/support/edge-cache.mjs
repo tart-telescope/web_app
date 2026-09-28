@@ -17,7 +17,18 @@ import { expect } from "@playwright/test";
  * layout without a rebuild.
  */
 export async function gotoApp(page, options) {
-  await page.goto(process.env.E2E_PATH ?? "/", options);
+  const target = new URL(process.env.E2E_PATH ?? "/", "http://localhost");
+
+  // Push the live poll out of the way. Each tick fetches the current visibility
+  // and appends a record to the history, so a story that loads five files and
+  // then counts them can be a record ahead of itself by the time it looks —
+  // which is exactly the kind of off-by-one that reads as a bug in whatever the
+  // story is testing.
+  if (!target.searchParams.has("refresh")) {
+    target.searchParams.set("refresh", "120");
+  }
+
+  await page.goto(target.pathname + target.search, options);
 }
 
 export function edgeCacheRows(page) {
