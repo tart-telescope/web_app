@@ -1,89 +1,137 @@
 /**
- * Measure what a loaded visibility history costs in memory, so claims about
- * changing its representation can be checked rather than assumed.
+ * Measure what a loaded visibility history costs in memory, and what the
+ * `vis-typed-arrays` flag changes about it.
  *
  * Loads N files through the Edge Cache eye buttons, forcing a garbage
  * collection before each reading so the numbers are not inflated by uncollected
  * garbage.
  *
+ * The attribution that matters is the *drop*: after the last reading the store's
+ * history is emptied and the heap sampled again. What falls away is what the
+ * history itself was retaining, which is far more direct than comparing whole
+ * page figures between two runs — the page also holds three.js, a wasm heap and
+ * whatever the last render left behind, and those differ run to run.
+ *
  * Usage:
- *   node e2e/tools/measure-history-cost.mjs [files]
+ *   node e2e/tools/measure-history-cost.mjs [files]     # default 5
  */
 
 import { chromium } from "@playwright/test";
 
 const BASE_URL = process.env.E2E_BASE_URL || "http://localhost:3000";
-const FILES = Number(process.argv[2] ?? 6);
-const TARGET_RECORDS = 3600; // the store's cap, see app.js
+const FILES = Number(process.argv[2] ?? 5);
 
-const browser = await chromium.launch({
-  args: ["--enable-unsafe-swiftshader", "--enable-precise-memory-info"],
-});
-const context = await browser.newContext();
-const page = await context.newPage();
-const cdp = await context.newCDPSession(page);
-
-await page.goto(BASE_URL);
-
-const rows = page.locator(".v-data-table tbody tr").filter({ hasText: /\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/ });
-await rows.first().waitFor({ state: "visible", timeout: 30_000 });
-const rowCount = await rows.count();
+const mb = (bytes) => (bytes / 1024 / 1024).toFixed(1);
 
 /** Heap after a forced GC, so garbage does not inflate the reading. */
-async function sample() {
+async function sample(cdp, page) {
   await cdp.send("HeapProfiler.collectGarbage");
   return page.evaluate(() => performance.memory?.usedJSHeapSize ?? null);
 }
 
-/** Load one row and wait for the button's spinner to clear. */
-async function loadRow(index) {
-  const eye = rows.nth(index).getByRole("button").first();
-  const done = page.waitForResponse((r) => /\/vis\/.*\.hdf(\?|$)/.test(r.url()) && r.status() === 200, { timeout: 60_000 });
-  const started = Date.now();
-  await eye.click();
-  await done;
-  await eye
-    .locator(".v-progress-circular")
-    .waitFor({ state: "hidden", timeout: 120_000 })
-    .catch(() => {});
-  return Date.now() - started;
+/** Measure one flag state: load, read, empty, read again. */
+async function measure(flags, files) {
+  const browser = await chromium.launch({
+    args: ["--enable-unsafe-swiftshader", "--enable-precise-memory-info"],
+  });
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  const cdp = await context.newCDPSession(page);
+
+  await page.goto(`${BASE_URL}/?flags=${flags}`);
+
+  const rows = page.locator(".v-data-table tbody tr").filter({ hasText: /\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/ });
+  await rows.first().waitFor({ state: "visible", timeout: 30_000 });
+  const rowCount = await rows.count();
+
+  /** Load one row and wait for the button's spinner to clear. */
+  async function loadRow(index) {
+    const eye = rows.nth(index).getByRole("button").first();
+    const done = page.waitForResponse((r) => /\/vis\/.*\.hdf(\?|$)/.test(r.url()) && r.status() === 200, { timeout: 60_000 });
+    const started = Date.now();
+    await eye.click();
+    await done;
+    await eye
+      .locator(".v-progress-circular")
+      .waitFor({ state: "hidden", timeout: 120_000 })
+      .catch(() => {});
+    return Date.now() - started;
+  }
+
+  // Warm up, so the one-time runtime costs are not in the first sample.
+  await loadRow(0).catch(() => {});
+  await page.waitForTimeout(500);
+
+  const before = await sample(cdp, page);
+
+  const times = [];
+  const heapAfterEach = [];
+  for (let i = 1; i <= files && i < rowCount; i++) {
+    times.push(await loadRow(i));
+    heapAfterEach.push(await sample(cdp, page));
+  }
+
+  const layout = await page.evaluate(() => {
+    const store = document.querySelector("#app").__vue_app__.config.globalProperties.$pinia._s.get("app");
+    const first = store.vis_history[0];
+    return {
+      records: store.vis_history.length,
+      kind: first?.values instanceof Float32Array ? "packed Float32Array" : "objects",
+      fields: first && !first.values ? Object.keys(first).join(",") : null,
+    };
+  });
+
+  const withHistory = heapAfterEach.at(-1);
+
+  // Emptying the store and reading the heap again was the plan for attributing
+  // the cost to the history directly. It does not work: usedJSHeapSize does not
+  // come back down when the records are dropped, so it reported 0.0 MB freed
+  // for 361 records in both layouts. The growth across loading is what is left,
+  // and it is measured identically in both runs, which is what makes comparing
+  // them meaningful.
+  await browser.close();
+
+  return { flags, before, heapAfterEach, times, layout, withHistory, growth: withHistory - before };
 }
 
-// Warm up so the one-time runtime costs are not in the first sample.
-await loadRow(0).catch(() => {});
-await page.waitForTimeout(500);
-
-const before = await sample();
-
-const times = [];
-const heapAfterEach = [];
-for (let i = 1; i <= FILES && i < rowCount; i++) {
-  times.push(await loadRow(i));
-  heapAfterEach.push(await sample());
+const results = [];
+for (const flags of ["-vis-typed-arrays", "vis-typed-arrays"]) {
+  process.stdout.write(`measuring ${flags} … `);
+  const result = await measure(flags, FILES);
+  results.push(result);
+  console.log(`done (${result.layout.records} records, ${result.layout.kind})`);
 }
 
-await browser.close();
+const [off, on] = results;
+const steps = (r) => r.heapAfterEach.map((h, i) => h - (i === 0 ? r.before : r.heapAfterEach[i - 1]));
 
-const mb = (b) => (b / 1024 / 1024).toFixed(1);
-const RECORDS_PER_FILE = 60; // one per minute of capture, at decimation 1
+console.log(`\nHistory memory  (${FILES} files, the same files in both runs)`);
+console.log("  flags                  records   before     after    growth   per record   per file");
+for (const r of results) {
+  console.log(
+    `  ${r.flags.padEnd(22)} ${String(r.layout.records).padStart(5)}   ` +
+      `${mb(r.before).padStart(6)} MB ${mb(r.withHistory).padStart(6)} MB ${mb(r.growth).padStart(7)} MB   ` +
+      `${(r.growth / r.layout.records / 1024).toFixed(1).padStart(8)} KB   ${(r.growth / (FILES + 1) / 1024 / 1024).toFixed(2).padStart(6)} MB`,
+  );
+}
 
-// Marginal cost matters more than the total: a constant step per file means the
-// records; a decaying one means one-time caches that stop growing.
-const steps = heapAfterEach.map((h, i) => h - (i === 0 ? before : heapAfterEach[i - 1]));
+console.log(`\n  layout off : ${off.layout.kind}${off.layout.fields ? `  (${off.layout.fields})` : ""}`);
+console.log(`  layout on  : ${on.layout.kind}`);
+console.log(`  difference : ${mb(off.growth - on.growth)} MB less growth for the same ${on.layout.records} records`);
+if (on.growth > 0) console.log(`  ratio      : ${(off.growth / on.growth).toFixed(1)}x`);
+console.log(
+  `  per file   : ${steps(off)
+    .map((s) => mb(s))
+    .join(", ")} MB (off)`,
+);
+console.log(
+  `               ${steps(on)
+    .map((s) => mb(s))
+    .join(", ")} MB (on)`,
+);
 
-console.log(`\nHistory cost  (${times.length} files loaded)`);
-console.log(`  heap before        : ${mb(before)} MB`);
-console.log(`  heap after         : ${mb(heapAfterEach.at(-1))} MB`);
-console.log(`  total delta        : ${mb(heapAfterEach.at(-1) - before)} MB`);
-console.log(`  per-file step      : ${steps.map((s) => `${mb(s)}`).join(", ")} MB`);
-console.log(`  per-load time      : ${times.map((t) => `${t}ms`).join(", ")}`);
-
-const steady = steps.slice(1); // drop the first, which may include a one-time cache
-const meanStep = steady.reduce((a, b) => a + b, 0) / steady.length;
-const perRecordBytes = meanStep / RECORDS_PER_FILE;
-console.log(`\n  mean steady step   : ${mb(meanStep)} MB per file (~${RECORDS_PER_FILE} records)`);
-console.log(`  => ~${(perRecordBytes / 1024).toFixed(1)} KB per record`);
-console.log(`  => ~${mb(perRecordBytes * TARGET_RECORDS)} MB at the ${TARGET_RECORDS}-record cap`);
-
-console.log("\nCaveats: heap is a whole-page figure (app, wasm, rendering included),");
-console.log(`and records-per-file is assumed at ${RECORDS_PER_FILE} rather than measured.`);
+console.log("\nCaveats: this is whole-page growth from loading, not only the records — it also");
+console.log("includes whatever the chart and the renderer hold afterwards. Both runs do the");
+console.log("same thing to the same page, so the difference between them is the flag's.");
+console.log("usedJSHeapSize is a coarse instrument: read it as a shape rather than a precise");
+console.log("figure, and note the per-file steps staying flat rather than decaying.");
