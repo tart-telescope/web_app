@@ -22,6 +22,31 @@ pnpm build
 
 This is the official scaffolding tool for Vuetify, designed to give you a head start in building your new Vuetify application. It sets up a base template with all the necessary configurations and standard directory structure, enabling you to begin development without the hassle of setting up the project from scratch.
 
+## 🚩 Feature Flags
+
+Two runtime flags, both off by default. They exist so a change can be measured
+against the old behaviour without a rebuild.
+
+| Flag               | Default | Effect                                                                                                                                                                                     |
+| ------------------ | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `color-worker`     | off     | Render the sphere's colour map in a Web Worker instead of on the main thread. That render costs ~69 ms per hovered cursor position, a dropped frame for the whole page; this moves it off. |
+| `vis-typed-arrays` | off     | Store the visibility history as packed `Float32Array`s plus a shared baseline table, rather than an array of `{i,j,re,im}` objects. Roughly a quarter of the memory.                       |
+
+Set the build default with the matching `VITE_` variable — `VITE_COLOR_WORKER=true`,
+`VITE_VIS_TYPED_ARRAYS=true` — or override it for a single run:
+
+```
+?flags=color-worker                      on for this run
+?flags=-color-worker                     off for this run
+?flags=vis-typed-arrays,-color-worker    several at once
+```
+
+Overrides are deliberately not kept in `localStorage`: a remembered one would
+silently poison the next "flag off" measurement.
+
+Not part of this system, but related: `VITE_CATALOG_URL` (satellite catalogue
+endpoint, defaults to the public one) and `VITE_DISABLE_LOCAL_SATELLITES`.
+
 ## ❗️ Important Links
 
 - 📄 [Docs](https://vuetifyjs.com/)
