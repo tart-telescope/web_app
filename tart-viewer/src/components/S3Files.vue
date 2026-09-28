@@ -115,7 +115,14 @@ export default {
       this.$emit("path-changed", this.currentPrefix);
     },
   },
-  computed: {},
+  computed: {
+    // mapState belongs here, not in methods: in methods it defines a *method*
+    // called dataThinning, so `this.dataThinning` is a function rather than 3.
+    // That function reached the loader as the thinning factor, `index % fn` is
+    // NaN, and every record was skipped — the file parsed, logged its antennas,
+    // and added nothing.
+    ...mapState(useAppStore, ["dataThinning"]),
+  },
 
   // Lifecycle hooks
   mounted() {
@@ -128,7 +135,6 @@ export default {
     this.stopAutoRefresh();
   },
   methods: {
-    ...mapState(useAppStore, ["dataThinning"]),
     ...mapActions(useAppStore, ["enrichBulkSatellites"]),
     /**
      * Fetch files from last 24 hours (today + yesterday)
