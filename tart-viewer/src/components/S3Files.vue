@@ -169,22 +169,41 @@ export default {
       }
     },
 
-    async enrichSatellitesWithProgress() {
-      if (this.enrichLoading) return;
+    /**
+     * Enrich whatever is still missing satellites.
+     *
+     * Runs are chained rather than dropped. This used to return early whenever a
+     * run was already in flight, which is fine when it is called once — but a
+     * bulk load now calls it once per file, and the call that matters most is
+     * the one after the last file. Dropping that one would leave records
+     * permanently without satellites, with nothing reporting it.
+     *
+     * Chaining is cheap here because each run only looks at records that still
+     * lack satellites, so a run queued behind a slow one usually has nothing to
+     * do and returns without an API call.
+     */
+    enrichSatellitesWithProgress() {
+      const previous = this.enrichRun ?? Promise.resolve();
 
-      this.enrichLoading = true;
+      this.enrichRun = previous
+        .catch(() => {})
+        .then(async () => {
+          this.enrichLoading = true;
 
-      try {
-        const result = await this.enrichBulkSatellites();
+          try {
+            const result = await this.enrichBulkSatellites();
 
-        if (result && !result.success) {
-          console.warn("Satellite enrichment completed with errors:", result);
-        }
-      } catch (error) {
-        console.error("Failed to enrich satellites:", error);
-      } finally {
-        this.enrichLoading = false;
-      }
+            if (result && !result.success) {
+              console.warn("Satellite enrichment completed with errors:", result);
+            }
+          } catch (error) {
+            console.error("Failed to enrich satellites:", error);
+          } finally {
+            this.enrichLoading = false;
+          }
+        });
+
+      return this.enrichRun;
     },
 
     formatFileSize,
@@ -207,19 +226,16 @@ export default {
       this.bulkPhase = "loading";
 
       try {
-        // Load all files first without enrichment
+        // Enrich as each file lands, rather than holding it all back to the end
+        // so the user watches a full history with no satellites over it. The
+        // service calls this without awaiting, so the next file's download is
+        // not queued behind the enrichment.
         for (const [index, file] of hdf5Files.entries()) {
           this.bulkProgress = index + 1;
 
           try {
             const fileUrl = this.getFileUrl(file.name);
-            await hdf5Service.loadFileToStore(
-              file,
-              fileUrl,
-              this.store,
-              null, // Don't enrich after each file
-              10,
-            );
+            await hdf5Service.loadFileToStore(file, fileUrl, this.store, () => this.enrichSatellitesWithProgress(), 10);
 
             // Small delay to prevent UI blocking
             await new Promise((resolve) => setTimeout(resolve, 10));
@@ -229,10 +245,13 @@ export default {
           }
         }
 
-        // Now enrich all satellites in one bulk operation
+        // Catch-up. Enrichment has been running alongside the loads, so this is
+        // usually a no-op that returns without an API call — but it is what
+        // guarantees the last file's records are covered, and awaiting it is
+        // what keeps "Enriching satellites…" on screen until they are.
         this.bulkPhase = "enriching";
         this.bulkProgress = 0;
-        this.bulkTotal = 1; // Just one enrichment operation
+        this.bulkTotal = 1;
         await this.enrichSatellitesWithProgress();
         this.bulkProgress = 1;
       } finally {
