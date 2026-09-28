@@ -167,7 +167,7 @@ export default {
           fileUrl,
           this.store,
           this.enrichBulkSatellites,
-          1, // No data thinning for edge cache files
+          this.dataThinning, // whatever the thinning control is set to
         );
 
         this.$emit("file-loaded", {
@@ -189,7 +189,7 @@ export default {
     },
   },
   computed: {
-    ...mapState(useAppStore, ["telescope_mode", "visFileList", "rawFileList", "TART_URL"]),
+    ...mapState(useAppStore, ["telescope_mode", "visFileList", "rawFileList", "TART_URL", "dataThinning"]),
   },
   setup() {
     const store = useAppStore();

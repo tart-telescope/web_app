@@ -57,7 +57,7 @@
 </template>
 
 <script>
-import { mapActions } from "pinia";
+import { mapActions, mapState } from "pinia";
 import { hdf5Service, s3Service } from "@/services";
 import { useAppStore } from "@/stores/app";
 import { formatFileSize, formatTimeAgo } from "@/utils/format";
@@ -128,6 +128,7 @@ export default {
     this.stopAutoRefresh();
   },
   methods: {
+    ...mapState(useAppStore, ["dataThinning"]),
     ...mapActions(useAppStore, ["enrichBulkSatellites"]),
     /**
      * Fetch files from last 24 hours (today + yesterday)
@@ -171,7 +172,7 @@ export default {
         try {
           this.loadingFile = file.name;
           const fileUrl = this.getFileUrl(file.name);
-          await hdf5Service.loadFileToStore(file, fileUrl, this.store, () => this.enrichSatellitesWithProgress(), 1);
+          await hdf5Service.loadFileToStore(file, fileUrl, this.store, () => this.enrichSatellitesWithProgress(), this.dataThinning);
         } catch (error) {
           console.error("Failed to load HDF5 file:", error);
         } finally {
@@ -248,7 +249,13 @@ export default {
         let completed = 0;
         await mapWithConcurrency(hdf5Files, BULK_CONCURRENCY, async (file) => {
           try {
-            await hdf5Service.loadFileToStore(file, this.getFileUrl(file.name), this.store, () => this.enrichSatellitesWithProgress(), 10);
+            await hdf5Service.loadFileToStore(
+              file,
+              this.getFileUrl(file.name),
+              this.store,
+              () => this.enrichSatellitesWithProgress(),
+              this.dataThinning,
+            );
           } catch (error) {
             // Continue with the rest instead of stopping the batch.
             console.error(`Failed to load file ${file.name}:`, error);
