@@ -4,6 +4,10 @@ Playwright stories against an already-running dev server, plus standalone
 profilers. The stories assert behaviour; the numbers they print are the point of
 most of them.
 
+The stories load real files from the Edge Cache, so the dev server needs a
+telescope behind it — the SSH tunnel described in the README, with Local Mode
+on. Without it they fail on an empty table.
+
 ```bash
 pnpm dev                                # in another terminal
 pnpm test:e2e                           # all stories, ~1 min

@@ -10,6 +10,19 @@ pnpm dev
 
 (Repeat for npm, pnpm, and bun with respective commands.)
 
+#### Reaching a telescope
+
+Local Mode serves the app from a telescope's own API through the dev server,
+which proxies `/api/v1`, `/vis` and `/raw` to `localhost:1234`. Forward that
+from the telescope first:
+
+```bash
+ssh -L localhost:1234:localhost:8002 max@spark
+```
+
+Then toggle Local Mode in the hamburger menu. The app still loads without the
+tunnel, but the Edge Cache is empty and there is nothing to view.
+
 > Add NODE_OPTIONS='--no-warnings' to suppress the JSON import warnings that happen as part of the Vuetify import mapping. If you are on Node [v21.3.0](https://nodejs.org/en/blog/release/v21.3.0) or higher, you can change this to NODE_OPTIONS='--disable-warning=5401'. If you don't mind the warning, you can remove this from your package.json dev script.
 
 ### Building for Production
