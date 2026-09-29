@@ -35,9 +35,23 @@ cannot be reused:
 
 ## Where this goes a different route
 
-Two date/time bugs in the upstream client are why the time handling here is
-written from scratch rather than followed. Both were measured against the live
-`GET /catalog` for the same observer and instant, matching by satellite name:
+The reason this is not a thin wrapper is structural, and it has not changed:
+binary-only, `tokio` with `full`, and a TLE cache in `~/.cache`. Nothing that
+upstream can do in a command-line tool makes those usable from a browser.
+
+The two date/time bugs below were reported as
+[issue #9](https://github.com/tart-telescope/catalogue/issues/9) and fixed
+upstream in
+[`25172fb`](https://github.com/tart-telescope/catalogue/commit/25172fb), by
+taking the same route this crate takes: `datetime_to_minutes_since_epoch`, and
+a `julian_day` that subtracts the 0.5. So this is no longer a divergence —
+both now handle the epoch the same way. They are kept on record because they are
+why the time handling here was written from scratch rather than followed, and
+because they are the reason the parity test below is against the server rather
+than against the client.
+
+Both were measured against the live `GET /catalog` for the same observer and
+instant, matching by satellite name:
 
 | Build                          | Azimuth (median / max) | Elevation (median / max) |
 | ------------------------------ | ---------------------- | ------------------------ |
@@ -45,18 +59,18 @@ written from scratch rather than followed. Both were measured against the live
 | With the epoch fix only        | 156.8° / 201.7°        | 48.4° / 90.0°            |
 | Both fixed — what this does    | 0.006° / **0.029°**    | 0.004° / **0.010°**      |
 
-**Epoch units.** Upstream subtracts `Elements::epoch()` — *years* since J2000 —
-from a Julian Day offset in *days*. Dimensionally invalid, and worth about 74
-years. Its own tests pass regardless, because the test TLE carries zero drag, so
-the radial assertion never notices the phase error. This crate calls sgp4's
-`datetime_to_minutes_since_epoch` instead; `src/propagation.rs` carries a note
-saying not to follow the upstream arithmetic here.
+**Epoch units.** The client subtracted `Elements::epoch()` — *years* since
+J2000 — from a Julian Day offset in *days*. Dimensionally invalid, and worth
+about 74 years. Its tests passed regardless, because the test TLE carries zero
+drag, so the radial assertion never noticed the phase error. The fix is sgp4's
+own `datetime_to_minutes_since_epoch`, which is what both this crate and
+upstream now call.
 
 **The Julian Day of the unix epoch.** `2_440_587.5`, and the `.5` is the whole
-point: Julian Days begin at noon. The Fliegel–Van Flandern formula upstream uses
-returns a Julian Day *Number*, which refers to noon, so it is half a day — and
-therefore ~180.5° of GMST — out. That the second bug was independent of the first
-only became clear when fixing the first still left azimuth wrong by a median of
+point: Julian Days begin at noon. Fliegel–Van Flandern returns a Julian Day
+*Number*, which refers to noon, so the result was half a day — and therefore
+~180.5° of GMST — out. That the second bug was independent of the first only
+became clear when fixing the first still left azimuth wrong by a median of
 157°.
 
 Everything above the maths — the fetch, the TLE cache in IndexedDB, the decision

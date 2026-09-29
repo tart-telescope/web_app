@@ -108,12 +108,13 @@ pub fn propagate_to_ecef(
     datetime: &chrono::NaiveDateTime,
     rotation: (f64, f64),
 ) -> Option<[f64; 3]> {
-    // NOTE: use sgp4's own helper. Do NOT follow the upstream
-    // `tart-catalogue-client` client here: it subtracts `Elements::epoch()`
-    // (*years* since J2000) from a Julian Day offset in *days*, which is
-    // dimensionally invalid and propagates by roughly 74 years. Its own tests
-    // pass despite this because their test TLE has zero drag, so the radial
-    // assertion never notices the phase error.
+    // Use sgp4's own helper rather than arithmetic of our own. The upstream
+    // `tart-catalogue-client` subtracted `Elements::epoch()` (*years* since
+    // J2000) from a Julian Day offset in *days* — dimensionally invalid, and
+    // worth about 74 years. Its tests passed regardless because the test TLE
+    // has zero drag, so the radial assertion never noticed the phase error.
+    // Reported as issue #9 and fixed upstream in 25172fb, which now calls this
+    // same helper; the note is kept so nobody reintroduces the arithmetic.
     let minutes = propagator
         .elements
         .datetime_to_minutes_since_epoch(datetime)
