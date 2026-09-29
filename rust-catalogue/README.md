@@ -20,24 +20,26 @@ Same backend — the catalogue's `/ephemerides` endpoint — same quantity: a TL
 propagated with SGP4 to an observer's azimuth, elevation and range. The
 propagation itself is the same [`sgp4`] crate.
 
-What differs is the target. This is a library that compiles to
-`wasm32-unknown-unknown`, so the browser can compute positions without a round
-trip to the server.
+What differs is everything around it: upstream is a command-line tool, and this
+has to run inside a page.
 
-It is a reimplementation, not a wrapper and not a port of upstream's code, which
-cannot be reused:
+|                  | `tart-catalogue-client`         | `tart-catalogue` (here)                            |
+| ---------------- | ------------------------------- | -------------------------------------------------- |
+| Shape            | command-line tool               | library, loaded by the viewer                      |
+| Target           | native                          | `wasm32-unknown-unknown`                           |
+| Library target   | none — `has_lib` is false       | `cdylib` + `rlib`, so wasm-pack and `cargo test` both work |
+| Runtime          | `tokio`, `full`                 | none — nothing to schedule                         |
+| Network          | `reqwest`                       | not its job; the viewer fetches                    |
+| TLE cache        | `~/.cache/tart-catalogue/` via `std::fs` | not its job; IndexedDB, in the viewer     |
+| Output           | printed to a terminal           | `serde-wasm-bindgen` back to JS                    |
+| One call covers  | one observer, one instant       | every satellite at every timestamp                 |
 
-|                       |                                                                          |
-| --------------------- | ------------------------------------------------------------------------ |
-| Binary-only           | `has_lib` is false — there is no library target to depend on.             |
-| `tokio` with `full`   | Not supported on `wasm32-unknown-unknown`.                                |
-| `~/.cache` via `std::fs` | Its TLE cache writes to a home directory, which a browser does not have. |
+The last row is the one that matters for a viewer. Scrubbing a history asks for
+positions at up to 3600 instants across ~140 satellites, so the API is bulk by
+design: a single call, with the TEME→ECEF rotation computed once per instant and
+shared across every satellite rather than recomputed per satellite.
 
 ## Where this goes a different route
-
-The reason this is not a thin wrapper is structural, and it has not changed:
-binary-only, `tokio` with `full`, and a TLE cache in `~/.cache`. Nothing that
-upstream can do in a command-line tool makes those usable from a browser.
 
 The two date/time bugs below were reported as
 [issue #9](https://github.com/tart-telescope/catalogue/issues/9) and fixed
