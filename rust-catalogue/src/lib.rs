@@ -6,11 +6,17 @@
 //! math lives here.
 //!
 //! This is a deliberate reimplementation rather than a wrapper around
-//! `tart-catalogue-client`, which cannot be used here: it publishes no library
-//! target (so there is nothing to link), it depends on `tokio` with `full`
-//! (unsupported on `wasm32-unknown-unknown`), and its cache writes to
-//! `~/.cache` through `std::fs`. Its epoch handling is also incorrect — see
-//! the note in [`propagation::propagate_to_ecef`].
+//! [`tart-catalogue-client`](https://crates.io/crates/tart-catalogue-client),
+//! the TART collaboration's Rust client for the same catalogue and the same
+//! `/ephemerides` backend
+//! (<https://github.com/tart-telescope/catalogue>). That client cannot be used
+//! here: it publishes no library target (so there is nothing to link), it
+//! depends on `tokio` with `full` (unsupported on `wasm32-unknown-unknown`),
+//! and its cache writes to `~/.cache` through `std::fs`. Its epoch handling is
+//! also incorrect — see the note in [`propagation::propagate_to_ecef`].
+//!
+//! The README records the attribution and the two date/time bugs this routes
+//! around, with the measurements that found them.
 //!
 //! The math modules are not wasm-gated so the whole thing is testable with a
 //! plain `cargo test`.

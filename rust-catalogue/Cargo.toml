@@ -5,6 +5,11 @@ edition = "2024"
 license = "GPL-3.0-only"
 description = "Browser-side satellite horizontal (az/el/range) computation for the TART catalogue"
 repository = "https://github.com/tart-telescope/web_app"
+# Reimplements the same computation as the collaboration's own Rust client, for
+# the same /ephemerides backend, as a library that compiles to wasm. See the
+# README for the attribution and for the two upstream date/time bugs this
+# routes around: <https://github.com/tart-telescope/catalogue>
+# <https://crates.io/crates/tart-catalogue-client>
 
 # Mirrors rust/Cargo.toml conventions: cdylib for wasm-pack, rlib so the
 # native test suite can link the same code.
