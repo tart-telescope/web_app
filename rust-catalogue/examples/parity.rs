@@ -12,7 +12,7 @@ use std::env;
 use std::fs;
 use std::process::ExitCode;
 
-use tart_catalogue::propagation::{self, TleRecord};
+use tart_catalogue_wasm::propagation::{self, TleRecord};
 
 fn main() -> ExitCode {
     let args: Vec<String> = env::args().collect();

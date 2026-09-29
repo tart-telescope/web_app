@@ -1,5 +1,5 @@
 /**
- * Thin wrapper over the `tart-catalogue` wasm module.
+ * Thin wrapper over the `tart-catalogue-wasm` wasm module.
  *
  * Knows nothing about HTTP or storage; it is handed TLE records and times.
  * The module is imported lazily so that a checkout without a built
@@ -25,7 +25,7 @@ function loadModule() {
   if (!modulePromise) {
     modulePromise = (async () => {
       try {
-        const mod = await import("tart-catalogue");
+        const mod = await import("tart-catalogue-wasm");
         await mod.default();
         // Mirrors window.wasmReady for the gridless module, so diagnostics
         // can see that satellite positions are being computed locally.

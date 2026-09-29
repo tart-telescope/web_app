@@ -1,5 +1,5 @@
 [package]
-name = "tart-catalogue"
+name = "tart-catalogue-wasm"
 version = "0.1.0"
 edition = "2024"
 license = "GPL-3.0-only"
@@ -16,7 +16,7 @@ repository = "https://github.com/tart-telescope/web_app"
 # Mirrors rust/Cargo.toml conventions: cdylib for wasm-pack, rlib so the
 # native test suite can link the same code.
 [lib]
-name = "tart_catalogue"
+name = "tart_catalogue_wasm"
 path = "src/lib.rs"
 crate-type = ["cdylib", "rlib"]
 

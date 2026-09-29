@@ -9,9 +9,9 @@
 //! (`cargo test`) with no browser and no network.
 
 use serde::Deserialize;
-use tart_catalogue::geo;
-use tart_catalogue::propagation::{self, TleRecord};
-use tart_catalogue::time::rotation_sin_cos;
+use tart_catalogue_wasm::geo;
+use tart_catalogue_wasm::propagation::{self, TleRecord};
+use tart_catalogue_wasm::time::rotation_sin_cos;
 
 const VECTORS: &str = include_str!("test_vectors.json");
 

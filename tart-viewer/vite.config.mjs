@@ -15,7 +15,7 @@ import VueRouter from "vue-router/vite";
 export default defineConfig({
   base: process.env.BASE_URL || "/",
   optimizeDeps: {
-    exclude: ["util", "gridless", "tart-catalogue"],
+    exclude: ["util", "gridless", "tart-catalogue-wasm"],
   },
   assetsInclude: ["**/*.wasm"],
   plugins: [
