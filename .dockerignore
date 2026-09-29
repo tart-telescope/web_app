@@ -9,3 +9,7 @@ tart-viewer/dist
 tart-viewer/node_modules
 tart-viewer/.nuxt
 tart-viewer/.output
+**/pkg
+**/pkg-node
+**/pkg-catalogue
+/video
