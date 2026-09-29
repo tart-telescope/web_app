@@ -1,4 +1,4 @@
-# tart-catalogue
+# tart-catalogue-wasm
 
 Browser-side satellite horizontal (az/el/range) computation from TLEs, for the
 TART viewer. Pure computation: the network fetch and the TLE cache live in

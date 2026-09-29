@@ -21,7 +21,7 @@ import { createRequire } from "node:module";
 import { performance } from "node:perf_hooks";
 
 const require = createRequire(import.meta.url);
-const { CataloguePropagators } = require("../pkg-node/tart_catalogue.js");
+const { CataloguePropagators } = require("../pkg-node/tart_catalogue_wasm.js");
 
 const TOTAL = Number(process.argv[2] ?? 3600); // a full history
 const TLE_FILE = process.argv[3] ?? "/tmp/eph.json";

@@ -116,7 +116,9 @@ function bucketOf(functionName, url) {
     return "VM internal / native";
   }
   if (url.includes("gridlesslib_bg.wasm")) return "gridless wasm (synthesis)";
-  if (url.includes("tart_catalogue_bg.wasm")) return "catalogue wasm (satellites)";
+  // Matched on the crate stem, not the emitted filename: renaming the crate
+  // changes the suffix and this would silently stop attributing anything.
+  if (url.includes("tart_catalogue")) return "catalogue wasm (satellites)";
   if (url.includes("h5wasm")) return "h5wasm (HDF5 parse)";
   if (url.includes("three.js")) return "three.js";
   if (/\/(components|stores|services|composables|utils)\//.test(url)) return "app code";
