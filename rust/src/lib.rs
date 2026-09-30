@@ -5,32 +5,28 @@
 //! This library provides efficient gridless deconvolution algorithms for radio astronomy imaging,
 //! with optional WebAssembly SIMD optimizations for enhanced performance.
 //!
-//! ## SIMD Optimizations
+//! ## Features
 //!
-//! When compiled with the `simd` feature and targeting WebAssembly, this library uses SIMD
-//! instructions to accelerate:
-//! - Min/max finding operations (2x f32 values per instruction)
-//! - Normalization calculations
-//! - Color mapping operations
+//! - **Gridless Algorithm**: Direct Fourier transform without gridding interpolation
+//! - **High Performance**: Optimized mathematical functions and parallel processing
+//! - **WebAssembly Support**: Runs in browsers with optimized performance
+//! - **Multiple Backends**: Native binary and library interfaces
+//! - **Template System**: SVG generation for visualization
 //!
-//! ### Usage Example
+//! ## Library Usage
+//!
 //! ```rust,no_run
-//! use gridlesslib::get_color_bytes_only_simd;
-//! use wasm_bindgen::JsValue;
+//! use gridlesslib::{json_to_svg, file_to_dataset, get_obs_from_dataset};
 //!
-//! // Standard version
-//! let result1 = get_color_bytes_only(json_data.clone(), 32, true);
-//!
-//! // SIMD-optimized version (automatically falls back if SIMD unavailable)
-//! let result2 = get_color_bytes_only_simd(json_data, 32);
+//! let json_data = std::fs::read_to_string("observation.json").unwrap();
+//! let (svg_content, timestamp) = json_to_svg(&json_data, 32, true);
+//! std::fs::write("output.svg", svg_content).unwrap();
 //! ```
 //!
-//! ### Compilation
-//! - Default: `cargo build --target wasm32-unknown-unknown`
-//! - With SIMD: `cargo build --target wasm32-unknown-unknown --features simd`
-//!
-//! https://depth-first.com/articles/2020/07/07/rust-and-webassembly-from-scratch-hello-world-with-strings/
-//! TODO switch to the above model of Linear Memory.
+//! ## Compilation
+//! - Default: `cargo build --release --features fast-math`
+//! - WASM: `wasm-pack build --target web --features browser`
+//! - WASM with SIMD: `wasm-pack build --target web --features browser,simd`
 
 extern crate ndarray;
 extern crate serde;
@@ -140,18 +136,12 @@ pub fn make_svg_with_features(
         Ok(()) => sky
             .to_svg_with_features(true, sources, show_stats, show_colorbar)
             .render_to_string()
-            .unwrap_or_else(|e| {
-                eprintln!("Template render error: {}", e);
-                format!("<!-- Template render error: {} -->", e)
-            }),
+            .unwrap_or_else(|e| format!("<!-- Template render error: {} -->", e)),
         Err(e) => {
             eprintln!("Error in sky reconstruction: {}", e);
             sky.to_svg_with_features(true, sources, show_stats, show_colorbar)
                 .render_to_string()
-                .unwrap_or_else(|render_e| {
-                    eprintln!("Template render error: {}", render_e);
-                    format!("<!-- Sky reconstruction error: {} -->", e)
-                })
+                .unwrap_or_else(|_render_e| format!("<!-- Sky reconstruction error: {} -->", e))
         }
     }
 }

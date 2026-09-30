@@ -20,14 +20,17 @@ fn api_parse_json<T: DeserializeOwned>(contents: &str) -> T {
     match serde_json::from_str(contents) {
         Ok(data) => data,
         Err(e) => {
-            web_sys::console::log_1(&format!("JSON parse error: {}", e).into());
-            web_sys::console::log_1(
-                &format!(
-                    "JSON content (first 500 chars): {}",
-                    &contents[..contents.len().min(500)]
-                )
-                .into(),
-            );
+            #[cfg(target_arch = "wasm32")]
+            {
+                web_sys::console::log_1(&format!("JSON parse error: {}", e).into());
+                web_sys::console::log_1(
+                    &format!(
+                        "JSON content (first 500 chars): {}",
+                        &contents[..contents.len().min(500)]
+                    )
+                    .into(),
+                );
+            }
             panic!(
                 "Failed to parse JSON: {} | Content: {}",
                 e,

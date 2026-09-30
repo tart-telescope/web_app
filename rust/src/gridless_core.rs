@@ -13,79 +13,87 @@ use crate::utils::{fast_magnitude, fast_sin_cos};
 use ndarray::{Array1, Ix1, Zip};
 use rayon::prelude::*;
 
-/// Computes Fourier harmonics for gridless imaging with optimized vectorization.
+/// Computes Fourier harmonics and accumulates directly into complex_pixels.
 ///
-/// This function calculates the complex exponentials needed for the discrete
-/// Fourier transform in the gridless imaging algorithm. Each harmonic corresponds
-/// to a baseline measurement and represents the phase relationship between
-/// the sky model and the visibility data.
-///
-/// # Arguments
-/// * `sky` - The sky hemisphere containing pixel coordinates (l, m, n)
-/// * `u_coords` - Array of u-coordinates (east-west baseline components)
-/// * `v_coords` - Array of v-coordinates (north-south baseline components)
-/// * `w_coords` - Array of w-coordinates (zenith baseline components)
-///
-/// # Returns
-/// Vector of complex arrays, one for each baseline, containing the harmonic values
-/// for each sky pixel.
+/// This fused implementation eliminates the intermediate allocation of
+/// `Vec<VectorComplex>` that stored all harmonics separately. Instead,
+/// harmonics are computed and immediately accumulated into the output
+/// buffer, using parallel reduction for multi-core acceleration.
 ///
 /// # Performance Optimizations
-/// - Parallel processing of baselines using Rayon
-/// - Pre-allocates all vectors with known capacity
-/// - Uses vectorized operations via ndarray for SIMD acceleration
-/// - Computes trigonometric functions in batches for better cache locality
-/// - Pre-computes constants to reduce redundant calculations
-pub fn compute_fourier_harmonics(
-    sky: &Hemisphere,
+/// - **Fused compute-accumulate**: No intermediate storage of all harmonics
+/// - **Parallel reduction**: Each thread accumulates into a local buffer,
+///   reducing memory contention and improving cache locality
+/// - **Chunked baselines**: Baselines are distributed across threads in
+///   chunks to minimize reduction overhead
+/// - **Pre-computed constants**: n_minus_one computed once per reconstruction
+///
+/// # Arguments
+/// * `visibilities` - Complex visibility measurements from interferometer
+/// * `u_coords` - u-coordinates of baselines (wavelengths)
+/// * `v_coords` - v-coordinates of baselines (wavelengths)
+/// * `w_coords` - w-coordinates of baselines (wavelengths)
+/// * `sky` - Sky hemisphere containing pixel coordinates (l, m, n)
+///
+/// # Returns
+/// Accumulated complex pixel array (before normalization)
+fn accumulate_fused_harmonics(
+    visibilities: &VectorComplex,
     u_coords: &VectorReal,
     v_coords: &VectorReal,
     w_coords: &VectorReal,
-) -> Vec<VectorComplex> {
-    let num_baselines = u_coords.len();
+    sky: &Hemisphere,
+) -> VectorComplex {
+    let num_baselines = visibilities.len();
     let num_pixels = sky.visible_pix.len();
 
-    // Pre-compute constants for optimization
-    let phase_mult = -TWO_PI;
-    let n_minus_one = &sky.n - 1.0;
+    // Pre-compute n - 1.0 for all pixels (done once per reconstruction)
+    let n_minus_one: Array1<f32> = sky.n.mapv(|n| n - 1.0);
 
-    // Parallel processing of baselines
+    // Parallel reduction: each chunk computes a partial sum into a local buffer
+    let chunk_size = (num_baselines / rayon::current_num_threads()).max(1);
+
     (0..num_baselines)
-        .into_par_iter()
-        .map(|baseline_idx| {
-            let u = u_coords[baseline_idx];
-            let v = v_coords[baseline_idx];
-            let w = w_coords[baseline_idx];
+        .collect::<Vec<_>>()
+        .par_chunks(chunk_size)
+        .map(|baseline_chunk| {
+            let mut local_pixels = VectorComplex::zeros(Ix1(num_pixels));
 
-            let mut baseline_harmonics = VectorComplex::zeros(Ix1(num_pixels));
+            for &baseline_idx in baseline_chunk {
+                let visibility = visibilities[baseline_idx];
+                let u = u_coords[baseline_idx];
+                let v = v_coords[baseline_idx];
+                let w = w_coords[baseline_idx];
 
-            // Pre-calculate phase angles for vectorized sin/cos computation
-            let mut phase_angles = VectorReal::zeros(Ix1(num_pixels));
-            Zip::from(&mut phase_angles)
-                .and(&sky.l)
-                .and(&sky.m)
-                .and(&n_minus_one)
-                .for_each(|phase, &l, &m, &n| {
-                    *phase = phase_mult * (u * l + v * m + w * n);
-                });
+                // Compute phase angles for this baseline
+                let mut phase_angles = VectorReal::zeros(Ix1(num_pixels));
+                let phase_mult = -TWO_PI;
+                Zip::from(&mut phase_angles)
+                    .and(&sky.l)
+                    .and(&sky.m)
+                    .and(&n_minus_one)
+                    .for_each(|phase, &l, &m, &n| {
+                        *phase = phase_mult * (u * l + v * m + w * n);
+                    });
 
-            // Vectorized trigonometric computation
-            let mut cos_vals = Array1::<f32>::zeros(num_pixels);
-            let mut sin_vals = Array1::<f32>::zeros(num_pixels);
-            batch_sincos(&phase_angles, &mut cos_vals, &mut sin_vals);
+                // Compute sin/cos and accumulate: local_pixels += vis * exp(i*phase)
+                Zip::from(&mut local_pixels)
+                    .and(&phase_angles)
+                    .for_each(|pixel, &phase| {
+                        let (sin_p, cos_p) = fast_sin_cos(phase);
 
-            // Assemble complex harmonics
-            Zip::from(&mut baseline_harmonics)
-                .and(&cos_vals)
-                .and(&sin_vals)
-                .for_each(|harmonic, &cos_val, &sin_val| {
-                    harmonic.re = cos_val;
-                    harmonic.im = sin_val;
-                });
+                        // Complex multiplication: vis * (cos + i*sin)
+                        let vis_re = visibility.re;
+                        let vis_im = visibility.im;
 
-            baseline_harmonics
+                        pixel.re += vis_re * cos_p - vis_im * sin_p;
+                        pixel.im += vis_re * sin_p + vis_im * cos_p;
+                    });
+            }
+
+            local_pixels
         })
-        .collect()
+        .reduce(|| VectorComplex::zeros(Ix1(num_pixels)), |a, b| a + b)
 }
 
 /// Performs gridless imaging from visibility measurements with enhanced performance.
@@ -104,16 +112,14 @@ pub fn compute_fourier_harmonics(
 /// * `use_real_only` - If true, use only real part; if false, use magnitude
 ///
 /// # Algorithm
-/// 1. Compute Fourier harmonics for each baseline (optimized)
-/// 2. Accumulate weighted harmonics using visibility data (vectorized)
-/// 3. Convert complex result to real values (fast magnitude calculation)
+/// 1. Compute Fourier harmonics for each baseline and accumulate in parallel (fused)
+/// 2. Convert complex result to real values (fast magnitude calculation)
 ///
 /// # Performance Optimizations
-/// - Zero-allocation harmonic accumulation using in-place operations
-/// - Vectorized complex arithmetic with SIMD hints
+/// - Fused compute-accumulate eliminates intermediate Vec<VectorComplex> allocation
+/// - Parallel reduction via Rayon for multi-core acceleration
+/// - Single-pass phase+accumulate per baseline for cache efficiency
 /// - Fast magnitude calculation using optimized norm computation
-/// - Branch-free final conversion
-/// - Memory-efficient single-pass algorithm
 pub fn reconstruct_sky_image(
     visibilities: &VectorComplex,
     u_coords: &VectorReal,
@@ -136,31 +142,9 @@ pub fn reconstruct_sky_image(
         return Err("Sky hemisphere has no visible pixels");
     }
 
-    // Pre-compute Fourier harmonics (parallel computation)
-    let harmonics = compute_fourier_harmonics(sky, u_coords, v_coords, w_coords);
-
-    // Single allocation with exact size needed
-    let mut complex_pixels = VectorComplex::zeros(Ix1(num_sky_pixels));
-
-    // Vectorized accumulation of weighted harmonics
-    for (baseline_idx, visibility) in visibilities.iter().enumerate() {
-        let harmonic = &harmonics[baseline_idx];
-
-        // In-place vectorized complex multiplication and accumulation
-        // complex_pixels += visibility * harmonic
-        Zip::from(&mut complex_pixels)
-            .and(harmonic)
-            .for_each(|pixel, &harmonic_val| {
-                // Complex multiplication: (vis_re + i*vis_im) * (h_re + i*h_im)
-                let vis_re = visibility.re;
-                let vis_im = visibility.im;
-                let h_re = harmonic_val.re;
-                let h_im = harmonic_val.im;
-
-                pixel.re += vis_re * h_re - vis_im * h_im;
-                pixel.im += vis_re * h_im + vis_im * h_re;
-            });
-    }
+    // Fused harmonic computation + accumulation (no intermediate storage)
+    let complex_pixels =
+        accumulate_fused_harmonics(visibilities, u_coords, v_coords, w_coords, sky);
 
     // Apply normalization once at the end
     let normalization = (num_sky_pixels as f32).sqrt().recip();
@@ -175,17 +159,4 @@ pub fn reconstruct_sky_image(
     }
 
     Ok(())
-}
-
-/// Optimized sin/cos batch computation
-fn batch_sincos(phase_angles: &VectorReal, cos_vals: &mut Array1<f32>, sin_vals: &mut Array1<f32>) {
-    // Use efficient vectorized computation
-    Zip::from(cos_vals)
-        .and(sin_vals)
-        .and(phase_angles)
-        .for_each(|cos_val, sin_val, &phase| {
-            let (sin_p, cos_p) = fast_sin_cos(phase);
-            *cos_val = cos_p;
-            *sin_val = sin_p;
-        });
 }

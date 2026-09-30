@@ -236,32 +236,68 @@ pub fn simd_find_min_max(values: &[f32]) -> (f32, f32) {
         })
 }
 
-/// SIMD-accelerated color mapping using cubehelix algorithm.
+/// Pre-computed cubehelix color lookup table (256 entries for 8-bit output).
 ///
-/// Converts normalized pixel values to RGB color triplets using vectorized
-/// operations for maximum performance. Processes normalization and color
-/// mapping in batches to maximize SIMD utilization.
+/// This LUT is shared by both SIMD and scalar color mapping paths,
+/// eliminating all per-pixel trigonometric and arithmetic overhead.
+static CUBEHELIX_LUT: once_cell::sync::Lazy<[(u8, u8, u8); 256]> =
+    once_cell::sync::Lazy::new(|| {
+        let mut lut = [(0u8, 0u8, 0u8); 256];
+        for (i, entry) in lut.iter_mut().enumerate() {
+            *entry = compute_cubehelix_rgb(i as f32 / 255.0);
+        }
+        lut
+    });
+
+/// Compute a single cubehelix RGB triplet (used only to build the LUT).
+#[inline]
+fn compute_cubehelix_rgb(fract: f32) -> (u8, u8, u8) {
+    const START: f32 = 1.0;
+    const ROT: f32 = -1.5;
+    const SAT: f32 = 1.5;
+    const TWO_PI: f32 = 2.0 * std::f32::consts::PI;
+
+    let angle_base = TWO_PI * (START / 3.0 + 1.0);
+    let angle_scale = TWO_PI * ROT;
+    let angle = angle_base + angle_scale * fract;
+    let (sin_angle, cos_angle) = angle.sin_cos();
+
+    let amp = SAT * fract * (1.0 - fract) * 0.5;
+    let amp_cos = amp * cos_angle;
+    let amp_sin = amp * sin_angle;
+
+    let red = (fract + amp_cos * -0.14861 + amp_sin * 1.78277).clamp(0.0, 1.0);
+    let grn = (fract + amp_cos * -0.29227 + amp_sin * -0.90649).clamp(0.0, 1.0);
+    let blu = (fract + amp_cos * 1.97294).clamp(0.0, 1.0);
+
+    (
+        (red * 255.0).round() as u8,
+        (grn * 255.0).round() as u8,
+        (blu * 255.0).round() as u8,
+    )
+}
+
+/// SIMD-accelerated color mapping using pre-computed cubehelix LUT.
 ///
-/// Processes normalization in pairs using SIMD arithmetic, then applies
-/// color mapping to convert normalized values to RGB triplets.
+/// The expensive per-pixel cubehelix computation (sin, cos, 6× mul, 3× clamp)
+/// is replaced by a single LUT lookup. The SIMD path normalizes 4 pixels at
+/// once, then each pixel does a cheap array index.
 #[cfg(all(target_arch = "wasm32", feature = "simd"))]
 pub fn simd_color_mapping(values: &[f32], rgb_bytes: &mut [u8], min_val: f32, range: f32) {
-    // Early return for invalid inputs
     if values.is_empty() || range == 0.0 {
         return;
     }
 
     let min_vec = f32x4_splat(min_val);
-    let _range_vec = f32x4_splat(range);
-    let inv_range_vec = f32x4_splat(1.0 / range);
+    let scale_vec = f32x4_splat(255.0 / range);
 
-    // Process values in chunks of 4 for SIMD efficiency
+    // Process values in chunks of 4 using SIMD for normalization, LUT for color
     let chunks = values.len() / 4;
 
     for i in 0..chunks {
         let base_idx = i * 4;
 
-        // Load 4 values
+        // Load 4 values and normalize: idx = (val - min) * 255 / range
         let vals = f32x4(
             values[base_idx],
             values[base_idx + 1],
@@ -269,22 +305,20 @@ pub fn simd_color_mapping(values: &[f32], rgb_bytes: &mut [u8], min_val: f32, ra
             values[base_idx + 3],
         );
 
-        // Vectorized normalization: (val - min) / range
-        let normalized = f32x4_mul(f32x4_sub(vals, min_vec), inv_range_vec);
+        let scaled = f32x4_mul(f32x4_sub(vals, min_vec), scale_vec);
+        // Clamp to [0, 255] range
+        let clamped = f32x4_max(f32x4_splat(0.0), f32x4_min(scaled, f32x4_splat(255.0)));
 
-        // Clamp to [0, 1] range
-        let clamped = f32x4_max(f32x4_splat(0.0), f32x4_min(normalized, f32x4_splat(1.0)));
-
-        // Apply cubehelix color mapping to each normalized value
+        // Look up colors via LUT
         for j in 0..4 {
-            let t = match j {
+            let idx = match j {
                 0 => f32x4_extract_lane::<0>(clamped),
                 1 => f32x4_extract_lane::<1>(clamped),
                 2 => f32x4_extract_lane::<2>(clamped),
                 _ => f32x4_extract_lane::<3>(clamped),
-            };
+            } as usize;
 
-            let (r, g, b) = cubehelix_color_simd(t);
+            let (r, g, b) = CUBEHELIX_LUT[idx];
             let pixel_idx = (base_idx + j) * 3;
             rgb_bytes[pixel_idx] = r;
             rgb_bytes[pixel_idx + 1] = g;
@@ -294,9 +328,11 @@ pub fn simd_color_mapping(values: &[f32], rgb_bytes: &mut [u8], min_val: f32, ra
 
     // Handle remaining values with scalar processing
     let remainder_start = chunks * 4;
+    let scale = 255.0 / range;
     for (i, &val) in values[remainder_start..].iter().enumerate() {
-        let normalized = ((val - min_val) / range).clamp(0.0, 1.0);
-        let (r, g, b) = cubehelix_color_simd(normalized);
+        let idx = ((val - min_val) * scale) as usize;
+        let clamped = idx.min(255);
+        let (r, g, b) = CUBEHELIX_LUT[clamped];
         let pixel_idx = (remainder_start + i) * 3;
         rgb_bytes[pixel_idx] = r;
         rgb_bytes[pixel_idx + 1] = g;
@@ -304,98 +340,20 @@ pub fn simd_color_mapping(values: &[f32], rgb_bytes: &mut [u8], min_val: f32, ra
     }
 }
 
-/// SIMD-optimized cubehelix color mapping function
-#[cfg(all(target_arch = "wasm32", feature = "simd"))]
-#[inline(always)]
-fn cubehelix_color_simd(fract: f32) -> (u8, u8, u8) {
-    // Cubehelix algorithm optimized for SIMD (matches non-WASM implementation)
-    let fract = fract.clamp(0.0, 1.0);
-
-    // CubeHelix parameters (matching hemisphere_template.rs)
-    const START: f32 = 1.0;
-    const ROT: f32 = -1.5;
-    const SAT: f32 = 1.5;
-    const TWO_PI: f32 = 2.0 * std::f32::consts::PI;
-
-    // Pre-computed constants for optimized calculation
-    let angle_base = TWO_PI * (START / 3.0 + 1.0); // TWO_PI * (4.0/3.0)
-    let angle_scale = TWO_PI * ROT; // TWO_PI * (-1.5)
-
-    let angle = angle_base + angle_scale * fract;
-    let (sin_angle, cos_angle) = crate::utils::fast_sin_cos(angle);
-
-    // Optimized amplitude calculation
-    let amp = SAT * fract * (1.0 - fract) * 0.5;
-
-    // Pre-compute products to reduce multiplications
-    let amp_cos = amp * cos_angle;
-    let amp_sin = amp * sin_angle;
-
-    // Compute RGB vectors with fewer operations (original coefficients)
-    let red = (fract + amp_cos * -0.14861 + amp_sin * 1.78277).clamp(0.0, 1.0);
-    let grn = (fract + amp_cos * -0.29227 + amp_sin * -0.90649).clamp(0.0, 1.0);
-    let blu = (fract + amp_cos * 1.97294).clamp(0.0, 1.0);
-
-    // Convert to integer RGB (using round for consistency)
-    (
-        (red * 255.0).round() as u8,
-        (grn * 255.0).round() as u8,
-        (blu * 255.0).round() as u8,
-    )
-}
-
-/// Fallback scalar color mapping for non-SIMD targets
+/// Fallback scalar color mapping using pre-computed cubehelix LUT.
 #[cfg(not(all(target_arch = "wasm32", feature = "simd")))]
 pub fn simd_color_mapping(values: &[f32], rgb_bytes: &mut [u8], min_val: f32, range: f32) {
     if values.is_empty() || range == 0.0 {
         return;
     }
 
+    let scale = 255.0 / range;
     for (i, &val) in values.iter().enumerate() {
-        let normalized = ((val - min_val) / range).clamp(0.0, 1.0);
-        let (r, g, b) = cubehelix_color_scalar(normalized);
+        let idx = ((val - min_val) * scale) as usize;
+        let (r, g, b) = CUBEHELIX_LUT[idx.min(255)];
         let pixel_idx = i * 3;
         rgb_bytes[pixel_idx] = r;
         rgb_bytes[pixel_idx + 1] = g;
         rgb_bytes[pixel_idx + 2] = b;
     }
-}
-
-/// Scalar cubehelix color mapping for fallback
-#[cfg(not(all(target_arch = "wasm32", feature = "simd")))]
-#[inline(always)]
-fn cubehelix_color_scalar(fract: f32) -> (u8, u8, u8) {
-    let fract = fract.clamp(0.0, 1.0);
-
-    // CubeHelix parameters (matching hemisphere_template.rs)
-    const START: f32 = 1.0;
-    const ROT: f32 = -1.5;
-    const SAT: f32 = 1.5;
-    const TWO_PI: f32 = 2.0 * std::f32::consts::PI;
-
-    // Pre-computed constants for optimized calculation
-    let angle_base = TWO_PI * (START / 3.0 + 1.0); // TWO_PI * (4.0/3.0)
-    let angle_scale = TWO_PI * ROT; // TWO_PI * (-1.5)
-
-    let angle = angle_base + angle_scale * fract;
-    let (sin_angle, cos_angle) = crate::utils::fast_sin_cos(angle);
-
-    // Optimized amplitude calculation
-    let amp = SAT * fract * (1.0 - fract) * 0.5;
-
-    // Pre-compute products to reduce multiplications
-    let amp_cos = amp * cos_angle;
-    let amp_sin = amp * sin_angle;
-
-    // Compute RGB vectors with fewer operations (original coefficients)
-    let red = (fract + amp_cos * -0.14861 + amp_sin * 1.78277).clamp(0.0, 1.0);
-    let grn = (fract + amp_cos * -0.29227 + amp_sin * -0.90649).clamp(0.0, 1.0);
-    let blu = (fract + amp_cos * 1.97294).clamp(0.0, 1.0);
-
-    // Convert to integer RGB (using round for consistency)
-    (
-        (red * 255.0).round() as u8,
-        (grn * 255.0).round() as u8,
-        (blu * 255.0).round() as u8,
-    )
 }

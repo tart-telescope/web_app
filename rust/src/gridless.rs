@@ -9,7 +9,7 @@
 //! spherical harmonics.
 
 // Re-export core functions
-pub use crate::gridless_core::{compute_fourier_harmonics, reconstruct_sky_image};
+pub use crate::gridless_core::reconstruct_sky_image;
 
 // Re-export SIMD functions
 #[cfg(target_arch = "wasm32")]
