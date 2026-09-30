@@ -343,30 +343,68 @@ function parseConfigData(h5file) {
  * @param {Buffer|Uint8Array} buffer - File buffer
  * @returns {Object} h5wasm File object
  */
+/**
+ * Memoised h5wasm module and runtime instantiation.
+ *
+ * `import("h5wasm")` pulls in the ~4.8 MB hdf5_hl chunk and the module then has
+ * to instantiate its wasm runtime. Both used to happen inside the first file
+ * load, i.e. on the click. Funnelling every caller through here means the
+ * background warm-up and the real load share one attempt.
+ */
+let h5wasmModule = null;
+
+/**
+ * Load the h5wasm module and wait for its runtime to be ready.
+ *
+ * Idempotent: concurrent and later callers share the first attempt. A failure
+ * is not cached, so a subsequent load can retry.
+ *
+ * @returns {Promise<Object>} the h5wasm module namespace
+ */
+export function prepareH5wasm() {
+  if (!h5wasmModule) {
+    h5wasmModule = (async () => {
+      const h5wasm = await import("h5wasm");
+      if (h5wasm.ready) {
+        await h5wasm.ready;
+      }
+      return h5wasm;
+    })().catch((error) => {
+      h5wasmModule = null;
+      throw error;
+    });
+  }
+
+  return h5wasmModule;
+}
+
+/**
+ * Warm the HDF5 runtime ahead of first use, so the first file load does not pay
+ * for downloading and instantiating it.
+ *
+ * Best effort by design: callers are expected to swallow rejections rather than
+ * surface them, since a failed warm-up only means the old behaviour.
+ *
+ * @returns {Promise<void>}
+ */
+export async function warmH5wasm() {
+  await prepareH5wasm();
+}
+
 export async function loadH5wasmFromBuffer(buffer) {
   try {
-    const h5wasm = await import("h5wasm");
-    if (h5wasm.ready) {
-      await h5wasm.ready;
-    }
+    const h5wasm = await prepareH5wasm();
     const uint8Buffer = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
 
     // Create unique virtual path to avoid file caching issues
     const virtualPath = `/data_${Date.now()}_${Math.random().toString(36).slice(2, 11)}.hdf5`;
 
-    // Clean up any existing files first
-    try {
-      const existingFiles = h5wasm.FS.readdir("/").filter((f) => f.endsWith(".hdf5"));
-      for (const file of existingFiles) {
-        try {
-          h5wasm.FS.unlink("/" + file);
-        } catch {
-          console.warn("Could not clean up file:", file);
-        }
-      }
-    } catch {
-      console.warn("Could not clean up existing files");
-    }
+    // No sweep of the virtual filesystem here. It used to unlink every .hdf5 in
+    // the root before writing, which is only safe while one file is open at a
+    // time — and the filesystem is shared by every load, so a second concurrent
+    // load could delete the first one's file out from under it, mid-read.
+    // `hdf5Service._cleanupHdf5File` unlinks this load's own file in a `finally`
+    // already, so the sweep was redundant as well as unsafe.
 
     // Write buffer to virtual filesystem with unique name
     h5wasm.FS.writeFile(virtualPath, uint8Buffer);

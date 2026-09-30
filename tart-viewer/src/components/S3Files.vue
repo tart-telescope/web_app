@@ -57,10 +57,21 @@
 </template>
 
 <script>
-import { mapActions } from "pinia";
+import { mapActions, mapState } from "pinia";
 import { hdf5Service, s3Service } from "@/services";
 import { useAppStore } from "@/stores/app";
 import { formatFileSize, formatTimeAgo } from "@/utils/format";
+import { mapWithConcurrency } from "@/utils/pool";
+
+/**
+ * How many files "Add to timeline" loads at once.
+ *
+ * Downloads overlap, so a small pool already hides most of the network wait,
+ * while the parsing stays serial regardless. Raising it holds more files'
+ * records in memory at the same time; 4 is the point where the measured bulk
+ * load stopped improving much. Override with VITE_BULK_CONCURRENCY.
+ */
+const BULK_CONCURRENCY = Number(import.meta.env.VITE_BULK_CONCURRENCY ?? 4);
 
 export default {
   name: "S3Files",
@@ -104,7 +115,14 @@ export default {
       this.$emit("path-changed", this.currentPrefix);
     },
   },
-  computed: {},
+  computed: {
+    // mapState belongs here, not in methods: in methods it defines a *method*
+    // called dataThinning, so `this.dataThinning` is a function rather than 3.
+    // That function reached the loader as the thinning factor, `index % fn` is
+    // NaN, and every record was skipped — the file parsed, logged its antennas,
+    // and added nothing.
+    ...mapState(useAppStore, ["dataThinning"]),
+  },
 
   // Lifecycle hooks
   mounted() {
@@ -160,7 +178,7 @@ export default {
         try {
           this.loadingFile = file.name;
           const fileUrl = this.getFileUrl(file.name);
-          await hdf5Service.loadFileToStore(file, fileUrl, this.store, () => this.enrichSatellitesWithProgress(), 1);
+          await hdf5Service.loadFileToStore(file, fileUrl, this.store, () => this.enrichSatellitesWithProgress(), this.dataThinning);
         } catch (error) {
           console.error("Failed to load HDF5 file:", error);
         } finally {
@@ -169,22 +187,41 @@ export default {
       }
     },
 
-    async enrichSatellitesWithProgress() {
-      if (this.enrichLoading) return;
+    /**
+     * Enrich whatever is still missing satellites.
+     *
+     * Runs are chained rather than dropped. This used to return early whenever a
+     * run was already in flight, which is fine when it is called once — but a
+     * bulk load now calls it once per file, and the call that matters most is
+     * the one after the last file. Dropping that one would leave records
+     * permanently without satellites, with nothing reporting it.
+     *
+     * Chaining is cheap here because each run only looks at records that still
+     * lack satellites, so a run queued behind a slow one usually has nothing to
+     * do and returns without an API call.
+     */
+    enrichSatellitesWithProgress() {
+      const previous = this.enrichRun ?? Promise.resolve();
 
-      this.enrichLoading = true;
+      this.enrichRun = previous
+        .catch(() => {})
+        .then(async () => {
+          this.enrichLoading = true;
 
-      try {
-        const result = await this.enrichBulkSatellites();
+          try {
+            const result = await this.enrichBulkSatellites();
 
-        if (result && !result.success) {
-          console.warn("Satellite enrichment completed with errors:", result);
-        }
-      } catch (error) {
-        console.error("Failed to enrich satellites:", error);
-      } finally {
-        this.enrichLoading = false;
-      }
+            if (result && !result.success) {
+              console.warn("Satellite enrichment completed with errors:", result);
+            }
+          } catch (error) {
+            console.error("Failed to enrich satellites:", error);
+          } finally {
+            this.enrichLoading = false;
+          }
+        });
+
+      return this.enrichRun;
     },
 
     formatFileSize,
@@ -207,32 +244,40 @@ export default {
       this.bulkPhase = "loading";
 
       try {
-        // Load all files first without enrichment
-        for (const [index, file] of hdf5Files.entries()) {
-          this.bulkProgress = index + 1;
-
+        // Files load in parallel, bounded by BULK_CONCURRENCY. One at a time
+        // left the network idle for most of each file's turn; the parsing stays
+        // serial either way, because the wasm is single-threaded, so the bound
+        // only has to overlap downloads without holding every file's parsed
+        // records in memory at once.
+        //
+        // Enrichment still runs as each file lands, and the service calls it
+        // without awaiting, so it never holds up a download.
+        let completed = 0;
+        await mapWithConcurrency(hdf5Files, BULK_CONCURRENCY, async (file) => {
           try {
-            const fileUrl = this.getFileUrl(file.name);
             await hdf5Service.loadFileToStore(
               file,
-              fileUrl,
+              this.getFileUrl(file.name),
               this.store,
-              null, // Don't enrich after each file
-              10,
+              () => this.enrichSatellitesWithProgress(),
+              this.dataThinning,
             );
-
-            // Small delay to prevent UI blocking
-            await new Promise((resolve) => setTimeout(resolve, 10));
           } catch (error) {
+            // Continue with the rest instead of stopping the batch.
             console.error(`Failed to load file ${file.name}:`, error);
-            // Continue with next file instead of stopping
           }
-        }
 
-        // Now enrich all satellites in one bulk operation
+          completed += 1;
+          this.bulkProgress = completed;
+        });
+
+        // Catch-up. Enrichment has been running alongside the loads, so this is
+        // usually a no-op that returns without an API call — but it is what
+        // guarantees the last file's records are covered, and awaiting it is
+        // what keeps "Enriching satellites…" on screen until they are.
         this.bulkPhase = "enriching";
         this.bulkProgress = 0;
-        this.bulkTotal = 1; // Just one enrichment operation
+        this.bulkTotal = 1;
         await this.enrichSatellitesWithProgress();
         this.bulkProgress = 1;
       } finally {

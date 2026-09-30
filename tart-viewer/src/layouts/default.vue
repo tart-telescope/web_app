@@ -182,7 +182,20 @@ import { useRoute, useRouter } from "vue-router";
 import LoginField from "@/components/LoginField.vue";
 import TelescopeModeChange from "@/components/TelescopeModeChange.vue";
 import { useAppStore } from "@/stores/app";
+
 import { useTelescopeRegistryStore } from "@/stores/telescopeRegistry";
+
+/**
+ * The poll interval the app starts on, in seconds.
+ *
+ * Each tick pulls the live visibility and pushes a record into the history, so
+ * anything measuring the history has a moving target unless the tick is out of
+ * the way. Tests pin it with `?refresh=120`; the default is unchanged.
+ */
+function initialRefreshInterval() {
+  const requested = Number(new URLSearchParams(globalThis.location?.search ?? "").get("refresh"));
+  return Number.isFinite(requested) && requested > 0 ? requested : 10;
+}
 
 export default {
   name: "App",
@@ -204,7 +217,7 @@ export default {
 
     enabled: false,
     refresher: null,
-    refreshInterval: 10,
+    refreshInterval: initialRefreshInterval(),
     refreshIntervals: [5, 10, 20, 60, 120],
     CUSTOM_TART_URL: "",
     applyingCustomUrl: false,

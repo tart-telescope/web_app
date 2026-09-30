@@ -1,4 +1,46 @@
+import { markRaw } from "vue";
+
 import { SUPPORTED_ANTENNA_COUNTS } from "@/utils/antennaConfig";
+import { isEnabled } from "@/utils/flags";
+import { registerBaselineTable } from "@/utils/visLayout";
+
+/**
+ * Resolve which baselines a file contributes, once per file.
+ *
+ * A timestep can be shorter than the baseline table, and the legacy loop skipped
+ * those positions (`if (!res) continue`), so the packed layout has to skip
+ * exactly the same ones or its indices stop lining up with the pairs.
+ *
+ * @returns {{indices: number[], tableId: string}}
+ */
+function resolveBaselineColumns(baselineData, visibilityData) {
+  const firstTimeStep = visibilityData.find(Boolean) ?? [];
+  const indices = [];
+  const pairs = [];
+
+  for (let baselineIndex = 0; baselineIndex < firstTimeStep.length; baselineIndex++) {
+    const pair = baselineData[baselineIndex];
+    if (!pair) continue;
+    indices.push(baselineIndex);
+    pairs.push([pair[0], pair[1]]);
+  }
+
+  return { indices, tableId: registerBaselineTable(pairs) };
+}
+
+/** Pack one timestamp's complex values in the column order resolved above. */
+function packValuesFrom(timeStepVis, { indices, tableId }) {
+  const values = new Float32Array(indices.length * 2);
+
+  for (const [position, baselineIndex] of indices.entries()) {
+    const complexVis = timeStepVis[baselineIndex];
+    if (!complexVis) continue;
+    values[position * 2] = complexVis[0];
+    values[position * 2 + 1] = complexVis[1];
+  }
+
+  return { values, tableId };
+}
 
 class Hdf5Service {
   constructor() {}
@@ -133,6 +175,20 @@ class Hdf5Service {
       // Populate visibility data
       if (timestamps && visibilityData) {
         let history = store.vis_history;
+
+        // Skip timestamps already present, keyed by exact millisecond. The
+        // previous `history.some(...)` scan ran per timestamp and read every
+        // record through the reactive proxy, so it cost O(history) each time.
+        // Date carries integer milliseconds, so the old 0.01ms tolerance was
+        // equivalent to exact equality. Records added below are seeded into the
+        // set too, so duplicates within one file are still caught.
+        const seen = new Set(history.map((record) => new Date(record.timestamp).getTime()));
+
+        // Which baselines are usable depends only on the file, not the
+        // timestamp, so the pairs are resolved once here and shared by every
+        // record through the baseline table rather than copied into each.
+        const packed = isEnabled("vis-typed-arrays") ? resolveBaselineColumns(baselineData, visibilityData) : null;
+
         for (const [index, timestamp] of timestamps.entries()) {
           // Apply decimation - only process every k-th record
           if (index % k !== 0) {
@@ -140,34 +196,42 @@ class Hdf5Service {
           }
 
           const ts = new Date(timestamp);
-          // skip if timestamp already exists
-          if (history.some((record) => Math.abs(record.timestamp - ts) < 0.01)) {
+          if (seen.has(ts.getTime())) {
             continue;
           }
 
-          const data = [];
-
           const timeStepVis = visibilityData[index];
-          for (const [baselineIndex, complexVis] of timeStepVis.entries()) {
-            const res = baselineData[baselineIndex];
-            if (!res) continue;
-            data.push({
-              i: res[0],
-              j: res[1],
-              re: complexVis[0],
-              im: complexVis[1],
-            });
+
+          let data;
+          if (packed) {
+            data = packValuesFrom(timeStepVis, packed);
+          } else {
+            data = [];
+            for (const [baselineIndex, complexVis] of timeStepVis.entries()) {
+              const res = baselineData[baselineIndex];
+              if (!res) continue;
+              data.push({
+                i: res[0],
+                j: res[1],
+                re: complexVis[0],
+                im: complexVis[1],
+              });
+            }
           }
 
-          const visRecord = {
+          // markRaw: the payload is replaced wholesale, never edited field by
+          // field, so there is nothing for a proxy to track — and at 276
+          // entries per record the proxies are most of the memory.
+          const visRecord = markRaw({
             timestamp: ts,
-            data,
+            ...(packed ? { values: data.values, tableId: data.tableId } : { data }),
             satellites: [],
             gain: gainRecord,
             antennas,
             nAntennas: antennaConfig?.nAntennas ?? antennas?.length ?? null,
-          };
+          });
           history.push(visRecord);
+          seen.add(ts.getTime());
         }
 
         history = history.toSorted((a, b) => new Date(a.timestamp) - new Date(b.timestamp));

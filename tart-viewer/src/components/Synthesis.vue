@@ -86,9 +86,11 @@
 </template>
 
 <script>
-import { get_color_bytes_only, get_color_bytes_only_simd, get_hemisphere_pixel_corners, get_pixel_coords_only_simd } from "gridless";
+import { get_hemisphere_pixel_corners, get_pixel_coords_only_simd } from "gridless";
 import { mapState } from "pinia";
+import { requestColorBytes } from "@/services/colorRenderClient";
 import { useAppStore } from "@/stores/app";
+import { baselineCount, packRecordValues, toVisEntries } from "@/utils/visLayout";
 import SvgThreejs from "./SvgThreejs.vue";
 import Threejs3D from "./Threejs3D.vue";
 
@@ -181,16 +183,18 @@ export default {
     },
 
     filteredVisData() {
-      if (!this.currentVisData?.data) return null;
+      const record = this.currentVisData;
+      if (!record || baselineCount(record) === 0) return null;
 
       // All antennas in use: nothing to filter. Derive the expected count from
       // the loaded array (24 or 32) rather than assuming 24.
       const allUsed = this.nAntennas || this.antennas?.length;
-      if (!allUsed || this.antennasUsed.length >= allUsed) return this.currentVisData.data;
+      const antennaSet = !allUsed || this.antennasUsed.length >= allUsed ? null : this.antennaSet;
 
-      const filtered = this.currentVisData.data.filter((v) => this.antennaSet.has(v.i) && this.antennaSet.has(v.j));
-
-      return filtered;
+      // Built per render, for one record. The wasm needs {i,j,re,im} objects
+      // with every field present — serde errors on a missing one and that
+      // surfaces as an empty render, not a throw.
+      return toVisEntries(record, antennaSet);
     },
 
     // Pre-computed payload for rendering
@@ -319,7 +323,12 @@ export default {
     },
 
     // Just update colors (fast)
-    doColorUpdate() {
+    //
+    // Async because the render itself may happen in a worker. Callers are
+    // watchers that fire and forget, so nothing waits on the returned promise —
+    // ordering is handled by the client, which resolves a superseded request to
+    // null rather than making us paint a stale cursor position.
+    async doColorUpdate() {
       if (!this.renderPayload) {
         return;
       }
@@ -336,7 +345,12 @@ export default {
       const currentRef = this.is3D ? this.$refs.threejsRef : this.$refs.svgRef;
       if (!currentRef || this.nside < 2) return;
 
-      const bytes = this.use_simd ? get_color_bytes_only_simd(payload, this.nside) : get_color_bytes_only(payload, this.nside);
+      const bytes = await requestColorBytes(payload, this.nside, this.use_simd);
+      // The cursor has already moved past this one.
+      if (!bytes) return;
+
+      // With the worker this is a round trip rather than pure compute, so it
+      // reads as latency: the time from asking for a colour map to having it.
       this.timings.render = (performance.now() - start).toFixed(1);
       start = performance.now();
 
@@ -405,16 +419,18 @@ export default {
       }
     },
 
-    updateFullscreenComponent() {
+    async updateFullscreenComponent() {
       if (this.fullscreen && this.$refs.fullscreenThreejsRef && this.isReadyToRender) {
         // Update geometry
         if (sphereCache) {
           this.$refs.fullscreenThreejsRef.createSphereFromCorners(sphereCache);
         }
 
-        // Update colors
+        // Update colors. A null result means a newer request overtook this one;
+        // that request repaints the fullscreen ref as well, so skipping is safe.
         const payload = JSON.stringify(this.renderPayload);
-        const bytes = this.use_simd ? get_color_bytes_only_simd(payload, this.nside) : get_color_bytes_only(payload, this.nside);
+        const bytes = await requestColorBytes(payload, this.nside, this.use_simd);
+        if (!bytes) return;
         this.$refs.fullscreenThreejsRef.updateSphereColors(bytes);
 
         // Update satellites
@@ -454,12 +470,14 @@ export default {
       for (let i = 0; i < 30; i++) {
         testData.push({
           timestamp: new Date(now + i * 1000).toISOString(),
-          data: Array.from({ length: 100 }, (_, j) => ({
-            i: Math.floor(j / 10),
-            j: j % 10,
-            re: Math.sin(i * 0.1 + j * 0.05) * Math.random(),
-            im: Math.cos(i * 0.1 + j * 0.05) * Math.random(),
-          })),
+          ...packRecordValues(
+            Array.from({ length: 100 }, (_, j) => ({
+              i: Math.floor(j / 10),
+              j: j % 10,
+              re: Math.sin(i * 0.1 + j * 0.05) * Math.random(),
+              im: Math.cos(i * 0.1 + j * 0.05) * Math.random(),
+            })),
+          ),
           satellites: [
             { name: "GPS Test", az: 45 + i, el: 30 + Math.sin(i * 0.1) * 10 },
             {

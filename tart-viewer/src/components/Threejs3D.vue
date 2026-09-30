@@ -107,6 +107,10 @@ let positionIndicator = null;
 let isMouseDown = false;
 let mouseX = 0,
   mouseY = 0;
+/** Where the current touch began, for telling a tap from a rotate. */
+let touchStart = null;
+/** How far a finger may travel and still count as a tap, in pixels. */
+const TAP_SLOP = 10;
 let targetRotationX = 0,
   targetRotationY = 0;
 let rotationX = 0,
@@ -351,6 +355,7 @@ function onTouchStart(event) {
   if (event.touches.length === 1) {
     mouseX = event.touches[0].clientX;
     mouseY = event.touches[0].clientY;
+    touchStart = { x: mouseX, y: mouseY };
     isMouseDown = true;
 
     // Hide coordinate sprite when touch dragging starts
@@ -405,15 +410,35 @@ function onTouchEnd(event) {
 
   isMouseDown = false;
 
-  // Show coordinate sprite when touch dragging ends
-  if (coordinateDiv) {
-    coordinateDiv.style.display = "block";
+  // Read the az/el at the point the finger lifted, and let the update place the
+  // readout. Nothing on the touch path had ever positioned it: `onTouchStart`
+  // hid it and this re-showed it, but `updateCoordinateSprite` — the only code
+  // that sets left/top — is reached from `onMouseMove`, and from `onTouchMove`
+  // only while `!isMouseDown`, which a touch never is. An absolutely positioned
+  // element with no offsets falls back to its static position, so the readout
+  // appeared in the top-left corner of the canvas instead of under the finger.
+  const touch = event.changedTouches?.[0];
+  if (touch) {
+    const rect = canvasRef.value.getBoundingClientRect();
+    mouse.x = ((touch.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((touch.clientY - rect.top) / rect.height) * 2 + 1;
+    mouseX = touch.clientX;
+    mouseY = touch.clientY;
   }
 
-  // Show position indicator when touch dragging ends
-  if (positionIndicator) {
-    positionIndicator.visible = true;
+  // A tap, not the end of a rotate. Dragging the sphere and lifting the finger
+  // over a satellite should not mark it.
+  const travelled = touchStart ? Math.hypot(mouseX - touchStart.x, mouseY - touchStart.y) : 0;
+  touchStart = null;
+
+  if (travelled < TAP_SLOP) {
+    // Mark a satellite if one is under the finger, so a tap reads back its name
+    // and position the way a hover does on a desktop. This has to run before
+    // the coordinate readout, which stands aside when a satellite is marked.
+    checkSatelliteHover();
   }
+
+  updateCoordinateSprite(mouse);
 }
 
 // Convert azimuth/elevation to 3D coordinates on sphere
@@ -449,6 +474,40 @@ function cartesianToAzEl(x, y, z) {
   return { azimuth, elevation };
 }
 
+/** Undo the highlight on whichever satellite is currently marked. */
+function unhighlightSatellite() {
+  if (!hoveredSatellite) return;
+  hoveredSatellite.scale.set(1, 1, 1);
+  if (hoveredSatellite.ringMesh) {
+    hoveredSatellite.ringMesh.material.color.setHex(COLORS.hoveredSatellite);
+    hoveredSatellite.ringMesh.material.opacity = 0.8;
+  }
+}
+
+/**
+ * Project the marked satellite onto the canvas and hand the tooltip its screen
+ * position. Separate from the highlighting so it can also run when the marked
+ * satellite has not changed — a tap resolving to the same satellite should move
+ * the tooltip to where the finger landed rather than leave it where the last
+ * one put it.
+ */
+function positionSatelliteTooltip() {
+  if (!hoveredSatellite || !camera) return;
+
+  const vector = new Vector3();
+  vector.setFromMatrixPosition(hoveredSatellite.matrixWorld);
+  vector.project(camera);
+
+  const rect = canvasRef.value.getBoundingClientRect();
+  hoveredSatelliteInfo.value = {
+    ...hoveredSatellite.userData,
+    screenX: ((vector.x + 1) * rect.width) / 2,
+    screenY: ((-vector.y + 1) * rect.height) / 2,
+  };
+
+  emit("satellite-hover", hoveredSatelliteInfo.value);
+}
+
 // Check for satellite hover
 function checkSatelliteHover() {
   if (!raycaster || !camera || satellites.length === 0) return;
@@ -459,53 +518,18 @@ function checkSatelliteHover() {
   if (intersects.length > 0) {
     const newHovered = intersects[0].object;
     if (hoveredSatellite !== newHovered) {
-      // Reset previous hovered satellite
-      if (hoveredSatellite) {
-        hoveredSatellite.scale.set(1, 1, 1);
-        // Reset ring glow
-        if (hoveredSatellite.ringMesh) {
-          hoveredSatellite.ringMesh.material.color.setHex(COLORS.hoveredSatellite);
-          hoveredSatellite.ringMesh.material.opacity = 0.8;
-        }
-      }
-
-      // Highlight new hovered satellite
+      unhighlightSatellite();
       hoveredSatellite = newHovered;
       hoveredSatellite.scale.set(1.5, 1.5, 1.5);
-      // Add ring glow
       if (hoveredSatellite.ringMesh) {
         hoveredSatellite.ringMesh.material.color.setHex(0x21_96_f3); // Teal glow (secondary theme color)
         hoveredSatellite.ringMesh.material.opacity = 1; // Full opacity
       }
-
-      // Calculate screen coordinates for tooltip positioning
-      const vector = new Vector3();
-      vector.setFromMatrixPosition(hoveredSatellite.matrixWorld);
-      vector.project(camera);
-
-      const canvas = canvasRef.value;
-      const rect = canvas.getBoundingClientRect();
-      const screenX = ((vector.x + 1) * rect.width) / 2;
-      const screenY = ((-vector.y + 1) * rect.height) / 2;
-
-      // Store hover info for tooltip
-      hoveredSatelliteInfo.value = {
-        ...hoveredSatellite.userData,
-        screenX: screenX,
-        screenY: screenY,
-      };
-
-      // Emit hover event
-      emit("satellite-hover", hoveredSatelliteInfo.value);
     }
+
+    positionSatelliteTooltip();
   } else if (hoveredSatellite) {
-    // Reset hovered satellite
-    hoveredSatellite.scale.set(1, 1, 1);
-    // Reset ring glow
-    if (hoveredSatellite.ringMesh) {
-      hoveredSatellite.ringMesh.material.color.setHex(COLORS.hoveredSatellite);
-      hoveredSatellite.ringMesh.material.opacity = 0.8;
-    }
+    unhighlightSatellite();
     hoveredSatellite = null;
     hoveredSatelliteInfo.value = null;
     emit("satellite-hover", null);

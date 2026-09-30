@@ -54,9 +54,14 @@ const props = defineProps({
   },
 });
 
-// Use video recorder composable
+// Use video recorder composable. Getters, not values: a prop read at setup is a
+// snapshot, and vis_history is replaced rather than mutated on every file load.
 const { isRecording, recordingProgress, recordingError, hasHistoryData, canRecord, progressText, startRecording, stopRecording } =
-  useVideoRecorder(props.visHistory, props.nside, props.info);
+  useVideoRecorder(
+    () => props.visHistory,
+    () => props.nside,
+    () => props.info,
+  );
 
 // Local state for error display
 const showError = ref(false);

@@ -1,0 +1,46 @@
+[package]
+name = "tart-catalogue-wasm"
+version = "0.1.0"
+edition = "2024"
+license = "GPL-3.0-only"
+description = "Browser-side satellite horizontal (az/el/range) computation for the TART catalogue"
+repository = "https://github.com/tart-telescope/web_app"
+# Reimplements the same computation as the collaboration's own Rust client, for
+# the same /ephemerides backend, as a library that compiles to wasm. That client
+# is binary-only and depends on tokio, so it cannot be linked here. See the
+# README for the attribution, the parity measurements, and the two upstream
+# date/time bugs that were reported and since fixed:
+# <https://github.com/tart-telescope/catalogue>
+# <https://crates.io/crates/tart-catalogue-client>
+
+# Mirrors rust/Cargo.toml conventions: cdylib for wasm-pack, rlib so the
+# native test suite can link the same code.
+[lib]
+name = "tart_catalogue_wasm"
+path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# pure-Rust SGP4 propagation; verified to compile for wasm32-unknown-unknown
+sgp4 = "2"
+
+# chrono is already in the graph via sgp4 (Elements::datetime is a
+# chrono::NaiveDateTime). Declared explicitly because we name the type when
+# converting unix seconds into a datetime for SGP4.
+chrono = { version = "0.4", default-features = false, features = ["std"] }
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+wasm-bindgen = { version = "0.2.128", features = ["serde-serialize"] }
+serde-wasm-bindgen = "0.6.5"
+js-sys = "0.3.105"
+
+[dev-dependencies]
+serde_json = "1"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"

@@ -6,6 +6,7 @@
  */
 
 import { get_color_bytes_only_simd, get_hemisphere_pixel_corners } from "gridless";
+import { toVisEntries } from "@/utils/visLayout";
 import {
   BufferAttribute,
   BufferGeometry,
@@ -289,7 +290,9 @@ export default class MediaRecorderService {
       return;
     }
 
-    // Prepare payload for WASM processing
+    // Prepare payload for WASM processing. The frames come from a snapshot of
+    // vis_history, so the baseline payload may be in either layout; rebuild the
+    // {i,j,re,im} wire format the wasm expects from whichever it is.
     const payload = JSON.stringify({
       info: { info: visData.info || {} },
       ant_pos: visData.antennas || [],
@@ -297,7 +300,7 @@ export default class MediaRecorderService {
       data: [
         [
           {
-            data: visData.data || [],
+            data: toVisEntries(visData),
             timestamp: visData.timestamp,
           },
           [],

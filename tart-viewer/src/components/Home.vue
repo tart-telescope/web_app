@@ -32,7 +32,7 @@
       <FpgaStatus />
     </v-col>
     <v-col cols="12">
-      <S3Files :base-path="s3BasePath" :data-thinning="dataThinning" />
+      <S3Files :base-path="s3BasePath" />
     </v-col>
   </v-row>
 </template>

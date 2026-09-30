@@ -6,50 +6,59 @@
  */
 
 import { storeToRefs } from "pinia";
-import { computed, onUnmounted, ref, watch } from "vue";
+import { computed, onUnmounted, ref, watch, watchEffect } from "vue";
 import { createVideoRecorder, detectBestRecordingMethod, RecorderUtils, RECORDING_SETTINGS } from "@/services/videoRecorder";
 import { useAppStore } from "@/stores/app";
 
-export function useVideoRecorder(visHistoryProp, nsideProp, infoProp) {
+/**
+ * Resolve a data source that may be a getter or a plain value.
+ *
+ * Callers pass getters now. A prop handed over by value is a snapshot taken at
+ * setup: `watch(() => prop, ...)` has no reactive dependency and never fires,
+ * and a ref built from it keeps pointing at whatever array existed then.
+ *
+ * That is how the recorder came to export 60 frames of a 601-record history.
+ * The store replaces vis_history on every file load — the sort at the end of it
+ * returns a new array — so a captured reference is not merely stale, it is
+ * permanently detached, while the live data path keeps pushing into the
+ * current array and makes it look like it is creeping along.
+ */
+function resolve(source, fallback) {
+  const value = typeof source === "function" ? source() : source;
+  return value ?? fallback;
+}
+
+/**
+ * What an export would cover: how many frames, out of how many, and the
+ * timestamps the video will start and end on.
+ *
+ * The first and last timestamps are the point. A frame count on its own cannot
+ * be checked against the timeline by eye, and "60 of 601" looked like a
+ * plausible export until the span was printed next to it — the recorder was
+ * working from a stale copy of the history, so the video silently covered one
+ * file while every other number in the app looked right.
+ */
+function describeExport(history, selected) {
+  const first = selected[0]?.timestamp ?? null;
+  const last = selected.at(-1)?.timestamp ?? null;
+  const elapsed = selected.length > 1 ? (new Date(last) - new Date(first)) / 1000 : 0;
+
+  return (
+    `${selected.length}/${history.length} frames  ` +
+    `${first ? new Date(first).toISOString() : "—"} .. ${last ? new Date(last).toISOString() : "—"}` +
+    `  (${elapsed.toFixed(0)}s of data, ${(selected.length / RECORDING_SETTINGS.frameRate).toFixed(1)}s of video)`
+  );
+}
+
+export function useVideoRecorder(visHistorySource, nsideSource, infoSource) {
   // Access store for zoom range
   const store = useAppStore();
 
-  // Use provided data as reactive refs
-  const vis_history = ref(visHistoryProp || []);
-  const nside = ref(nsideProp || 64);
-  const info = ref(infoProp || {});
-
-  // Watch for prop changes and update refs
-  watch(
-    () => visHistoryProp,
-    (newValue) => {
-      vis_history.value = newValue || [];
-      console.log("🔄 vis_history updated from props:", vis_history.value.length, "frames");
-    },
-    { immediate: true },
-  );
-
-  watch(
-    () => nsideProp,
-    (newValue) => {
-      nside.value = newValue || 64;
-    },
-    { immediate: true },
-  );
-
-  watch(
-    () => infoProp,
-    (newValue) => {
-      info.value = newValue || {};
-    },
-    { immediate: true },
-  );
-
-  // Debug logging
-  console.log("🎬 Video recorder initialized with props");
-  console.log("📈 vis_history length:", vis_history.value?.length || 0);
-  console.log("🔢 nside:", nside.value);
-  console.log("ℹ️ info:", info.value);
+  // Read through on every access, so the recorder always sees the current
+  // history rather than the one that happened to exist when it mounted.
+  const vis_history = computed(() => resolve(visHistorySource, []));
+  const nside = computed(() => resolve(nsideSource, 64));
+  const info = computed(() => resolve(infoSource, {}));
 
   // Recording state
   const isRecording = ref(false);
@@ -78,7 +87,6 @@ export function useVideoRecorder(visHistoryProp, nsideProp, infoProp) {
       // If no zoom range, return full history
       const zoomRange = store.currentZoomRange;
       if (!zoomRange || !zoomRange.min || !zoomRange.max) {
-        console.log("📹 Recording full history:", history.length, "frames");
         return history;
       }
 
@@ -86,33 +94,31 @@ export function useVideoRecorder(visHistoryProp, nsideProp, infoProp) {
       const minTime = zoomRange.min * 1000;
       const maxTime = zoomRange.max * 1000;
 
-      const filtered = history.filter((item) => {
+      return history.filter((item) => {
         const timestamp = new Date(item.timestamp).getTime();
         return timestamp >= minTime && timestamp <= maxTime;
       });
-
-      console.log("📹 Recording filtered history:", {
-        totalFrames: history.length,
-        filteredFrames: filtered.length,
-        zoomRange: { min: zoomRange.min, max: zoomRange.max },
-        timeRange: { minTime, maxTime },
-      });
-
-      return filtered;
     } catch (error) {
       console.warn("❌ Error filtering vis_history:", error);
       return vis_history.value || [];
     }
   });
 
+  // Published quietly, following the window.h5wasmWarm convention. The
+  // recorder's own view of the history is otherwise invisible from outside, and
+  // it is the thing that was wrong when the export covered one file: every
+  // number the app showed came from the store. Not logged, because this
+  // re-evaluates on every render.
+  watchEffect(() => {
+    globalThis.recorderView = {
+      frames: filteredVisHistory.value.length,
+      total: vis_history.value.length,
+    };
+  });
+
   const hasHistoryData = computed(() => {
     try {
       const history = filteredVisHistory.value;
-      console.log("🔍 Checking hasHistoryData:", {
-        historyValue: history,
-        isArray: Array.isArray(history),
-        length: history?.length || 0,
-      });
       return history && Array.isArray(history) && history.length > 0;
     } catch (error) {
       console.warn("❌ Error accessing vis_history:", error);
@@ -153,7 +159,6 @@ export function useVideoRecorder(visHistoryProp, nsideProp, infoProp) {
    */
   function extractSceneConfig(is3D, refs) {
     try {
-      console.log("🔧 Extracting scene config:", { is3D, refs });
       const activeRef = is3D ? refs.threejsRef : refs.svgRef;
 
       if (!activeRef) {
@@ -161,12 +166,8 @@ export function useVideoRecorder(visHistoryProp, nsideProp, infoProp) {
         throw new Error("No active renderer reference available");
       }
 
-      console.log("📷 Active ref found:", activeRef);
-
       // Extract current camera configuration
       const camera = activeRef.camera;
-      console.log("📷 Camera object:", camera);
-      console.log("📷 Camera type:", camera?.type);
 
       let cameraConfig = null;
       if (camera) {
@@ -231,8 +232,6 @@ export function useVideoRecorder(visHistoryProp, nsideProp, infoProp) {
         };
       }
 
-      console.log("📷 Camera config:", cameraConfig);
-
       const sceneConfig = {
         is3D,
         nside: nside.value || 64,
@@ -247,7 +246,6 @@ export function useVideoRecorder(visHistoryProp, nsideProp, infoProp) {
         },
       };
 
-      console.log("✅ Scene config extracted:", sceneConfig);
       return sceneConfig;
     } catch (error) {
       console.error("❌ Failed to extract scene config:", error);
@@ -270,8 +268,6 @@ export function useVideoRecorder(visHistoryProp, nsideProp, infoProp) {
    * Start recording with fixed optimal settings
    */
   async function startRecording(is3D, refs) {
-    console.log("🚀 startRecording called:", { is3D, refs });
-
     if (isRecording.value) {
       throw new Error("Recording already in progress");
     }
@@ -285,8 +281,6 @@ export function useVideoRecorder(visHistoryProp, nsideProp, infoProp) {
     }
 
     try {
-      console.log("📊 Starting recording setup...");
-
       // Reset state
       recordingError.value = null;
       recordingProgress.value = 0;
@@ -295,55 +289,34 @@ export function useVideoRecorder(visHistoryProp, nsideProp, infoProp) {
       currentTimestamp.value = null;
       estimatedTimeRemaining.value = 0;
 
-      // Use fixed recording settings
       const recordingSettings = RECORDING_SETTINGS;
-      console.log("⚙️ Recording settings:", recordingSettings);
 
       // Validate filtered vis_history
       if (!filteredVisHistory.value || !Array.isArray(filteredVisHistory.value)) {
-        console.error("❌ filtered vis_history validation failed:", filteredVisHistory.value);
         throw new Error("filtered vis_history is not available or not an array");
       }
       RecorderUtils.validateVisHistory(filteredVisHistory.value);
-      console.log("✅ filtered vis_history validated");
 
-      // Create data snapshot from filtered history
-      console.log("📸 Creating data snapshot...");
+      // The one place this is worth saying out loud. It used to be logged from
+      // the filtered-history computed, so it printed on every render instead of
+      // when an export was actually asked for.
+      console.log(`📹 Export: ${describeExport(vis_history.value, filteredVisHistory.value)}`);
+
       const historySnapshot = RecorderUtils.createDataSnapshot(filteredVisHistory.value);
       totalFrames.value = historySnapshot.length;
-      console.log("✅ Data snapshot created:", historySnapshot.length, "frames");
 
-      // Extract scene configuration
-      console.log("🎬 Extracting scene configuration...");
       const sceneConfig = extractSceneConfig(is3D, refs);
-      console.log("✅ Scene config extracted successfully");
 
-      // Create recorder
-      console.log("🎯 Creating recorder");
       activeRecorder = createVideoRecorder();
       recordingMethod.value = "stream";
       isRecording.value = true;
-      console.log("✅ Recorder created successfully");
 
-      console.log("🎬 Starting recording:", {
-        frames: historySnapshot.length,
-        duration: `${recordingStats.value?.duration}s`,
-        size: `~${recordingStats.value?.estimatedSizeMB}MB`,
-      });
-
-      // Start recording
-      console.log("▶️ Starting actual recording...");
       await activeRecorder.recordHistory(sceneConfig, historySnapshot, recordingSettings, onRecordingProgress);
-
-      console.log("✅ Recording completed successfully");
     } catch (error) {
-      console.error("❌ Recording failed at step:", error);
-      console.error("❌ Error stack:", error.stack);
+      console.error("❌ Recording failed:", error);
       recordingError.value = error.message;
       throw error;
     } finally {
-      // Cleanup
-      console.log("🧹 Cleaning up recording state");
       isRecording.value = false;
       activeRecorder = null;
       recordingProgress.value = 0;

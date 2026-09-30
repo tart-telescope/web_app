@@ -1,6 +1,11 @@
 // Utilities
+import { markRaw } from "vue";
+
 import { defineStore } from "pinia";
 import { satelliteApi, telescopeApi } from "@/services";
+import { createCoalescer } from "@/utils/coalesce";
+import { isEnabled } from "@/utils/flags";
+import { baselineCount, packRecordValues } from "@/utils/visLayout";
 
 export const useAppStore = defineStore("app", {
   state: () => {
@@ -290,6 +295,14 @@ export const useAppStore = defineStore("app", {
       let processedCount = 0;
       let errorCount = 0;
 
+      // Enrichment results are buffered and written to the store on a
+      // coalescer instead of once per batch. Each batch is separated by an
+      // await, so writing per batch forces a full re-render per batch (~36 for
+      // a 3600-record history); buffering collapses that to a handful. The
+      // buffer is a plain array, so accumulating into it costs nothing.
+      const buffer = [];
+      const coalescer = createCoalescer(() => this._flushSatelliteEnrichment(buffer));
+
       try {
         // Process in batches to avoid overwhelming the API
         for (let i = 0; i < timestamps.length; i += batchSize) {
@@ -307,7 +320,8 @@ export const useAppStore = defineStore("app", {
               );
 
               if (response?.dates && response?.az_el) {
-                this._processSatelliteResponse(response, visToEnrich);
+                this._processSatelliteResponse(response, visToEnrich, buffer);
+                coalescer.schedule();
                 processedCount += batch.length;
                 batchSuccess = true;
               } else {
@@ -347,23 +361,31 @@ export const useAppStore = defineStore("app", {
           error: error.message,
           processed: processedCount,
         };
+      } finally {
+        // Always land whatever is buffered, including on the failure paths,
+        // so the coalescing window can never swallow the final batch.
+        coalescer.flushNow();
       }
     },
 
     /**
-     * Process satellite API response and update vis_history with satellite data
+     * Match a satellite API response to visibility records and buffer the result
      *
      * Maps satellite data from the API response to the corresponding visibility
      * records in vis_history based on timestamp matching. Uses exact timestamp
      * matching first, then falls back to closest match within tolerance.
      *
+     * Matches are appended to `buffer` rather than written onto the records
+     * here: see _flushSatelliteEnrichment for why the write is deferred.
+     *
      * @param {Object} response - API response from satelliteApi.getBulkAzEl
      * @param {Array} response.dates - Array of timestamp strings from API
      * @param {Array} response.az_el - Array of satellite data arrays
      * @param {Array} visToEnrich - Array of vis_history items to enrich
+     * @param {Array} buffer - Plain array to append { record, satellites } to
      * @private
      */
-    _processSatelliteResponse(response, visToEnrich) {
+    _processSatelliteResponse(response, visToEnrich, buffer) {
       const { dates: responseTimestamps, az_el } = response;
 
       // Create a map for faster timestamp lookups
@@ -400,16 +422,46 @@ export const useAppStore = defineStore("app", {
         }
 
         if (matchedVis && satelliteData) {
-          matchedVis.satellites = satelliteData.map((satellite) => ({
-            name: satellite.name,
-            az: satellite.az,
-            el: satellite.el,
-          }));
+          buffer.push({
+            record: matchedVis,
+            satellites: satelliteData.map((satellite) => ({
+              name: satellite.name,
+              az: satellite.az,
+              el: satellite.el,
+            })),
+          });
           enrichedCount++;
         }
       }
 
       return enrichedCount;
+    },
+
+    /**
+     * Apply buffered enrichment results to the store in one synchronous pass.
+     *
+     * The pass is what matters: doing every write without an intervening await
+     * lets Vue coalesce them into a single render. Writing as results arrive
+     * instead would cost one render per API batch, which is the churn this
+     * buffering exists to remove.
+     *
+     * @param {Array} buffer - [{ record, satellites }] from
+     *   _processSatelliteResponse; emptied once applied
+     * @private
+     */
+    _flushSatelliteEnrichment(buffer) {
+      if (buffer.length === 0) return;
+
+      for (const { record, satellites } of buffer) {
+        record.satellites = satellites;
+      }
+
+      // Records are markRaw, so writing `satellites` above triggers nothing on
+      // its own. Replacing the array is what tells Vue the history changed —
+      // one render per flush, not one per record.
+      this.vis_history = this.vis_history.slice();
+
+      buffer.length = 0;
     },
     async synthesisData() {
       console.log("🔄 synthesisData() called");
@@ -426,7 +478,7 @@ export const useAppStore = defineStore("app", {
         hasGain: !!synthesisData.gain,
         hasAntennas: !!synthesisData.antennas,
         visTimestamp: synthesisData.vis?.timestamp,
-        visDataLength: synthesisData.vis?.data?.length,
+        visBaselineCount: baselineCount(synthesisData.vis),
       });
 
       const { vis, gain, antennas } = synthesisData;
@@ -438,7 +490,7 @@ export const useAppStore = defineStore("app", {
 
       console.log("📈 Processing vis data:", {
         timestamp: visData?.timestamp,
-        dataLength: visData?.data?.length || 0,
+        baselineCount: baselineCount(visData),
         hasGain: !!gainsData,
         hasAntennas: !!antPos,
         currentHistoryLength: this.vis_history.length,
@@ -464,13 +516,26 @@ export const useAppStore = defineStore("app", {
           });
         this.sat_list = satellites;
 
-        // Store visibility with satellite data in history
-        const visWithSatellites = {
-          ...visData,
-          satellites,
-          gain: gainsData,
-          antennas: antPos,
-        };
+        // Store visibility with satellite data in history. The live API returns
+        // the same {i,j,re,im} wire format as the HDF5 files, so it packs the
+        // same way; markRaw because the payload is never edited in place.
+        const packed = isEnabled("vis-typed-arrays") && Array.isArray(visData?.data) ? packRecordValues(visData.data) : null;
+
+        let visWithSatellites;
+        if (packed) {
+          const { data: legacyData, ...rest } = visData;
+          void legacyData; // replaced by the packed form below
+          visWithSatellites = markRaw({
+            ...rest,
+            values: packed.values,
+            tableId: packed.tableId,
+            satellites,
+            gain: gainsData,
+            antennas: antPos,
+          });
+        } else {
+          visWithSatellites = markRaw({ ...visData, satellites, gain: gainsData, antennas: antPos });
+        }
 
         while (this.vis_history.length > 3600) {
           this.vis_history.shift();
