@@ -2,16 +2,6 @@ class S3Service {
   constructor() {}
 
   /**
-   * Set S3 configuration
-   * @param {string} bucket - S3 bucket name
-   * @param {string} host - S3 host/endpoint
-   */
-  setConfig(bucket, host) {
-    this.S3_BUCKET = bucket;
-    this.S3_HOST = host;
-  }
-
-  /**
    * Create a new AbortController for request cancellation
    * @private
    */
@@ -279,8 +269,15 @@ class S3Service {
       return { files, folders };
     }, `Fetch with prefix: ${prefix}`);
   }
-  S3_BUCKET = "tart-hdf";
-  S3_HOST = "s3.max.ac.nz";
+  // The endpoint lives here, as the service's own default, rather than being
+  // applied from a component lifecycle hook. URLs are built from these fields
+  // whenever a fetch runs, and a fetch can run before the component's
+  // `mounted()` — the `basePath` watcher in S3Files fires from `created()`.
+  // While the live host was set in `mounted()`, that window served a stale
+  // default and the listing went out to s3.max.ac.nz, which no longer serves
+  // this bucket, as a cross-origin request that could only fail.
+  S3_BUCKET = "";
+  S3_HOST = "tart.s3.us-west-2.amazonaws.com";
   abortController = null;
 }
 
