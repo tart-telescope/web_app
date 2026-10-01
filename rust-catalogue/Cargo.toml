@@ -13,8 +13,8 @@ repository = "https://github.com/tart-telescope/web_app"
 # <https://github.com/tart-telescope/catalogue>
 # <https://crates.io/crates/tart-catalogue-core>
 
-# Mirrors rust/Cargo.toml conventions: cdylib for wasm-pack, rlib so the
-# native test suite can link the same code.
+# Mirrors rust/Cargo.toml conventions: cdylib for wasm-pack, rlib so the crate
+# can still be linked natively (`cargo check`, and any native consumer).
 [lib]
 name = "tart_catalogue_wasm"
 path = "src/lib.rs"
@@ -32,12 +32,10 @@ serde_json = "1"
 wasm-bindgen = { version = "0.2.128", features = ["serde-serialize"] }
 serde-wasm-bindgen = "0.6.5"
 
-# Test-only: the vector suite reads RFC3339 dates, and the epoch regression
-# test reaches for sgp4's Elements directly to pin the units.
-[dev-dependencies]
-chrono = { version = "0.4", default-features = false, features = ["std"] }
-sgp4 = "2"
-serde_json = "1"
+# No dev-dependencies and no test suite: every test this crate used to carry
+# exercised the maths, and the maths is now tart-catalogue-core's, tested there.
+# Nothing here is left to cover but the binding layer, which does not compile
+# for the native target `cargo test` runs on.
 
 [profile.release]
 opt-level = 3

@@ -2,8 +2,9 @@
 //!
 //! Given TLEs fetched from the catalogue's `/ephemerides` endpoint, this crate
 //! propagates them with SGP4 and converts to azimuth/elevation/range for an
-//! observer. The network fetch and the TLE cache live in JavaScript; only the
-//! math lives here.
+//! observer. Neither the network fetch nor the TLE cache lives here: those are
+//! the viewer's JavaScript. What is here is the binding between that JavaScript
+//! and the maths in [`tart_catalogue_core`].
 //!
 //! The maths is not ours. It is
 //! [`tart-catalogue-core`](https://crates.io/crates/tart-catalogue-core), the
@@ -18,12 +19,15 @@
 //!
 //! That split followed this crate's own report of the client's two date/time
 //! bugs ([issue #9](https://github.com/tart-telescope/catalogue/issues/9),
-//! fixed in `25172fb`). The vector suite in `tests/` is kept as the gate on the
-//! pinned version, and the README records the measurements behind the report.
+//! fixed in `25172fb`). The README records the measurements behind the report.
 //!
-//! What is left here is the wasm binding layer in [`wasm`]. The maths modules
-//! are not wasm-gated, so the whole thing is testable with a plain
-//! `cargo test`.
+//! What is left here is the wasm binding layer in [`wasm`], and nothing else.
+//! The astropy vector suite and the parity harness that used to live in this
+//! crate went with the maths: they exercised the core, which tests itself, and
+//! they are upstream's now. There are no tests because there is nothing left
+//! here that is ours to test — [`wasm`] is wasm32-only, so it does not even
+//! compile for the host target `cargo test` builds against. `make check_wasm`
+//! is the check that matters.
 
 pub use tart_catalogue_core::{geo, propagation, time};
 

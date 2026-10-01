@@ -219,11 +219,9 @@ dependencies = [
 name = "tart-catalogue-wasm"
 version = "0.1.0"
 dependencies = [
- "chrono",
  "serde",
  "serde-wasm-bindgen",
  "serde_json",
- "sgp4",
  "tart-catalogue-core",
  "wasm-bindgen",
 ]

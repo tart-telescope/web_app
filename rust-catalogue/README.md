@@ -4,7 +4,7 @@ Browser-side satellite horizontal (az/el/range) computation from TLEs, for the
 TART viewer. A thin wasm binding layer over [`tart-catalogue-core`]; the network
 fetch and the TLE cache live in JavaScript.
 
-    make test                  # native tests incl. parity vs astropy vectors
+    make check_wasm            # the check that matters: compiles for wasm32
     make build_wasm_tart       # builds ../tart-viewer/pkg-catalogue
 
 ## What is here, and what is not
@@ -50,8 +50,27 @@ writes to `~/.cache` through `std::fs`. None of that builds for
 So this crate carried its own copy of the maths, and reported the two date/time
 bugs that copy was written to avoid — [issue #9], fixed upstream in [`25172fb`].
 The core was then split out of the client in [`d244f3d`] for exactly this use,
-and this crate now depends on it instead of duplicating it. The copy here is
-gone; the vector suite in `tests/` stays, as the gate on the pinned version.
+and this crate now depends on it instead of duplicating it.
+
+The copy is gone, and so is everything that tested it. That includes the two
+things that were not simply deleted along with the source:
+
+- **The astropy vector suite** (`tests/`) — upstream's core carries the
+  identical `vectors.rs` and `test_vectors.json`, and runs them in its own CI.
+  A second copy here re-tested the same crate.
+- **The live parity harness** (`examples/parity.rs`, `scripts/parity_check.sh`)
+  — it computed through the re-exported core, not through `wasm.rs`, so it
+  measured the same maths upstream already covers. Its one distinctive check,
+  local output against the server's own `/catalog` for the same inputs, is
+  upstream's integration testbench now
+  (`tart-catalogue-server/test/test_api.py` in the catalogue repo).
+
+What that costs: nothing here now verifies the *specific core version we pin*.
+A regression in a `0.1.x` release would reach the browser before this repo
+noticed. [`wasm.rs`](src/wasm.rs) — the JSON shape, the metres/kilometres
+conversion — is not covered by any test at all, upstream's or ours, and cannot
+be: it is `wasm32`-only, so it does not compile for the host target `cargo test`
+builds against. `make check_wasm` is the check that matters.
 
 ## The two date/time bugs, on record
 
