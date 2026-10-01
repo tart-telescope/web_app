@@ -5,37 +5,23 @@ edition = "2024"
 license = "GPL-3.0-only"
 description = "Browser-side satellite horizontal (az/el/range) computation for the TART catalogue"
 repository = "https://github.com/tart-telescope/web_app"
-# The maths is the collaboration's own tart-catalogue-core, used directly. The
-# client crate that first carried it is still unusable here — no library
-# target, tokio, and a cache in ~/.cache — but the core was split out of it in
-# catalogue d244f3d for exactly this: pure computation, no I/O, builds for
-# wasm32-unknown-unknown. What remains here is the wasm binding layer.
-# <https://github.com/tart-telescope/catalogue>
-# <https://crates.io/crates/tart-catalogue-core>
 
-# Mirrors rust/Cargo.toml conventions: cdylib for wasm-pack, rlib so the crate
-# can still be linked natively (`cargo check`, and any native consumer).
+# Mirrors rust/Cargo.toml: cdylib for wasm-pack, rlib for native linking.
 [lib]
 name = "tart_catalogue_wasm"
 path = "src/lib.rs"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-# TLE propagation, coordinate transforms and sidereal time. Pure computation
-# with no I/O, and it builds for wasm32-unknown-unknown, so the maths is the
-# collaboration's rather than a copy of it kept in step by hand.
+# TLE propagation, geodesy and sidereal time. The maths, none of it ours.
+# <https://github.com/tart-telescope/catalogue>
 tart-catalogue-core = "0.1"
 
+# JSON at the wasm boundary: TLE records in, look-angle rows out.
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-
 wasm-bindgen = { version = "0.2.128", features = ["serde-serialize"] }
 serde-wasm-bindgen = "0.6.5"
-
-# No dev-dependencies and no test suite: every test this crate used to carry
-# exercised the maths, and the maths is now tart-catalogue-core's, tested there.
-# Nothing here is left to cover but the binding layer, which does not compile
-# for the native target `cargo test` runs on.
 
 [profile.release]
 opt-level = 3
