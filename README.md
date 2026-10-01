@@ -10,6 +10,20 @@ A Vue.js frontend application with Rust/WebAssembly components for TART telescop
 
 
 ## UI Dev
+
+Build the two wasm packages first. The dev server imports them from the working
+tree and neither is checked in, so `pnpm dev` on a fresh clone has nothing to
+render:
+```
+    (cd rust           && make export-wasm-production)   # -> tart-viewer/pkg
+    (cd rust-catalogue && make export-wasm-production)   # -> tart-viewer/pkg-catalogue
+    (cd tart-viewer    && pnpm install)                  # links both file: packages
+```
+`pnpm install` has to come after the builds — both are `file:` dependencies, and
+pnpm resolves them at install time. See `tart-viewer/README.md` for the
+toolchain prerequisites and the faster debug-build alternative.
+
+Then:
 ```
     pnpm dev
 ```
