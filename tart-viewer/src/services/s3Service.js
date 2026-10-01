@@ -2,16 +2,6 @@ class S3Service {
   constructor() {}
 
   /**
-   * Set S3 configuration
-   * @param {string} bucket - S3 bucket name
-   * @param {string} host - S3 host/endpoint
-   */
-  setConfig(bucket, host) {
-    this.S3_BUCKET = bucket;
-    this.S3_HOST = host;
-  }
-
-  /**
    * Create a new AbortController for request cancellation
    * @private
    */
@@ -279,8 +269,10 @@ class S3Service {
       return { files, folders };
     }, `Fetch with prefix: ${prefix}`);
   }
-  S3_BUCKET = "tart-hdf";
-  S3_HOST = "s3.max.ac.nz";
+  // Live endpoint. Set here, not from mounted(): the basePath watcher can
+  // fetch before that hook runs.
+  S3_BUCKET = "";
+  S3_HOST = "tart.s3.us-west-2.amazonaws.com";
   abortController = null;
 }
 

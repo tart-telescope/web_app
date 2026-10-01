@@ -126,8 +126,6 @@ export default {
 
   // Lifecycle hooks
   mounted() {
-    s3Service.setConfig("", "tart.s3.us-west-2.amazonaws.com");
-
     this.fetchLast24Hours();
     this.startAutoRefresh();
   },
