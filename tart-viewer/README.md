@@ -1,5 +1,51 @@
 # TART VIEWER
 
+### Build the wasm modules first
+
+The viewer imports two Rust/WebAssembly packages straight out of the working
+tree, and neither is checked in. A fresh clone has to build them before the dev
+server will render anything:
+
+| Import                | Built into                  | From           |
+| --------------------- | --------------------------- | -------------- |
+| `gridless`            | `tart-viewer/pkg`           | `rust/`        |
+| `tart-catalogue-wasm` | `tart-viewer/pkg-catalogue` | `rust-catalogue/` |
+
+Both are `wasm-pack build --target web`, wrapped in a Make target that puts the
+output where the viewer expects it. If you don't yet have the toolchain:
+
+```bash
+rustup target add wasm32-unknown-unknown
+cargo install wasm-pack
+```
+
+Then, from the repository root:
+
+```bash
+(cd rust           && make export-wasm-production)   # -> tart-viewer/pkg
+(cd rust-catalogue && make export-wasm-production)   # -> tart-viewer/pkg-catalogue
+(cd tart-viewer    && pnpm install)                  # links both file: packages
+```
+
+Three things worth knowing about that sequence:
+
+- **`pnpm install` comes last.** Both packages are `file:` dependencies, which
+  pnpm resolves at install time, so the directories have to exist first.
+- **The catalogue build is optional in effect, not in principle.**
+  `src/services/satellite/localPropagation.js` imports it lazily and falls back
+  to the remote catalogue API when it is missing — the app boots either way, it
+  just never computes satellite positions locally. `gridless` has no such
+  fallback.
+- **Both are release builds**, and take a minute or two the first time. While
+  actively changing Rust, a debug build is enough and much faster:
+
+  ```bash
+  (cd rust-catalogue && wasm-pack build --dev --target web --out-dir ../tart-viewer/pkg-catalogue)
+  ```
+
+Rebuilding the wasm does not restart the dev server; Vite picks the new output
+up if you have it open.
+
 ### Starting the Development Server
 
 To start the development server with hot-reload, run the following command. The server will be accessible at [http://localhost:3000](http://localhost:3000):

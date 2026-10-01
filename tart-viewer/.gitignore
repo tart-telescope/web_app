@@ -27,3 +27,7 @@ pnpm-debug.log*
 /test-results
 /playwright-report
 /blob-report
+
+# wasm-pack output, imported as file: dependencies (see README)
+/pkg
+/pkg-catalogue

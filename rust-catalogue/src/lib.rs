@@ -1,32 +1,20 @@
-//! Browser-side satellite horizontal positions for the TART catalogue.
+//! WebAssembly bindings for the viewer's satellite look angles: TLEs in,
+//! azimuth/elevation/range out, for one observer across many instants.
 //!
-//! Given TLEs fetched from the catalogue's `/ephemerides` endpoint, this crate
-//! propagates them with SGP4 and converts to azimuth/elevation/range for an
-//! observer. The network fetch and the TLE cache live in JavaScript; only the
-//! math lives here.
+//! The maths is [`tart_catalogue_core`] — TLE propagation, geodesy, sidereal
+//! time — re-exported here so callers keep one import path. This crate adds
+//! what the browser needs on top and nothing else: a stateful
+//! [`wasm::CataloguePropagators`] that builds SGP4 constants once per TLE set
+//! and reuses them across queries, and the JSON shape the viewer's JavaScript
+//! reads back.
 //!
-//! This is a deliberate reimplementation rather than a wrapper around
-//! [`tart-catalogue-client`](https://crates.io/crates/tart-catalogue-client),
-//! the TART collaboration's Rust client for the same catalogue and the same
-//! `/ephemerides` backend
-//! (<https://github.com/tart-telescope/catalogue>). That client cannot be used
-//! here: it publishes no library target (so there is nothing to link), it
-//! depends on `tokio` with `full` (unsupported on `wasm32-unknown-unknown`),
-//! and its cache writes to `~/.cache` through `std::fs`. Those are the reasons
-//! it cannot be reused, and they are structural rather than fixable from here.
+//! The network fetch and the TLE cache are the viewer's JavaScript, not this
+//! crate's.
 //!
-//! Its epoch handling was also incorrect when this crate was written — see the
-//! note in [`propagation::propagate_to_ecef`] — which is why the time handling
-//! was written from scratch. That has since been reported and fixed upstream in
-//! 25172fb, by the same route, so the two now agree on it. The README records
-//! the attribution and the measurements that found the bugs.
-//!
-//! The math modules are not wasm-gated so the whole thing is testable with a
-//! plain `cargo test`.
+//! No tests: [`wasm`] is `wasm32`-only, so it does not compile for the host
+//! target `cargo test` builds against, and the maths is tested in the core.
 
-pub mod geo;
-pub mod propagation;
-pub mod time;
+pub use tart_catalogue_core::{geo, propagation, time};
 
 #[cfg(target_arch = "wasm32")]
 pub mod wasm;

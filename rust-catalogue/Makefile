@@ -4,9 +4,11 @@
 # SIMD here (sgp4 has no SIMD paths), so the production build deliberately
 # omits the +simd128 flags.
 
-all: test
+all: check_wasm
 
-# Native test suite, including parity against the vendored astropy vectors.
+# Kept so the target still exists, but there is nothing for it to run: the
+# maths moved to tart-catalogue-core and the astropy vectors went with it, and
+# the binding layer is wasm32-only. This compiles the crate for the host.
 test:
 	cargo test
 
@@ -29,13 +31,8 @@ export-wasm-production:
 build_wasm_node:
 	wasm-pack build --release --target nodejs --out-dir pkg-node
 
-# Live parity check against the running catalogue server.
-# Requires curl and python3; compares local computation to GET /catalog.
-parity:
-	./scripts/parity_check.sh
-
 # Chunk-size trade-off for the viewer's enrichment loop.
 benchmark-chunks: build_wasm_node
 	node scripts/benchmark-chunk-sizes.mjs 3600 /tmp/eph.json
 
-.PHONY: all test check_wasm build_wasm_pkg build_wasm_tart export-wasm-production build_wasm_node parity benchmark-chunks
+.PHONY: all test check_wasm build_wasm_pkg build_wasm_tart export-wasm-production build_wasm_node benchmark-chunks
